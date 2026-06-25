@@ -1,5 +1,9 @@
 # OpenGateSP
 
+[![CI](https://github.com/sameer-zahir/opengatesp/actions/workflows/ci.yml/badge.svg)](https://github.com/sameer-zahir/opengatesp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![PowerShell 7.4+](https://img.shields.io/badge/PowerShell-7.4%2B-5391FE?logo=powershell&logoColor=white)
+
 > **The free, open-source [ShareGate](https://sharegate.com) alternative** for SharePoint Online — **migrate** file shares into SharePoint, **audit** permissions and external sharing, and **provision** sites. A PowerShell engine + a Windows GUI (MCP server on the roadmap). MIT-licensed.
 
 > **Status: v0.1.0 — early.** The engine (a PowerShell module) and the GUI ship first; an MCP server (so Claude / Codex / Gemini can drive it) is on the roadmap. Built as a real day-job utility for one enterprise tenant and open-sourced.
