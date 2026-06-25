@@ -56,6 +56,8 @@ function Invoke-EngineCommand {
         'report.inventory'   { Confirm-Connected; return (Get-SPSiteInventory @Params) }
         'migrate.files'      { Confirm-Connected; return (Start-SPFileMigration @Params) }
         'precheck.readiness' { return (Test-SPMigrationReadiness @Params) }  # local scan, no connection
+        'copy.site'          { return (Copy-SPSite @Params) }                # manages its own source+dest connections
+
 
         'provision.site'     { Confirm-Connected; return (New-SPSiteFromTemplate @Params) }
         'bulk.metadata'      { Confirm-Connected; return (Set-SPBulkMetadata @Params) }

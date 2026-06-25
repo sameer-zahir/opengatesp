@@ -106,6 +106,28 @@ server.tool(
 );
 
 server.tool(
+  "sharepoint_copy_site",
+  "Copy a SharePoint site's structure (and optionally its content) to another site in the SAME tenant — the open 'copy structure and content'. Previews a dry-run plan by default; set execute=true to perform the copy. Same-tenant only in this release.",
+  {
+    sourceUrl: z.string().url(),
+    destinationUrl: z.string().url(),
+    lists: z.array(z.string()).optional().describe("Limit to these list/library display names."),
+    includeContent: z.boolean().optional().describe("Also copy items and files (default: structure only)."),
+    conflictMode: z.enum(["Replace", "Skip", "KeepBoth", "IfNewer"]).optional().describe("Conflict handling for existing objects (default: IfNewer)."),
+    execute: z.boolean().optional().describe("false = dry-run plan (default); true = perform the copy."),
+  },
+  async ({ sourceUrl, destinationUrl, lists, includeContent, conflictMode, execute }) => {
+    const params: Record<string, unknown> = { SourceUrl: sourceUrl, DestinationUrl: destinationUrl };
+    if (lists) params.Lists = lists;
+    if (includeContent === true) params.IncludeContent = true;
+    if (conflictMode) params.ConflictMode = conflictMode;
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("copy.site", params);
+  },
+);
+
+server.tool(
   "sharepoint_provision_site",
   "Create a SharePoint site. Previews (-WhatIf) by default; set execute=true to actually create.",
   {

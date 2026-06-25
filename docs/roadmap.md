@@ -5,19 +5,21 @@ redesigned GUI (sidebar navigation + card home), on top of the engine (PowerShel
 MCP server, and app-only certificate auth (headless/unattended). What's next, roughly in
 priority order:
 
-## Next
-- **Post-migration validation** — compare a finished migration against its source (file counts
-  and names) and report what didn't make it.
-- **More provisioning templates** — a small library of common site/library templates.
+## SharePoint → SharePoint migration (the big build, phased)
+The path toward ShareGate-style site migration, grounded in what PnP PowerShell actually supports. Each phase ships independently.
+- **Phase 1 — same-tenant copy structure + content (engine shipped):** `Copy-SPSite` copies a site's lists, libraries, fields, content types, views, navigation, pages, items, and files (with timestamps) to another site in the same tenant. Dry-run by default. GUI wizard next. See [docs/07](07-sharepoint-migration.md).
+- **Phase 2** — mappings, permissions, conflict modes, incremental ("copy if newer").
+- **Phase 3** — **tenant-to-tenant** (multi-connection, identity mapping, cross-tenant files).
+- **Phase 4** — **Teams + Planner + M365 Groups**.
+- **Phase 5** — deeper governance (permissions-matrix / external-sharing / orphaned-user reports, lifecycle, provisioning requests).
+- Maybe later: **Box** import.
 
-## Later
-- **More migration types** — tenant-to-tenant, full site (lists + pages + navigation),
-  and Teams/Microsoft 365 Group migration.
-- **PowerShell Gallery** — `Install-Module OpenGateSP`.
+## Also planned
+- **Post-migration validation** — compare a finished migration against its source.
+- **More provisioning templates**; **PowerShell Gallery** (`Install-Module OpenGateSP`).
 
-## Non-goals (for now)
-- A hosted SaaS or paid tier. OpenGateSP stays a tool you run against your own tenant.
-- Chasing feature-parity for its own sake. We invest in a clean, modern GUI, but the durable
-  edge is free + open + scriptable + AI-driven, not matching every commercial checkbox.
+## Out of scope
+- Exchange/Gmail **mailboxes**, **Google Drive** import, classic **2013 workflows** — different APIs or deprecated.
+- A hosted SaaS or paid tier. OpenGateSP stays a tool you run against your own tenant; the durable edge is free + open + scriptable + AI-driven.
 
 Contributions welcome — open an issue describing the operation you need.
