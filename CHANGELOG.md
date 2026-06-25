@@ -4,7 +4,24 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0]
+
+### Added
+- **Pre-migration readiness check** — `Test-SPMigrationReadiness` scans a local folder for
+  SharePoint blockers (illegal/reserved names, blocked file types, over-long projected URLs,
+  oversized and empty files), graded Error/Warning. Local and read-only — no tenant needed.
+- **Scheduled governance reports** — `scripts/scheduled/Run-GovernanceReport.ps1` writes
+  sharing/permission CSVs headless (app-only auth); `Register-GovernanceReportTask.ps1`
+  schedules it; `Get-SPScheduledCommand` builds the command line. See [docs/06](docs/06-scheduled-reports.md).
+- **MCP** — `sharepoint_precheck_migration` tool for the pre-check.
+
+### Changed
+- **GUI redesigned** — a left sidebar navigation grouped into Migration / Governance, a
+  card-based Home ("What do you want to do?"), a breadcrumb app bar, severity-coloured
+  pre-check results, empty states, a busy indicator, and a provisioning template/libraries
+  picker. Same engine and worker-runspace model underneath.
+
+## [0.1.0]
 
 ### Added
 - **Engine (OpenGateSP module):**
@@ -25,6 +42,3 @@ follow [Semantic Versioning](https://semver.org/).
   unattended runs (scheduled jobs, fully headless MCP). The auth mode persists in config; the
   certificate password is read from `OPENGATESP_CERT_PASSWORD` and never saved.
 - PSScriptAnalyzer + Pester + MCP-build CI.
-
-### Planned
-- Tenant-to-tenant and full-site migration; PowerShell Gallery publish. See docs/roadmap.md.

@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OpenGateSP.psm1'
-    ModuleVersion     = '0.1.0'
+    ModuleVersion     = '0.2.0'
     GUID              = 'a4d9b2e7-6c81-4f3a-9b5e-2f7c1d8e4a60'
     Author            = 'Sameer Zahir'
     CompanyName       = 'Sameer Zahir'
@@ -30,7 +30,7 @@
             Tags         = @('SharePoint', 'SharePointOnline', 'Microsoft365', 'PnP', 'Migration', 'FileShare', 'Governance', 'Permissions', 'ShareGate-alternative', 'migration-tool')
             LicenseUri   = 'https://github.com/sameer-zahir/opengatesp/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/sameer-zahir/opengatesp'
-            ReleaseNotes = 'v0.1.0 - initial engine: Connect-SPTool, Get-SPSiteInventory, Get-SPPermissionReport, Get-SPSharingReport, Start-SPFileMigration, New-SPSiteFromTemplate, Set-SPBulkMetadata.'
+            ReleaseNotes = 'v0.2.0 - add Test-SPMigrationReadiness (local pre-migration readiness check) and scheduled governance reports; modernized GUI (sidebar nav + card home). v0.1.0 - initial engine.'
         }
     }
 }

@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![PowerShell 7.4+](https://img.shields.io/badge/PowerShell-7.4%2B-5391FE?logo=powershell&logoColor=white)
 
-> **The free, open-source [ShareGate](https://sharegate.com) alternative** for SharePoint Online and Microsoft 365 — **migrate** file shares into SharePoint, **audit** permissions and external sharing, and **provision** sites. A themed Windows app, a PowerShell engine, and an MCP server so your AI assistant can drive it. MIT-licensed.
+> **The free, open-source [ShareGate](https://sharegate.com) alternative** for SharePoint Online and Microsoft 365 — **migrate** file shares into SharePoint, **pre-check** sources before you move them, **audit** permissions and external sharing, **provision** sites, and **schedule** governance reports. A themed Windows app, a PowerShell engine, and an MCP server so your AI assistant can drive it. MIT-licensed.
 
 ![OpenGateSP — themed SharePoint admin GUI](docs/screenshot-dark.png)
 
@@ -25,8 +25,10 @@ ShareGate is a polished, expensive tool for work that ultimately comes down to S
 |---|---|---|
 | **Price** | thousands / year | **Free (MIT)** |
 | File share / folder → SharePoint migration | ✅ | ✅ |
+| Pre-migration readiness check | ✅ | ✅ |
 | Permissions & external-sharing audit | ✅ | ✅ |
 | Site provisioning + CSV bulk metadata | ✅ | ✅ |
+| Scheduled governance reports | ✅ | ✅ |
 | Drive it from an AI assistant (MCP) | — | **✅ built in** |
 | Open source you can read, fork, and own | — | **✅** |
 | Tenant-to-tenant, Teams, full content reorg | ✅ | on the roadmap |
@@ -39,16 +41,18 @@ The GUI ships in warm **Gruvbox light** and deep **Tokyo Night Moon dark** (the 
 
 ![OpenGateSP light theme](docs/screenshot-light.png)
 
-## What it does (v0.1.0)
+## What it does (v0.2.0)
 
 | Area | Function | What it does |
 |---|---|---|
-| **Migration** | `Start-SPFileMigration` | Local file share / folder → SharePoint library, preserving structure + timestamps. Dry-run by default. |
+| **Migration** | `Test-SPMigrationReadiness` | Pre-flight a local folder for SharePoint blockers (illegal names, over-long paths, oversized/empty files). Local, read-only. |
+| | `Start-SPFileMigration` | Local file share / folder → SharePoint library, preserving structure + timestamps. Dry-run by default. |
 | **Reporting** | `Get-SPSiteInventory` | Tenant-wide sites + storage + last activity |
 | | `Get-SPPermissionReport` | Who has access; where inheritance is broken |
 | | `Get-SPSharingReport` | External users and sharing links |
 | **Provisioning** | `New-SPSiteFromTemplate` | Create a site or library from a template |
 | | `Set-SPBulkMetadata` | CSV-driven bulk column updates |
+| **Scheduled** | `Run-GovernanceReport.ps1` | Unattended sharing/permission CSVs on a daily/weekly task ([docs/06](docs/06-scheduled-reports.md)). |
 
 Same engine, three ways to use it: the **GUI**, the **PowerShell** module, or the **MCP server**.
 
@@ -76,7 +80,7 @@ Full guide: [docs/03-quickstart.md](docs/03-quickstart.md) · setup: [docs/01](d
 
 ## Roadmap
 
-Tenant-to-tenant and full-site migration · Teams/Group migration · scheduled-report examples · PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
+Tenant-to-tenant and full-site migration · Teams/Group migration · PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
 
 ## License
 

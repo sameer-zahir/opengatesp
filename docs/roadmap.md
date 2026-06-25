@@ -1,11 +1,13 @@
 # Roadmap
 
-OpenGateSP v0.1.0 ships the engine (PowerShell module), a Windows GUI, an MCP server, and
-app-only certificate auth (headless/unattended). What's next, roughly in priority order:
+OpenGateSP v0.2.0 adds a pre-migration readiness check, scheduled governance reports, and a
+redesigned GUI (sidebar navigation + card home), on top of the engine (PowerShell module), the
+MCP server, and app-only certificate auth (headless/unattended). What's next, roughly in
+priority order:
 
 ## Next
-- **Scheduled reports** — a ready-made scheduled-task / cron example that drops a permissions or
-  sharing report to a library or email, using app-only auth (no sign-in).
+- **Post-migration validation** — compare a finished migration against its source (file counts
+  and names) and report what didn't make it.
 - **More provisioning templates** — a small library of common site/library templates.
 
 ## Later
@@ -15,6 +17,7 @@ app-only certificate auth (headless/unattended). What's next, roughly in priorit
 
 ## Non-goals (for now)
 - A hosted SaaS or paid tier. OpenGateSP stays a tool you run against your own tenant.
-- Competing on a polished commercial GUI — the differentiator is free + scriptable + AI-driven.
+- Chasing feature-parity for its own sake. We invest in a clean, modern GUI, but the durable
+  edge is free + open + scriptable + AI-driven, not matching every commercial checkbox.
 
 Contributions welcome — open an issue describing the operation you need.
