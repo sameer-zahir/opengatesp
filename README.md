@@ -9,13 +9,13 @@
 
 ![OpenGateSP — themed SharePoint admin GUI](docs/screenshot-dark.png)
 
-## Download & run (about 60 seconds)
+## Install
 
-1. **[Download the latest release](https://github.com/sameer-zahir/opengatesp/releases/latest)** and unzip it.
-2. Double-click **`OpenGateSP.exe`** (or `Start-OpenGateSP.cmd`).
-3. On first run it installs the engine and shows you the one-time (free) Entra app registration, then opens the app.
+**Easiest — the installer.** [Download **`OpenGateSP-Setup.exe`**](https://github.com/sameer-zahir/opengatesp/releases/latest) and double-click it. It installs per-user (no admin), drops a **Start Menu + desktop shortcut**, and registers an uninstaller — like any normal app. First launch shows the one-time (free) Entra app registration, then opens the app.
 
-> Needs **Windows + PowerShell 7.4+**. The `.exe` is an *unsigned* launcher, so Windows SmartScreen shows a one-time **"More info → Run anyway."** Prefer `Start-OpenGateSP.cmd` if you'd rather run the visible script — it's all open source.
+**Portable — no install.** Prefer to keep it in a folder? Download the `.zip`, unzip, and run **`OpenGateSP.exe`** (or `Start-OpenGateSP.cmd`).
+
+> Needs **Windows + PowerShell 7.4+** (the installer points you to it if it's missing). The build is currently *unsigned*, so Windows SmartScreen shows a one-time **"More info → Run anyway"** — free open-source signing (SignPath) is in progress to remove that, and `winget install` is on the way.
 
 ## OpenGateSP vs ShareGate
 
