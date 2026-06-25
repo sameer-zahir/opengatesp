@@ -1,0 +1,9 @@
+# Normalize to LF in the repository; check out native line endings.
+* text=auto
+
+# Binary assets (never normalize)
+*.png binary
+*.jpg binary
+*.ico binary
+*.pfx binary
+*.cer binary
