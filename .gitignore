@@ -1,0 +1,39 @@
+# --- OpenGateSP local config & secrets (NEVER commit) ---
+spconfig.json
+**/spconfig.json
+*.pfx
+*.cer
+*.pem
+*.key
+
+# --- Logs & transcripts ---
+*.log
+logs/
+transcripts/
+*-transcript-*.txt
+
+# --- Generated report output ---
+reports/
+out/
+*.report.html
+*.report.csv
+
+# --- Node / MCP server (v2) ---
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+
+# --- PowerShell build artifacts ---
+*.zip
+*.nupkg
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

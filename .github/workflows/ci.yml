@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tooling
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $all = @()
+          foreach ($p in 'module', 'gui', 'scripts') {
+            $all += Invoke-ScriptAnalyzer -Path "./$p" -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+          }
+          if ($all) {
+            $all | Format-Table Severity, RuleName, ScriptName, Line -AutoSize
+            throw "PSScriptAnalyzer found $($all.Count) issue(s)."
+          }
+          Write-Host "PSScriptAnalyzer: clean."
+
+      - name: Pester (pure helpers)
+        shell: pwsh
+        run: |
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path = './tests'
+          $cfg.Run.Exit = $true
+          $cfg.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $cfg
