@@ -31,17 +31,35 @@ certificates to open-source projects**. OpenGateSP qualifies: public repo, OSI l
 
 What it buys: removes the "Unknown publisher" label and, as downloads accrue, clears SmartScreen.
 
-Steps:
-1. Apply at **https://signpath.org/** (SignPath Foundation → free code signing for OSS). You'll
-   describe the project and link the GitHub repo.
-2. Once approved, SignPath provisions a certificate + a signing policy for the project.
-3. Wire signing into CI (GitHub Actions): the release workflow uploads the built
-   `OpenGateSP-Setup.exe` (and `OpenGateSP.exe`) to SignPath via their GitHub Action / API;
-   SignPath signs and returns the artifact, which the workflow then attaches to the release.
-4. Update this repo's README to drop the "unsigned" note once signing is live.
+**Eligibility (OpenGateSP meets the formal criteria):** OSI-approved license with no commercial
+dual-licensing (MIT), not malware, actively maintained, already released in the form to be
+signed (the GitHub release), functionality described on the README / download page, public repo.
 
-Approval isn't instant and they vet the project, so treat this as a parallel track — keep
-shipping unsigned in the meantime (one-click "More info → Run anyway", normal for admin tools).
+**How to apply:**
+1. Download the OSS Request Form (Excel) linked from **https://signpath.org/** and fill it.
+   Values for OpenGateSP:
+   - Project name: `OpenGateSP`
+   - Repository: `https://github.com/sameer-zahir/opengatesp`
+   - License: `MIT` (no dual-licensing)
+   - Description: free, open-source ShareGate alternative for SharePoint Online — file-share
+     migration, a pre-migration readiness check, permissions/external-sharing reports, site
+     provisioning, scheduled governance reports. Windows GUI + PowerShell module + MCP server.
+   - Download / releases page: `https://github.com/sameer-zahir/opengatesp/releases`
+   - Build system: GitHub Actions
+   - Artifacts to sign: `OpenGateSP-Setup.exe` and `OpenGateSP.exe`
+   - Maintainer / contact: Sameer Zahir — sameerzahir97@gmail.com
+2. Email the completed form to the address SignPath lists on the site.
+3. They review and verify the project's **reputation** and that you control the repo.
+   **Heads-up:** the repo is brand new (0 stars), and the reputation check can mean a fresh
+   project is asked to come back once it has some traction. It costs nothing to apply, so apply
+   — just don't block releases on it.
+4. Once approved: SignPath provisions an OV certificate (the private key lives on their HSM —
+   you never touch it). Add a signing step to the release workflow (their GitHub Action uploads
+   the artifact, SignPath signs it, the workflow attaches it), then drop the "unsigned" note
+   from the README.
+
+Keep shipping unsigned in the meantime — the one-click "More info → Run anyway" is normal for
+admin tools, and winget (below) sidesteps it entirely.
 
 ## winget — `winget install OpenGateSP`
 
