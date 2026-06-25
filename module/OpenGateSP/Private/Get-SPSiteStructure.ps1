@@ -12,7 +12,8 @@ function Get-SPSiteStructure {
     [OutputType([pscustomobject])]
     param(
         [Parameter(Mandatory)]$Connection,
-        [string]$OutPath
+        [string]$OutPath,
+        [string[]]$Lists
     )
 
     if (-not $Connection) { throw 'A source connection is required.' }
@@ -23,8 +24,19 @@ function Get-SPSiteStructure {
         $OutPath = Join-Path $dir ('structure-{0}.pnp' -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
     }
 
+    # Whole-site extraction by default; scope to named lists/libraries when -Lists is given
+    # (granular Copy-SPList path) — that limits the template to just those list schemas.
+    $tplParams = @{ Out = $OutPath; Connection = $Connection; Force = $true; ErrorAction = 'Stop' }
+    if ($Lists) {
+        $tplParams.Handlers        = 'Lists'
+        $tplParams.ListsToExtract  = $Lists
+    }
+    else {
+        $tplParams.PersistBrandingFiles = $true
+    }
+
     Invoke-SPRetry -Operation 'extract site template' {
-        Get-PnPSiteTemplate -Out $OutPath -Connection $Connection -Force -PersistBrandingFiles -ErrorAction Stop
+        Get-PnPSiteTemplate @tplParams
     } | Out-Null
 
     [pscustomobject]@{ Path = $OutPath }

@@ -19,6 +19,7 @@
         'Start-SPFileMigration',
         'Test-SPMigrationReadiness',
         'Copy-SPSite',
+        'Copy-SPList',
         'New-SPSiteFromTemplate',
         'Set-SPBulkMetadata'
     )

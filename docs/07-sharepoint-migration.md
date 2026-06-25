@@ -37,10 +37,18 @@ Copy-SPSite -SourceUrl .../sites/Source -DestinationUrl .../sites/Dest
 
 # Structure + content, skipping anything newer at the destination:
 Copy-SPSite -SourceUrl .../sites/Source -DestinationUrl .../sites/Dest -IncludeContent -ConflictMode IfNewer
+
+# Just one list or library (schema scoped to that list — not the whole site):
+Copy-SPList -SourceUrl .../sites/Source -DestinationUrl .../sites/Dest -List "Documents" -IncludeContent
 ```
 
-Conflict modes: `Replace`, `Skip`, `KeepBoth`, `IfNewer` (default). Limit scope with `-Lists "Documents","Tasks"`.
-Also available as the MCP tool **`sharepoint_copy_site`** (dry-run by default; `execute=true` to run).
+`Copy-SPSite` copies the whole site's structure; `Copy-SPList` is the granular form — it extracts a
+template scoped to a single list/library, so the destination gets only that list's columns, content
+types, and views. Both are dry-run by default and share the same conflict modes: `Replace`, `Skip`,
+`KeepBoth`, `IfNewer` (default). Limit a site copy's content scope with `-Lists "Documents","Tasks"`.
+
+Also available as the MCP tools **`sharepoint_copy_site`** and **`sharepoint_copy_list`**
+(dry-run by default; `execute=true` to run).
 
 ## Manual test plan (run against a tenant)
 

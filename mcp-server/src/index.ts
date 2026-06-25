@@ -128,6 +128,27 @@ server.tool(
 );
 
 server.tool(
+  "sharepoint_copy_list",
+  "Copy a single SharePoint list or library — its schema (columns, content types, views) and optionally its content — to another site in the SAME tenant. The granular form of sharepoint_copy_site. Previews a dry-run plan by default; set execute=true to perform the copy.",
+  {
+    sourceUrl: z.string().url(),
+    destinationUrl: z.string().url(),
+    list: z.string().describe("Display name of the list or library to copy."),
+    includeContent: z.boolean().optional().describe("Also copy items/files (default: schema only)."),
+    conflictMode: z.enum(["Replace", "Skip", "KeepBoth", "IfNewer"]).optional().describe("Conflict handling if the list already exists (default: IfNewer)."),
+    execute: z.boolean().optional().describe("false = dry-run plan (default); true = perform the copy."),
+  },
+  async ({ sourceUrl, destinationUrl, list, includeContent, conflictMode, execute }) => {
+    const params: Record<string, unknown> = { SourceUrl: sourceUrl, DestinationUrl: destinationUrl, List: list };
+    if (includeContent === true) params.IncludeContent = true;
+    if (conflictMode) params.ConflictMode = conflictMode;
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("copy.list", params);
+  },
+);
+
+server.tool(
   "sharepoint_provision_site",
   "Create a SharePoint site. Previews (-WhatIf) by default; set execute=true to actually create.",
   {

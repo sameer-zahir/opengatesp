@@ -57,6 +57,7 @@ function Invoke-EngineCommand {
         'migrate.files'      { Confirm-Connected; return (Start-SPFileMigration @Params) }
         'precheck.readiness' { return (Test-SPMigrationReadiness @Params) }  # local scan, no connection
         'copy.site'          { return (Copy-SPSite @Params) }                # manages its own source+dest connections
+        'copy.list'          { return (Copy-SPList @Params) }                # granular single list/library copy
 
 
         'provision.site'     { Confirm-Connected; return (New-SPSiteFromTemplate @Params) }
