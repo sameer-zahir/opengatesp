@@ -328,8 +328,8 @@ $script:XamlControls = @'
 
     <!-- Sidebar nav -->
     <Style x:Key="NavGroupHeader" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource FgFaint}"/>
-        <Setter Property="FontSize" Value="10.5"/>
+        <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
+        <Setter Property="FontSize" Value="11"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Margin" Value="14,2,0,6"/>
     </Style>
@@ -403,9 +403,9 @@ $script:XamlControls = @'
         <Setter Property="Margin" Value="0,8,0,0"/>
     </Style>
     <Style x:Key="CardMeta" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource FgFaint}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
         <Setter Property="FontFamily" Value="Consolas"/>
-        <Setter Property="FontSize" Value="11.5"/>
+        <Setter Property="FontSize" Value="12"/>
         <Setter Property="Margin" Value="0,12,0,0"/>
     </Style>
     <Style x:Key="Breadcrumb" TargetType="TextBlock">
@@ -414,7 +414,7 @@ $script:XamlControls = @'
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style x:Key="EmptyState" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource FgFaint}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
@@ -431,8 +431,8 @@ $script:XamlDark = @'
     <SolidColorBrush x:Key="BgElev" Color="#2A2E44"/>
     <SolidColorBrush x:Key="BgElev2" Color="#2F334D"/>
     <SolidColorBrush x:Key="Fg" Color="#C8D3F5"/>
-    <SolidColorBrush x:Key="FgMute" Color="#828BB8"/>
-    <SolidColorBrush x:Key="FgFaint" Color="#636DA6"/>
+    <SolidColorBrush x:Key="FgMute" Color="#9AA5D6"/>
+    <SolidColorBrush x:Key="FgFaint" Color="#8C95C6"/>
     <SolidColorBrush x:Key="Accent" Color="#82AAFF"/>
     <SolidColorBrush x:Key="AccentHover" Color="#A2BFFF"/>
     <SolidColorBrush x:Key="AccentFg" Color="#1B1D2B"/>
@@ -452,7 +452,7 @@ $script:XamlLight = @'
     <SolidColorBrush x:Key="BgElev2" Color="#EBDBB2"/>
     <SolidColorBrush x:Key="Fg" Color="#3C3836"/>
     <SolidColorBrush x:Key="FgMute" Color="#665C54"/>
-    <SolidColorBrush x:Key="FgFaint" Color="#A89984"/>
+    <SolidColorBrush x:Key="FgFaint" Color="#7C6F64"/>
     <SolidColorBrush x:Key="Accent" Color="#D65D0E"/>
     <SolidColorBrush x:Key="AccentHover" Color="#AF3A03"/>
     <SolidColorBrush x:Key="AccentFg" Color="#FFF8E8"/>
@@ -465,12 +465,62 @@ $script:XamlLight = @'
 </ResourceDictionary>
 '@
 
+$script:XamlFluentLight = @'
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="Bg" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="BgElev" Color="#F3F2F1"/>
+    <SolidColorBrush x:Key="BgElev2" Color="#E9E7E5"/>
+    <SolidColorBrush x:Key="Fg" Color="#1B1A19"/>
+    <SolidColorBrush x:Key="FgMute" Color="#5D5A58"/>
+    <SolidColorBrush x:Key="FgFaint" Color="#797775"/>
+    <SolidColorBrush x:Key="Accent" Color="#0078D4"/>
+    <SolidColorBrush x:Key="AccentHover" Color="#106EBE"/>
+    <SolidColorBrush x:Key="AccentFg" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Border" Color="#E1DFDD"/>
+    <SolidColorBrush x:Key="BorderStrong" Color="#C8C6C4"/>
+    <SolidColorBrush x:Key="Good" Color="#0E700E"/>
+    <SolidColorBrush x:Key="GoodFg" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Warn" Color="#8A6A00"/>
+    <SolidColorBrush x:Key="Danger" Color="#A4262C"/>
+</ResourceDictionary>
+'@
+
+$script:XamlFluentDark = @'
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="Bg" Color="#1F1F1F"/>
+    <SolidColorBrush x:Key="BgElev" Color="#2B2B2B"/>
+    <SolidColorBrush x:Key="BgElev2" Color="#383838"/>
+    <SolidColorBrush x:Key="Fg" Color="#F3F2F1"/>
+    <SolidColorBrush x:Key="FgMute" Color="#C8C6C4"/>
+    <SolidColorBrush x:Key="FgFaint" Color="#A5A3A1"/>
+    <SolidColorBrush x:Key="Accent" Color="#479EF5"/>
+    <SolidColorBrush x:Key="AccentHover" Color="#6CB2EE"/>
+    <SolidColorBrush x:Key="AccentFg" Color="#1B1A19"/>
+    <SolidColorBrush x:Key="Border" Color="#3B3A39"/>
+    <SolidColorBrush x:Key="BorderStrong" Color="#4F4D4B"/>
+    <SolidColorBrush x:Key="Good" Color="#6CCB5F"/>
+    <SolidColorBrush x:Key="GoodFg" Color="#1F1F1F"/>
+    <SolidColorBrush x:Key="Warn" Color="#FCD34D"/>
+    <SolidColorBrush x:Key="Danger" Color="#F1707B"/>
+</ResourceDictionary>
+'@
+
 function Read-Dict([string]$xaml) { [Windows.Markup.XamlReader]::Parse($xaml) }
+# Name -> theme dictionary XAML. Fluent Light is the default.
+$script:Themes = [ordered]@{
+    'Fluent Light' = $script:XamlFluentLight
+    'Fluent Dark'  = $script:XamlFluentDark
+    'Gruvbox'      = $script:XamlLight
+    'Tokyo Night'  = $script:XamlDark
+}
+
 function Get-GuiTheme {
+    $name = $null
     if (Test-Path -LiteralPath $script:GuiCfgPath) {
-        try { $t = (Get-Content -LiteralPath $script:GuiCfgPath -Raw | ConvertFrom-Json).Theme; if ($t) { return $t } } catch { }
+        try { $name = (Get-Content -LiteralPath $script:GuiCfgPath -Raw | ConvertFrom-Json).Theme } catch { }
     }
-    'Dark'
+    # Any unknown or legacy ('Light'/'Dark') value falls through to the new default.
+    if ($name -and $script:Themes.Contains($name)) { $name } else { 'Fluent Light' }
 }
 function Save-GuiTheme([string]$name) {
     $dir = Split-Path $script:GuiCfgPath -Parent
@@ -483,19 +533,30 @@ $window.Resources.MergedDictionaries.Add($script:Controls)
 $script:ThemeDict = $null
 
 function Set-Theme([string]$name) {
-    $xaml = if ($name -eq 'Light') { $script:XamlLight } else { $script:XamlDark }
-    $td = Read-Dict $xaml
+    if (-not $script:Themes.Contains($name)) { $name = 'Fluent Light' }
+    $td = Read-Dict $script:Themes[$name]
     $md = $window.Resources.MergedDictionaries
     if ($script:ThemeDict) { [void]$md.Remove($script:ThemeDict) }
     $md.Insert(0, $td)
     $script:ThemeDict    = $td
     $script:CurrentTheme = $name
-    $script:BtnTheme.Content = if ($name -eq 'Dark') { [char]0x2600 } else { [char]0x263E }
     Save-GuiTheme $name
 }
 
-Set-Theme (Get-GuiTheme)
-$script:BtnTheme.Add_Click({ Set-Theme $(if ($script:CurrentTheme -eq 'Dark') { 'Light' } else { 'Dark' }) })
+# Apply the saved (or default) theme, then wire the styled theme picker.
+$script:CurrentThemeName = Get-GuiTheme
+Set-Theme $script:CurrentThemeName
+$script:CbTheme.ItemsSource  = [string[]]@($script:Themes.Keys)
+$script:CbTheme.SelectedItem = $script:CurrentThemeName
+$script:CbTheme.Add_SelectionChanged({ if ($script:CbTheme.SelectedItem) { Set-Theme ([string]$script:CbTheme.SelectedItem) } })
+
+# Fluid scale: grow the content area modestly on wider windows (clamped, never shrinks below 1.0).
+function Update-UiScale {
+    if (-not $script:UiScale) { return }
+    $s = [Math]::Max(1.0, [Math]::Min(1.2, $window.ActualWidth / 1180))
+    $script:UiScale.ScaleX = $s; $script:UiScale.ScaleY = $s
+}
+$window.Add_SizeChanged({ Update-UiScale })
 
 # --- helpers ----------------------------------------------------------------------------
 function Set-Status([string]$text) { $script:StatusText.Text = $text }

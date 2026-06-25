@@ -4,7 +4,7 @@
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True" SnapsToDevicePixels="True"
         Background="{DynamicResource Bg}"
         TextElement.Foreground="{DynamicResource Fg}"
-        TextElement.FontFamily="Segoe UI" TextElement.FontSize="13">
+        TextElement.FontFamily="Segoe UI" TextElement.FontSize="14">
 
     <DockPanel>
         <!-- App bar -->
@@ -25,7 +25,7 @@
                             <TextBlock x:Name="ConnStatus" Text="Not connected" Style="{DynamicResource Muted}"/>
                         </StackPanel>
                     </Border>
-                    <Button x:Name="BtnTheme" Content="☾" Style="{DynamicResource ThemeToggle}" ToolTip="Toggle light / dark"/>
+                    <ComboBox x:Name="CbTheme" Width="148" VerticalAlignment="Center" ToolTip="Theme"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -54,8 +54,8 @@
                 <DockPanel Margin="12,16">
                     <StackPanel DockPanel.Dock="Bottom">
                         <RadioButton x:Name="NavConnect" GroupName="Nav" Content="Connect" Style="{DynamicResource NavButton}"/>
-                        <TextBlock Text="PowerShell · MCP · GUI" FontFamily="Consolas" FontSize="10.5"
-                                   Foreground="{DynamicResource FgFaint}" Margin="14,12,0,2"/>
+                        <TextBlock Text="PowerShell · MCP · GUI" FontFamily="Consolas" FontSize="11"
+                                   Foreground="{DynamicResource FgMute}" Margin="14,12,0,2"/>
                     </StackPanel>
                     <StackPanel>
                         <TextBlock Text="MIGRATION" Style="{DynamicResource NavGroupHeader}"/>
@@ -70,12 +70,14 @@
                 </DockPanel>
             </Border>
 
-            <!-- Content host -->
+            <!-- Content host (fluid-scaled, scrolls if a view overflows) -->
             <Grid Grid.Column="1" Background="{DynamicResource Bg}">
+              <ScrollViewer x:Name="ContentScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Grid x:Name="ContentRoot">
+                  <Grid.LayoutTransform><ScaleTransform x:Name="UiScale" ScaleX="1" ScaleY="1"/></Grid.LayoutTransform>
 
                 <!-- HOME -->
-                <ScrollViewer x:Name="ViewHome" VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="28,26">
+                <StackPanel x:Name="ViewHome" Margin="28,26">
                         <TextBlock Text="What do you want to do?" FontSize="22" FontWeight="Bold"
                                    Foreground="{DynamicResource Fg}"/>
                         <TextBlock Text="Free and open. Run it from this window, a PowerShell prompt, or an AI assistant over MCP — same engine behind all three."
@@ -117,8 +119,7 @@
                                 </StackPanel>
                             </Button>
                         </WrapPanel>
-                    </StackPanel>
-                </ScrollViewer>
+                </StackPanel>
 
                 <!-- CONNECT -->
                 <Grid x:Name="ViewConnect" Margin="28,26" Visibility="Collapsed">
@@ -400,6 +401,8 @@
                     <Grid/>
                 </DockPanel>
 
+                </Grid>
+              </ScrollViewer>
             </Grid>
         </Grid>
     </DockPanel>
