@@ -55,6 +55,8 @@ function Invoke-EngineCommand {
         'report.permissions' { Confirm-Connected; return (Get-SPPermissionReport @Params) }
         'report.inventory'   { Confirm-Connected; return (Get-SPSiteInventory @Params) }
         'migrate.files'      { Confirm-Connected; return (Start-SPFileMigration @Params) }
+        'precheck.readiness' { return (Test-SPMigrationReadiness @Params) }  # local scan, no connection
+
         'provision.site'     { Confirm-Connected; return (New-SPSiteFromTemplate @Params) }
         'bulk.metadata'      { Confirm-Connected; return (Set-SPBulkMetadata @Params) }
         default              { throw "Unknown command: $Command" }

@@ -5,7 +5,7 @@ import { EngineHost } from "./engine.js";
 
 const engine = new EngineHost();
 
-const server = new McpServer({ name: "opengatesp", version: "0.1.0" });
+const server = new McpServer({ name: "opengatesp", version: "0.2.0" });
 
 type ToolResult = {
   content: { type: "text"; text: string }[];
@@ -82,6 +82,26 @@ server.tool(
     if (execute === true) params.Force = true;
     else params.WhatIf = true;
     return run("migrate.files", params);
+  },
+);
+
+server.tool(
+  "sharepoint_precheck_migration",
+  "Pre-check a local folder for SharePoint blockers before migrating: illegal/reserved names, blocked file types, over-long projected URLs, oversized and empty files. Local and read-only; no connection needed. Returns issue rows graded Error/Warning.",
+  {
+    source: z.string().describe("Local folder to scan, e.g. C:\\Shares\\Marketing"),
+    siteUrl: z.string().url().optional().describe("Target site URL; when set, path-length checks use the full destination URL."),
+    library: z.string().optional().describe("Target library display name (default: Documents)."),
+    targetFolder: z.string().optional().describe("Sub-folder within the library."),
+    maxPathLength: z.number().int().positive().optional().describe("Projected URL length that triggers a flag (default 400)."),
+  },
+  async ({ source, siteUrl, library, targetFolder, maxPathLength }) => {
+    const params: Record<string, unknown> = { Source: source };
+    if (siteUrl) params.SiteUrl = siteUrl;
+    if (library) params.Library = library;
+    if (targetFolder) params.TargetFolder = targetFolder;
+    if (maxPathLength) params.MaxPathLength = maxPathLength;
+    return run("precheck.readiness", params);
   },
 );
 
