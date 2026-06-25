@@ -21,6 +21,13 @@ function Write-SPLog {
     $ts   = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
     $line = "[$ts] [$($Level.ToUpper())] $Message"
 
+    # Quiet mode (set by the MCP host): never write to the host/stdout — it would corrupt
+    # the JSON-lines protocol. Only file logging, if a log path is set.
+    if ($env:OPENGATESP_QUIET -eq '1') {
+        if ($LogPath) { try { Add-Content -LiteralPath $LogPath -Value $line -ErrorAction Stop } catch { } }
+        return
+    }
+
     try {
         switch ($Level) {
             'Warn'    { Write-Host $line -ForegroundColor Yellow }

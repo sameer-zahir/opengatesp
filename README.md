@@ -4,18 +4,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![PowerShell 7.4+](https://img.shields.io/badge/PowerShell-7.4%2B-5391FE?logo=powershell&logoColor=white)
 
-> **The free, open-source [ShareGate](https://sharegate.com) alternative** for SharePoint Online — **migrate** file shares into SharePoint, **audit** permissions and external sharing, and **provision** sites. A PowerShell engine + a Windows GUI (MCP server on the roadmap). MIT-licensed.
+> **The free, open-source [ShareGate](https://sharegate.com) alternative** for SharePoint Online — **migrate** file shares into SharePoint, **audit** permissions and external sharing, and **provision** sites. A PowerShell engine, a Windows GUI, and an MCP server for AI assistants. MIT-licensed.
 
-> **Status: v0.1.0 — early.** The engine (a PowerShell module) and the GUI ship first; an MCP server (so Claude / Codex / Gemini can drive it) is on the roadmap. Built as a real day-job utility for one enterprise tenant and open-sourced.
+> **Status: v0.1.0 — early.** Engine + GUI + MCP server all ship in this release. Built as a real day-job utility for one enterprise tenant and open-sourced.
 
 ## Why this exists
 
-ShareGate is, under the hood, *scripts behind a GUI* — and it costs thousands per year. OpenGateSP is those scripts, free and modern: one engine that does the migration, governance, and provisioning work, with a GUI on top and an AI-driven interface to come.
+ShareGate is, under the hood, *scripts behind a GUI* — and it costs thousands per year. OpenGateSP is those scripts, free and modern: one engine that does the migration, governance, and provisioning work — with a GUI on top and an AI-driven interface for assistants like Claude.
 
 ```
 PowerShell module (OpenGateSP)   ← the engine (built on PnP.PowerShell)
    ├── Windows GUI               ← loads the module, calls its functions
-   └── MCP server (roadmap)      ← exposes the same functions to Claude / Codex / Gemini
+   └── MCP server                ← exposes the same functions to Claude / Codex / Gemini
 ```
 
 ## What it does (v0.1.0)
@@ -29,7 +29,11 @@ PowerShell module (OpenGateSP)   ← the engine (built on PnP.PowerShell)
 | **Provisioning / bulk** | `New-SPSiteFromTemplate` | Create a site or library from a template spec |
 | | `Set-SPBulkMetadata` | CSV-driven bulk column updates across a list/library |
 
-Every function supports `-AsJson` for clean, structured output (the same contract the GUI and the future MCP server consume).
+Every function supports `-AsJson` for clean, structured output — the same contract the GUI and the MCP server consume.
+
+## Drive it from an AI assistant
+
+The [MCP server](mcp-server/) lets Claude / Codex / Gemini run OpenGateSP conversationally — *"show external sharing on /sites/Marketing"*, *"preview migrating C:\Shares\HR into the HR site"*. Write tools **preview by default** (an agent must opt in to actually change anything). Setup: [mcp-server/README.md](mcp-server/README.md).
 
 ## What it is — and isn't
 
@@ -61,23 +65,17 @@ Connect-SPTool -Url https://contoso.sharepoint.com -ClientId <clientId> -Tenant 
 Start-SPFileMigration -Source "C:\Shares\Marketing" -SiteUrl https://contoso.sharepoint.com/sites/Marketing -WhatIf
 ```
 
-Prefer a window? Launch the GUI:
-
-```powershell
-pwsh -STA -File ./gui/Start-OpenGateSPGui.ps1
-```
-
-Full walkthrough: [docs/03-quickstart.md](docs/03-quickstart.md).
+Prefer a window? `pwsh -STA -File ./gui/Start-OpenGateSPGui.ps1`. Full walkthrough: [docs/03-quickstart.md](docs/03-quickstart.md).
 
 ## Safety
 
 - **Delegated auth** — OpenGateSP can never exceed what your own account can already do in SharePoint.
-- **Write operations are cautious** — `Start-SPFileMigration`, `Set-SPBulkMetadata`, and `New-SPSiteFromTemplate` support `-WhatIf`/`-Confirm` and ask once before a real run. **Always test against a throwaway site before production.**
+- **Write operations are cautious** — `Start-SPFileMigration`, `Set-SPBulkMetadata`, and `New-SPSiteFromTemplate` support `-WhatIf`/`-Confirm` and ask once before a real run; the MCP write tools preview by default. **Always test against a throwaway site before production.**
 - No client secret exists in this setup, so there is nothing secret to leak. `spconfig.json` (your tenant/client id) is git-ignored.
 
 ## Roadmap
 
-MCP server (drive it from Claude / Codex / Gemini) · app-only certificate auth for scheduled/unattended runs · tenant-to-tenant and full-site migration · Teams/Group migration · PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
+App-only certificate auth for scheduled/unattended runs (also makes the MCP server fully headless) · tenant-to-tenant and full-site migration · Teams/Group migration · PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
 
 ## License
 

@@ -16,9 +16,13 @@ follow [Semantic Versioning](https://semver.org/).
   - `New-SPSiteFromTemplate` — create a site/library from a template spec.
   - `Set-SPBulkMetadata` — CSV-driven bulk column updates.
   - Shared `-AsJson` output contract, throttling/retry, and logging.
-- Entra app-registration, prerequisites, and quickstart docs.
-- PSScriptAnalyzer + Pester CI.
+- **GUI** — Windows WPF front end (`gui/Start-OpenGateSPGui.ps1`) with a background worker
+  runspace, Connect/Reports/Migrate/Provision tabs, and CSV/HTML export.
+- **MCP server** — TypeScript Model Context Protocol server (`mcp-server/`) exposing the
+  engine to AI assistants via a persistent `pwsh` host; write tools preview by default.
+- Entra app-registration, prerequisites, quickstart, and operations docs; runnable examples.
+- PSScriptAnalyzer + Pester + MCP-build CI.
 
 ### Planned
-- Windows WPF GUI over the engine.
-- TypeScript MCP server exposing the engine to AI assistants.
+- App-only certificate auth for unattended/scheduled runs (fully headless MCP).
+- Tenant-to-tenant and full-site migration; PowerShell Gallery publish. See docs/roadmap.md.

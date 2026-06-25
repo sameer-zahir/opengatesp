@@ -1,0 +1,30 @@
+{
+  "name": "opengatesp-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server for OpenGateSP — drive SharePoint migration, reporting and provisioning from Claude / Codex / Gemini.",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "bin": {
+    "opengatesp-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "engine-host.ps1"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.22.0",
+    "typescript": "^5.7.0"
+  }
+}

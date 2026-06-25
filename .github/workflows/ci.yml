@@ -23,7 +23,7 @@ jobs:
         shell: pwsh
         run: |
           $all = @()
-          foreach ($p in 'module', 'gui', 'scripts') {
+          foreach ($p in 'module', 'gui', 'scripts', 'mcp-server') {
             $all += Invoke-ScriptAnalyzer -Path "./$p" -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
           }
           if ($all) {
@@ -40,3 +40,16 @@ jobs:
           $cfg.Run.Exit = $true
           $cfg.Output.Verbosity = 'Detailed'
           Invoke-Pester -Configuration $cfg
+
+  mcp-server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build

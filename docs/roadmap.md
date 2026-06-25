@@ -1,13 +1,11 @@
 # Roadmap
 
-OpenGateSP v0.1.0 ships the engine (PowerShell module) + a Windows GUI. What's next, roughly in priority order:
+OpenGateSP v0.1.0 ships the engine (PowerShell module), a Windows GUI, and an MCP server. What's next, roughly in priority order:
 
 ## Next
-- **MCP server** — a TypeScript Model Context Protocol server that exposes each engine
-  function as a tool, so Claude / Codex / Gemini can run migrations and reports
-  conversationally. Cheap to build because every function already emits `-AsJson`.
 - **App-only certificate auth** — for unattended / scheduled runs (governance reports on a
-  timer) without an interactive sign-in.
+  timer) without an interactive sign-in. Also makes the MCP server fully headless (no
+  one-time browser sign-in).
 
 ## Later
 - **More migration types** — tenant-to-tenant, full site (lists + pages + navigation),
