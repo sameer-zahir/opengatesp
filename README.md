@@ -37,7 +37,7 @@ OpenGateSP doesn't (yet) match ShareGate's full migration surface — it nails t
 
 ## Light & dark, built in
 
-The GUI ships in warm **Gruvbox light** and deep **Tokyo Night Moon dark** (the [Squintless](https://github.com/sameer-zahir/squintless) palettes), with a one-click toggle.
+The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent dark and the warm **Gruvbox** / deep **Tokyo Night Moon** ([Squintless](https://github.com/sameer-zahir/squintless)) themes a click away in the picker.
 
 ![OpenGateSP light theme](docs/screenshot-light.png)
 
@@ -47,6 +47,7 @@ The GUI ships in warm **Gruvbox light** and deep **Tokyo Night Moon dark** (the 
 |---|---|---|
 | **Migration** | `Test-SPMigrationReadiness` | Pre-flight a local folder for SharePoint blockers (illegal names, over-long paths, oversized/empty files). Local, read-only. |
 | | `Start-SPFileMigration` | Local file share / folder → SharePoint library, preserving structure + timestamps. Dry-run by default. |
+| | `Copy-SPSite` | Copy a site's structure (lists, libraries, columns, views) and optionally its content to another site in the **same tenant**. Dry-run by default ([docs/07](docs/07-sharepoint-migration.md)). |
 | **Reporting** | `Get-SPSiteInventory` | Tenant-wide sites + storage + last activity |
 | | `Get-SPPermissionReport` | Who has access; where inheritance is broken |
 | | `Get-SPSharingReport` | External users and sharing links |
@@ -80,7 +81,7 @@ Full guide: [docs/03-quickstart.md](docs/03-quickstart.md) · setup: [docs/01](d
 
 ## Roadmap
 
-Tenant-to-tenant and full-site migration · Teams/Group migration · PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
+Same-tenant **site-to-site copy** has shipped (Phase 1). Next: permissions/mappings, **tenant-to-tenant**, **Teams + M365 Groups**, PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
 
 ## License
 

@@ -13,13 +13,23 @@ follow [Semantic Versioning](https://semver.org/).
 - **Scheduled governance reports** — `scripts/scheduled/Run-GovernanceReport.ps1` writes
   sharing/permission CSVs headless (app-only auth); `Register-GovernanceReportTask.ps1`
   schedules it; `Get-SPScheduledCommand` builds the command line. See [docs/06](docs/06-scheduled-reports.md).
-- **MCP** — `sharepoint_precheck_migration` tool for the pre-check.
+- **SharePoint → SharePoint site copy (ShareGate-parity, Phase 1)** — `Copy-SPSite` copies a
+  site's structure (lists, libraries, fields, content types, views, navigation, pages) and
+  optionally its content (items, plus files with their Created/Modified/Author timestamps) to
+  another site in the **same tenant**. Dry-run by default; conflict modes Replace / Skip /
+  KeepBoth / IfNewer; scope with `-Lists`. Same-tenant only this release — tenant-to-tenant,
+  permission/identity mapping, and version history are tracked milestones. See [docs/07](docs/07-sharepoint-migration.md).
+- **MCP** — `sharepoint_precheck_migration` (pre-check) and `sharepoint_copy_site`
+  (site copy, dry-run by default) tools.
 
 ### Changed
 - **GUI redesigned** — a left sidebar navigation grouped into Migration / Governance, a
-  card-based Home ("What do you want to do?"), a breadcrumb app bar, severity-coloured
-  pre-check results, empty states, a busy indicator, and a provisioning template/libraries
-  picker. Same engine and worker-runspace model underneath.
+  card-based Home ("What do you want to do?"), a breadcrumb app bar, a numbered **Copy site**
+  (source → destination → options → run) wizard, severity-coloured results, empty states, a
+  busy indicator, and a provisioning template/libraries picker. Now ships with a
+  **Microsoft Fluent**-style light theme by default (plus Fluent dark, Gruvbox, and Tokyo
+  Night Moon) in a theme picker, WCAG-AA-tuned contrast, and fluid window scaling. Same engine
+  and worker-runspace model underneath.
 
 ## [0.1.0]
 

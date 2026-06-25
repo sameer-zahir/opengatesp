@@ -61,6 +61,7 @@
                         <TextBlock Text="MIGRATION" Style="{DynamicResource NavGroupHeader}"/>
                         <RadioButton x:Name="NavHome"     GroupName="Nav" Content="Home"      Style="{DynamicResource NavButton}"/>
                         <RadioButton x:Name="NavMigrate"  GroupName="Nav" Content="Migrate"   Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavCopySite" GroupName="Nav" Content="Copy site" Style="{DynamicResource NavButton}"/>
                         <RadioButton x:Name="NavPreCheck" GroupName="Nav" Content="Pre-check" Style="{DynamicResource NavButton}"/>
                         <RadioButton x:Name="NavProvision" GroupName="Nav" Content="Provision" Style="{DynamicResource NavButton}"/>
                         <TextBlock Text="GOVERNANCE" Style="{DynamicResource NavGroupHeader}" Margin="14,18,0,6"/>
@@ -88,6 +89,13 @@
                                     <TextBlock Text="Migrate a file share" Style="{DynamicResource CardTitle}"/>
                                     <TextBlock Text="Move a folder tree into a SharePoint library, intact." Style="{DynamicResource CardBody}"/>
                                     <TextBlock Text="Files · Folders · Timestamps" Style="{DynamicResource CardMeta}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="CardCopySite" Style="{DynamicResource Card}" Width="300">
+                                <StackPanel>
+                                    <TextBlock Text="Copy a SharePoint site" Style="{DynamicResource CardTitle}"/>
+                                    <TextBlock Text="Copy a site's structure and content to another site in your tenant." Style="{DynamicResource CardBody}"/>
+                                    <TextBlock Text="Lists · Libraries · Files · Same tenant" Style="{DynamicResource CardMeta}"/>
                                 </StackPanel>
                             </Button>
                             <Button x:Name="CardPreCheck" Style="{DynamicResource Card}" Width="300">
@@ -199,6 +207,99 @@
                         <DataGrid x:Name="GridMig"/>
                         <TextBlock x:Name="EmptyMig" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
                                    Text="Pick a source folder and a site, then preview before you run."/>
+                    </Grid>
+                </DockPanel>
+
+                <!-- COPY SITE (SharePoint → SharePoint) -->
+                <DockPanel x:Name="ViewCopySite" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="Copy a SharePoint site" Style="{DynamicResource Section}" Margin="0,0,0,4"/>
+                    <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,0,0,18" TextWrapping="Wrap"
+                               MaxWidth="680" HorizontalAlignment="Left"
+                               Text="Copy a site's structure — lists, libraries, columns, content types, views — and optionally its items and files to another site in the same tenant. Preview the plan first; nothing is written until you run the copy."/>
+                    <Grid DockPanel.Dock="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Step 1 · Source -->
+                        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,4">
+                            <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Accent}">
+                                <TextBlock Text="1" Foreground="{DynamicResource AccentFg}" FontWeight="Bold" FontSize="12"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Source" Foreground="{DynamicResource Fg}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                            <TextBlock Text="the site to copy from" Style="{DynamicResource Muted}" Margin="10,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbCopySource"/>
+
+                        <!-- Step 2 · Destination -->
+                        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,16,0,4">
+                            <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Accent}">
+                                <TextBlock Text="2" Foreground="{DynamicResource AccentFg}" FontWeight="Bold" FontSize="12"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Destination" Foreground="{DynamicResource Fg}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                            <TextBlock Text="an existing site in the same tenant" Style="{DynamicResource Muted}" Margin="10,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbCopyDest"/>
+
+                        <!-- Step 3 · Options -->
+                        <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,16,0,4">
+                            <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Accent}">
+                                <TextBlock Text="3" Foreground="{DynamicResource AccentFg}" FontWeight="Bold" FontSize="12"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Options" Foreground="{DynamicResource Fg}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Lists (optional)" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
+                            <TextBox x:Name="TbCopyLists" Width="320"/>
+                            <TextBlock Text="comma-separated — blank copies every list and library" Style="{DynamicResource Muted}" Margin="12,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="On conflict" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
+                            <ComboBox x:Name="CbCopyConflict" Width="160" SelectedIndex="0">
+                                <ComboBoxItem Content="IfNewer"/>
+                                <ComboBoxItem Content="Skip"/>
+                                <ComboBoxItem Content="KeepBoth"/>
+                                <ComboBoxItem Content="Replace"/>
+                            </ComboBox>
+                            <CheckBox x:Name="CbCopyContent" Content="Include content (items + files)" Margin="18,6,0,6"/>
+                        </StackPanel>
+
+                        <!-- Step 4 · Run -->
+                        <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,16,0,4">
+                            <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Accent}">
+                                <TextBlock Text="4" Foreground="{DynamicResource AccentFg}" FontWeight="Bold" FontSize="12"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Preview, then copy" Foreground="{DynamicResource Fg}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                            <TextBlock Text="preview is a read-only pre-check — it writes nothing" Style="{DynamicResource Muted}" Margin="10,0,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal">
+                            <Button x:Name="BtnPreviewCopy" Content="Preview plan (WhatIf)" Style="{DynamicResource WarnButton}"/>
+                            <Button x:Name="BtnRunCopy"     Content="Copy site"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,16,0,0">
+                        <DataGrid x:Name="GridCopy"/>
+                        <TextBlock x:Name="EmptyCopy" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                   Text="Enter a source and destination site, then preview the plan before you copy."/>
                     </Grid>
                 </DockPanel>
 

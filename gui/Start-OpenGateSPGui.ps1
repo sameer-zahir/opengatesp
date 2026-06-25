@@ -323,6 +323,9 @@ $script:XamlControls = @'
         <Style.Triggers>
             <DataTrigger Binding="{Binding Severity}" Value="Error"><Setter Property="Foreground" Value="{DynamicResource Danger}"/></DataTrigger>
             <DataTrigger Binding="{Binding Severity}" Value="Warning"><Setter Property="Foreground" Value="{DynamicResource Warn}"/></DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="Error"><Setter Property="Foreground" Value="{DynamicResource Danger}"/></DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="Warning"><Setter Property="Foreground" Value="{DynamicResource Warn}"/></DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="Skipped"><Setter Property="Foreground" Value="{DynamicResource FgMute}"/></DataTrigger>
         </Style.Triggers>
     </Style>
 
@@ -738,6 +741,45 @@ function Invoke-Migration([bool]$Preview) {
 $script:BtnPreviewMig.Add_Click({ Invoke-Migration $true })
 $script:BtnRunMig.Add_Click({ Invoke-Migration $false })
 
+# --- Copy site (SharePoint → SharePoint) ------------------------------------------------
+function Invoke-CopySite([bool]$Preview) {
+    $src = $script:TbCopySource.Text.Trim()
+    $dst = $script:TbCopyDest.Text.Trim()
+    if (-not $src -or -not $dst) { Set-Status 'Source and destination site URLs are required.'; return }
+    if ($src.TrimEnd('/') -ieq $dst.TrimEnd('/')) { Set-Status 'Source and destination must be different sites.'; return }
+
+    $p = @{
+        SourceUrl      = $src
+        DestinationUrl = $dst
+        ConflictMode   = @('IfNewer', 'Skip', 'KeepBoth', 'Replace')[$script:CbCopyConflict.SelectedIndex]
+    }
+    if ($script:CbCopyContent.IsChecked) { $p.IncludeContent = $true }
+    $lists = $script:TbCopyLists.Text.Trim()
+    if ($lists) { $p.Lists = @($lists -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
+
+    if ($Preview) {
+        $p.WhatIf = $true
+        $script:CopyVerb = 'planned'
+    }
+    else {
+        $what = if ($p.IncludeContent) { 'structure + content' } else { 'structure' }
+        if (-not (Confirm-Action "Copy $what from`n$src`nto`n$dst ?`n`nRun a preview first if you haven't.")) { Set-Status 'Cancelled.'; return }
+        $p.Force = $true
+        $script:CopyVerb = 'copied'
+    }
+
+    Invoke-Worker -Command 'Copy-SPSite' -Parameters $p -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Copy failed: $err"; return }
+        $rows = @(Show-Grid $script:GridCopy $result $script:EmptyCopy)
+        $errs = @($rows | Where-Object Status -eq 'Error').Count
+        $tail = if ($errs) { " — $errs error(s), see ./logs" } else { ' — see ./logs for the transcript.' }
+        Set-Status "$($rows.Count) object(s) $($script:CopyVerb)$tail"
+    }
+}
+$script:BtnPreviewCopy.Add_Click({ Invoke-CopySite $true })
+$script:BtnRunCopy.Add_Click({ Invoke-CopySite $false })
+
 # --- Provision --------------------------------------------------------------------------
 $script:BtnCreateSite.Add_Click({
     $title = $script:TbSiteTitle.Text.Trim()
@@ -853,11 +895,11 @@ $script:BtnCreateSchedule.Add_Click({
 
 # --- navigation -------------------------------------------------------------------------
 $script:ViewMap = [ordered]@{
-    Home     = $script:ViewHome; Connect = $script:ViewConnect; Migrate = $script:ViewMigrate
+    Home     = $script:ViewHome; Connect = $script:ViewConnect; Migrate = $script:ViewMigrate; CopySite = $script:ViewCopySite
     PreCheck = $script:ViewPreCheck; Provision = $script:ViewProvision; Reports = $script:ViewReports; Scheduled = $script:ViewScheduled
 }
-$script:CrumbMap = @{ Home = 'Home'; Connect = 'Connect'; Migrate = 'Migrate'; PreCheck = 'Pre-check'; Provision = 'Provision'; Reports = 'Reports'; Scheduled = 'Scheduled' }
-$script:GroupMap = @{ Home = 'Migration'; Connect = 'Migration'; Migrate = 'Migration'; PreCheck = 'Migration'; Provision = 'Migration'; Reports = 'Governance'; Scheduled = 'Governance' }
+$script:CrumbMap = @{ Home = 'Home'; Connect = 'Connect'; Migrate = 'Migrate'; CopySite = 'Copy site'; PreCheck = 'Pre-check'; Provision = 'Provision'; Reports = 'Reports'; Scheduled = 'Scheduled' }
+$script:GroupMap = @{ Home = 'Migration'; Connect = 'Migration'; Migrate = 'Migration'; CopySite = 'Migration'; PreCheck = 'Migration'; Provision = 'Migration'; Reports = 'Governance'; Scheduled = 'Governance' }
 
 function Show-View([string]$name) {
     foreach ($entry in $script:ViewMap.GetEnumerator()) {
@@ -869,12 +911,14 @@ function Show-View([string]$name) {
 $script:NavHome.Add_Checked({ Show-View 'Home' })
 $script:NavConnect.Add_Checked({ Show-View 'Connect' })
 $script:NavMigrate.Add_Checked({ Show-View 'Migrate' })
+$script:NavCopySite.Add_Checked({ Show-View 'CopySite' })
 $script:NavPreCheck.Add_Checked({ Show-View 'PreCheck' })
 $script:NavProvision.Add_Checked({ Show-View 'Provision' })
 $script:NavReports.Add_Checked({ Show-View 'Reports' })
 $script:NavScheduled.Add_Checked({ Show-View 'Scheduled' })
 
 $script:CardMigrate.Add_Click({ $script:NavMigrate.IsChecked = $true })
+$script:CardCopySite.Add_Click({ $script:NavCopySite.IsChecked = $true })
 $script:CardPreCheck.Add_Click({ $script:NavPreCheck.IsChecked = $true })
 $script:CardReports.Add_Click({ $script:NavReports.IsChecked = $true })
 $script:CardProvision.Add_Click({ $script:NavProvision.IsChecked = $true })
