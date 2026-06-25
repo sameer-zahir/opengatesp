@@ -24,9 +24,9 @@ Import-Module ps2exe
 
 $exe = Join-Path $OutputDir 'OpenGateSP.exe'
 $params = @{
-    InputFile   = Join-Path $PSScriptRoot 'Launch.ps1'
+    InputFile   = Join-Path $PSScriptRoot 'ExeStub.ps1'
     OutputFile  = $exe
-    STA         = $true
+    NoConsole   = $true
     Title       = 'OpenGateSP'
     Product     = 'OpenGateSP'
     Description = 'Free, open-source ShareGate alternative for SharePoint Online'
