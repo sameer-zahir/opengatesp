@@ -17,6 +17,7 @@
         'Get-SPPermissionReport',
         'Get-SPSharingReport',
         'Start-SPFileMigration',
+        'Test-SPMigrationReadiness',
         'New-SPSiteFromTemplate',
         'Set-SPBulkMetadata'
     )
