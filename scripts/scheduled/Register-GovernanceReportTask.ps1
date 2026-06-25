@@ -44,4 +44,5 @@ if ($PSCmdlet.ShouldProcess($TaskName, "Register $Frequency scheduled task")) {
     Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
         -Description 'OpenGateSP unattended governance report' -Force | Out-Null
     Write-Host "Registered '$TaskName' ($Frequency at $At). Reports land in $OutDir."
+    [pscustomobject]@{ TaskName = $TaskName; Frequency = $Frequency; At = $At; OutDir = $OutDir }
 }

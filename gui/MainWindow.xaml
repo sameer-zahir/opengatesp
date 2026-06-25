@@ -1,42 +1,127 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="OpenGateSP" Height="760" Width="1140" MinWidth="900" MinHeight="560"
+        Title="OpenGateSP" Height="780" Width="1180" MinWidth="940" MinHeight="600"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True" SnapsToDevicePixels="True"
         Background="{DynamicResource Bg}"
         TextElement.Foreground="{DynamicResource Fg}"
         TextElement.FontFamily="Segoe UI" TextElement.FontSize="13">
 
     <DockPanel>
-        <!-- Header -->
-        <Border DockPanel.Dock="Top" Background="{DynamicResource BgElev}" Padding="20,13"
+        <!-- App bar -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource BgElev}" Padding="20,12"
                 BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="OpenGateSP" FontFamily="Consolas" FontSize="20" FontWeight="Bold"
-                               Foreground="{DynamicResource Accent}"/>
-                    <TextBlock Text="the free ShareGate alternative" Style="{DynamicResource Muted}"
-                               Margin="12,0,0,0"/>
+                    <TextBlock Text="OpenGateSP" FontFamily="Consolas" FontSize="19" FontWeight="Bold"
+                               Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
+                    <Border Width="1" Height="18" Background="{DynamicResource BorderStrong}" Margin="14,0"/>
+                    <TextBlock x:Name="Breadcrumb" Text="Migration  ›  Home" Style="{DynamicResource Breadcrumb}"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Ellipse x:Name="ConnDot" Width="9" Height="9" Fill="{DynamicResource Warn}"
-                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock x:Name="ConnStatus" Text="Not connected" Style="{DynamicResource Muted}" Margin="0,0,16,0"/>
+                    <Border Background="{DynamicResource BgElev2}" CornerRadius="20" Padding="11,5" Margin="0,0,12,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="ConnDot" Width="9" Height="9" Fill="{DynamicResource Warn}"
+                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock x:Name="ConnStatus" Text="Not connected" Style="{DynamicResource Muted}"/>
+                        </StackPanel>
+                    </Border>
                     <Button x:Name="BtnTheme" Content="☾" Style="{DynamicResource ThemeToggle}" ToolTip="Toggle light / dark"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- Status bar -->
-        <Border DockPanel.Dock="Bottom" Background="{DynamicResource BgElev}" Padding="20,9"
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource BgElev}" Padding="20,8"
                 BorderBrush="{DynamicResource Border}" BorderThickness="0,1,0,0">
-            <TextBlock x:Name="StatusText" Text="Ready." Style="{DynamicResource Muted}"/>
+            <DockPanel>
+                <ProgressBar x:Name="BusyBar" DockPanel.Dock="Right" Width="130" Height="3"
+                             IsIndeterminate="True" Visibility="Collapsed"
+                             Background="Transparent" Foreground="{DynamicResource Accent}" BorderThickness="0"/>
+                <TextBlock x:Name="StatusText" Text="Ready." Style="{DynamicResource Muted}"/>
+            </DockPanel>
         </Border>
 
-        <TabControl x:Name="Tabs">
+        <!-- Body: nav rail + content -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-            <!-- CONNECT -->
-            <TabItem Header="Connect">
-                <Grid Margin="24">
+            <!-- Nav rail -->
+            <Border Grid.Column="0" Background="{DynamicResource BgElev}"
+                    BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0">
+                <DockPanel Margin="12,16">
+                    <StackPanel DockPanel.Dock="Bottom">
+                        <RadioButton x:Name="NavConnect" GroupName="Nav" Content="Connect" Style="{DynamicResource NavButton}"/>
+                        <TextBlock Text="PowerShell · MCP · GUI" FontFamily="Consolas" FontSize="10.5"
+                                   Foreground="{DynamicResource FgFaint}" Margin="14,12,0,2"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="MIGRATION" Style="{DynamicResource NavGroupHeader}"/>
+                        <RadioButton x:Name="NavHome"     GroupName="Nav" Content="Home"      Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavMigrate"  GroupName="Nav" Content="Migrate"   Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavPreCheck" GroupName="Nav" Content="Pre-check" Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavProvision" GroupName="Nav" Content="Provision" Style="{DynamicResource NavButton}"/>
+                        <TextBlock Text="GOVERNANCE" Style="{DynamicResource NavGroupHeader}" Margin="14,18,0,6"/>
+                        <RadioButton x:Name="NavReports"   GroupName="Nav" Content="Reports"   Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavScheduled" GroupName="Nav" Content="Scheduled" Style="{DynamicResource NavButton}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Content host -->
+            <Grid Grid.Column="1" Background="{DynamicResource Bg}">
+
+                <!-- HOME -->
+                <ScrollViewer x:Name="ViewHome" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="28,26">
+                        <TextBlock Text="What do you want to do?" FontSize="22" FontWeight="Bold"
+                                   Foreground="{DynamicResource Fg}"/>
+                        <TextBlock Text="Free and open. Run it from this window, a PowerShell prompt, or an AI assistant over MCP — same engine behind all three."
+                                   Style="{DynamicResource Muted}" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left"/>
+                        <WrapPanel Margin="0,22,0,0">
+                            <Button x:Name="CardMigrate" Style="{DynamicResource Card}" Width="300">
+                                <StackPanel>
+                                    <TextBlock Text="Migrate a file share" Style="{DynamicResource CardTitle}"/>
+                                    <TextBlock Text="Move a folder tree into a SharePoint library, intact." Style="{DynamicResource CardBody}"/>
+                                    <TextBlock Text="Files · Folders · Timestamps" Style="{DynamicResource CardMeta}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="CardPreCheck" Style="{DynamicResource Card}" Width="300">
+                                <StackPanel>
+                                    <TextBlock Text="Pre-check a source" Style="{DynamicResource CardTitle}"/>
+                                    <TextBlock Text="Spot what SharePoint will reject before you copy." Style="{DynamicResource CardBody}"/>
+                                    <TextBlock Text="Long paths · Bad names · Big files" Style="{DynamicResource CardMeta}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="CardReports" Style="{DynamicResource Card}" Width="300">
+                                <StackPanel>
+                                    <TextBlock Text="Report on access" Style="{DynamicResource CardTitle}"/>
+                                    <TextBlock Text="See who can reach a site and where sharing leaks." Style="{DynamicResource CardBody}"/>
+                                    <TextBlock Text="External · Permissions · Inventory" Style="{DynamicResource CardMeta}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="CardProvision" Style="{DynamicResource Card}" Width="300">
+                                <StackPanel>
+                                    <TextBlock Text="Provision a site" Style="{DynamicResource CardTitle}"/>
+                                    <TextBlock Text="Create a site from a template and bulk-edit metadata." Style="{DynamicResource CardBody}"/>
+                                    <TextBlock Text="New site · Template · CSV metadata" Style="{DynamicResource CardMeta}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="CardScheduled" Style="{DynamicResource Card}" Width="300">
+                                <StackPanel>
+                                    <TextBlock Text="Schedule a report" Style="{DynamicResource CardTitle}"/>
+                                    <TextBlock Text="Drop governance reports on a cadence, no sign-in." Style="{DynamicResource CardBody}"/>
+                                    <TextBlock Text="Daily / Weekly · App-only auth" Style="{DynamicResource CardMeta}"/>
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- CONNECT -->
+                <Grid x:Name="ViewConnect" Margin="28,26" Visibility="Collapsed">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="150"/>
                         <ColumnDefinition Width="*"/>
@@ -47,69 +132,33 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="0" Grid.Column="1" x:Name="TbUrl"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Client ID" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbClientId"/>
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Tenant" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TbTenant"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Connect to SharePoint" Style="{DynamicResource Section}" Margin="0,0,0,12"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
+                    <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbUrl"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Client ID" VerticalAlignment="Center"/>
+                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TbClientId"/>
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Tenant" VerticalAlignment="Center"/>
+                    <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbTenant"/>
 
-                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
                         <CheckBox x:Name="CbAdmin"  Content="Admin centre (tenant-wide)"/>
                         <CheckBox x:Name="CbDevice" Content="Device-code sign-in"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                    <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
                         <Button x:Name="BtnConnect" Content="Connect"/>
                         <TextBlock Text="Saved defaults load automatically. Register an app first (docs/02)."
                                    Style="{DynamicResource Muted}" Margin="6,0,0,0"/>
                     </StackPanel>
                 </Grid>
-            </TabItem>
 
-            <!-- REPORTS -->
-            <TabItem Header="Reports">
-                <DockPanel Margin="24">
-                    <Grid DockPanel.Dock="Top">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Report" VerticalAlignment="Center"/>
-                        <ComboBox  Grid.Row="0" Grid.Column="1" x:Name="CbReport" SelectedIndex="0">
-                            <ComboBoxItem Content="Sharing (external users + links)"/>
-                            <ComboBoxItem Content="Permissions (who has access)"/>
-                            <ComboBoxItem Content="Site inventory (admin, tenant-wide)"/>
-                        </ComboBox>
-                        <Button Grid.Row="0" Grid.Column="2" x:Name="BtnRunReport" Content="Run report"/>
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
-                        <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbReportSite"/>
-
-                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
-                            <CheckBox x:Name="CbInclLists" Content="Include list permissions / sharing links"/>
-                            <Button x:Name="BtnExportCsv"  Content="Export CSV"  Style="{DynamicResource GoodButton}"/>
-                            <Button x:Name="BtnExportHtml" Content="Export HTML" Style="{DynamicResource GoodButton}"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <DataGrid x:Name="GridReport" Margin="0,14,0,0"/>
-                </DockPanel>
-            </TabItem>
-
-            <!-- MIGRATE -->
-            <TabItem Header="Migrate">
-                <DockPanel Margin="24">
+                <!-- MIGRATE -->
+                <DockPanel x:Name="ViewMigrate" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="Migrate a file share" Style="{DynamicResource Section}" Margin="0,0,0,12"/>
                     <Grid DockPanel.Dock="Top">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="150"/>
@@ -137,7 +186,7 @@
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="Target sub-folder" VerticalAlignment="Center"/>
                         <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbTargetFolder"/>
 
-                        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal">
                             <CheckBox x:Name="CbPreserve" Content="Preserve timestamps" IsChecked="True"/>
                             <CheckBox x:Name="CbOverwrite" Content="Overwrite existing"/>
                             <Button x:Name="BtnPreviewMig" Content="Preview (WhatIf)" Style="{DynamicResource WarnButton}"/>
@@ -145,13 +194,59 @@
                         </StackPanel>
                     </Grid>
 
-                    <DataGrid x:Name="GridMig" Margin="0,14,0,0"/>
+                    <Grid Margin="0,14,0,0">
+                        <DataGrid x:Name="GridMig"/>
+                        <TextBlock x:Name="EmptyMig" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                   Text="Pick a source folder and a site, then preview before you run."/>
+                    </Grid>
                 </DockPanel>
-            </TabItem>
 
-            <!-- PROVISION -->
-            <TabItem Header="Provision">
-                <DockPanel Margin="24">
+                <!-- PRE-CHECK -->
+                <DockPanel x:Name="ViewPreCheck" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="Pre-check a source" Style="{DynamicResource Section}" Margin="0,0,0,4"/>
+                    <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,0,0,12" TextWrapping="Wrap"
+                               Text="A local, read-only scan. Fix what shows up here and the migration runs clean."/>
+                    <Grid DockPanel.Dock="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Source folder" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="0" Grid.Column="1" x:Name="TbPreSource"/>
+                        <Button    Grid.Row="0" Grid.Column="2" x:Name="BtnBrowsePreSource" Content="Browse..." Style="{DynamicResource GhostButton}"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Target site (optional)" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbPreSite"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Library / max path" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
+                            <TextBox x:Name="TbPreLibrary" Width="200" Text="Documents"/>
+                            <TextBlock Text="Max path:" Style="{DynamicResource Muted}" Margin="12,0,8,0"/>
+                            <TextBox x:Name="TbPreMaxPath" Width="80" Text="400"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal">
+                            <Button x:Name="BtnRunPrecheck" Content="Run pre-check"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,14,0,0">
+                        <DataGrid x:Name="GridPrecheck"/>
+                        <TextBlock x:Name="EmptyPrecheck" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                   Text="Choose a folder and run the check. Clean folders come back empty."/>
+                    </Grid>
+                </DockPanel>
+
+                <!-- PROVISION -->
+                <DockPanel x:Name="ViewProvision" Margin="28,26" Visibility="Collapsed">
                     <Grid DockPanel.Dock="Top">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="150"/>
@@ -166,9 +261,10 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="Create a site" Style="{DynamicResource Section}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Create a site" Style="{DynamicResource Section}"/>
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="Title" VerticalAlignment="Center"/>
                         <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbSiteTitle"/>
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="Type" VerticalAlignment="Center"/>
@@ -178,28 +274,133 @@
                         </ComboBox>
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="Alias / URL" VerticalAlignment="Center"/>
                         <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbSiteAlias"/>
-                        <Button    Grid.Row="3" Grid.Column="2" x:Name="BtnCreateSite" Content="Create site"/>
 
-                        <TextBlock Grid.Row="4" Grid.Column="1" Text="Bulk metadata (CSV)" Style="{DynamicResource Section}" Margin="0,18,0,0"/>
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Site / List" VerticalAlignment="Center"/>
-                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
-                            <TextBox x:Name="TbBulkSite" Width="320"/>
-                            <TextBlock Text="List:" Style="{DynamicResource Muted}" Margin="12,0,8,0"/>
-                            <TextBox x:Name="TbBulkList" Width="160" Text="Documents"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Template (optional)" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="4" Grid.Column="1" x:Name="TbTemplatePath"/>
+                        <Button    Grid.Row="4" Grid.Column="2" x:Name="BtnBrowseTemplate" Content="Browse..." Style="{DynamicResource GhostButton}"/>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Libraries (optional)" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal">
+                            <TextBox x:Name="TbLibraries" Width="320"/>
+                            <TextBlock Text="comma-separated" Style="{DynamicResource Muted}" Margin="10,0,0,0"/>
+                            <Button x:Name="BtnCreateSite" Content="Create site" Margin="14,8,8,8"/>
                         </StackPanel>
-                        <TextBlock Grid.Row="6" Grid.Column="0" Text="CSV path" VerticalAlignment="Center"/>
-                        <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
-                            <TextBox x:Name="TbBulkCsv" Width="320"/>
-                            <Button x:Name="BtnBrowseCsv" Content="Browse..." Style="{DynamicResource GhostButton}"/>
-                            <Button x:Name="BtnPreviewBulk" Content="Preview (WhatIf)" Style="{DynamicResource WarnButton}"/>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Text="Bulk metadata (CSV)" Style="{DynamicResource Section}" Margin="0,18,0,0"/>
+                        <TextBlock Grid.Row="7" Grid.Column="0" Text="Site / List" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal">
+                            <TextBox x:Name="TbBulkSite" Width="300"/>
+                            <TextBlock Text="List:" Style="{DynamicResource Muted}" Margin="12,0,8,0"/>
+                            <TextBox x:Name="TbBulkList" Width="150" Text="Documents"/>
+                            <TextBox x:Name="TbBulkCsv" Width="220" Margin="12,5,0,5"/>
+                            <Button x:Name="BtnBrowseCsv" Content="CSV..." Style="{DynamicResource GhostButton}"/>
+                            <Button x:Name="BtnPreviewBulk" Content="Preview" Style="{DynamicResource WarnButton}"/>
                             <Button x:Name="BtnRunBulk" Content="Apply"/>
                         </StackPanel>
                     </Grid>
 
-                    <DataGrid x:Name="GridProvision" Margin="0,14,0,0"/>
+                    <Grid Margin="0,14,0,0">
+                        <DataGrid x:Name="GridProvision"/>
+                        <TextBlock x:Name="EmptyProvision" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                   Text="Create a site or apply a CSV — results land here."/>
+                    </Grid>
                 </DockPanel>
-            </TabItem>
 
-        </TabControl>
+                <!-- REPORTS -->
+                <DockPanel x:Name="ViewReports" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="Report on access" Style="{DynamicResource Section}" Margin="0,0,0,12"/>
+                    <Grid DockPanel.Dock="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Report" VerticalAlignment="Center"/>
+                        <ComboBox  Grid.Row="0" Grid.Column="1" x:Name="CbReport" SelectedIndex="0">
+                            <ComboBoxItem Content="Sharing (external users + links)"/>
+                            <ComboBoxItem Content="Permissions (who has access)"/>
+                            <ComboBoxItem Content="Site inventory (admin, tenant-wide)"/>
+                        </ComboBox>
+                        <Button Grid.Row="0" Grid.Column="2" x:Name="BtnRunReport" Content="Run report"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbReportSite"/>
+
+                        <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal">
+                            <CheckBox x:Name="CbInclLists" Content="Include list permissions / sharing links"/>
+                            <Button x:Name="BtnExportCsv"  Content="Export CSV"  Style="{DynamicResource GoodButton}"/>
+                            <Button x:Name="BtnExportHtml" Content="Export HTML" Style="{DynamicResource GoodButton}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,14,0,0">
+                        <DataGrid x:Name="GridReport"/>
+                        <TextBlock x:Name="EmptyReport" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                   Text="Run a report to see who can reach a site."/>
+                    </Grid>
+                </DockPanel>
+
+                <!-- SCHEDULED -->
+                <DockPanel x:Name="ViewScheduled" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="Schedule a report" Style="{DynamicResource Section}" Margin="0,0,0,4"/>
+                    <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,0,0,12" TextWrapping="Wrap"
+                               Text="Build the command, then create a Windows task that runs it unattended. App-only auth (a certificate thumbprint) keeps it sign-in free."/>
+                    <Grid DockPanel.Dock="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="0" Grid.Column="1" x:Name="TbSchedSite"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Reports" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
+                            <CheckBox x:Name="CbSchedSharing" Content="Sharing" IsChecked="True"/>
+                            <CheckBox x:Name="CbSchedPerms"   Content="Permissions" IsChecked="True"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Output folder" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TbSchedOut" Text="C:\OpenGateSP\reports"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="When" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+                            <ComboBox x:Name="CbSchedFreq" Width="140" SelectedIndex="0">
+                                <ComboBoxItem Content="Daily"/>
+                                <ComboBoxItem Content="Weekly"/>
+                            </ComboBox>
+                            <TextBlock Text="at" Style="{DynamicResource Muted}" Margin="12,0,8,0"/>
+                            <TextBox x:Name="TbSchedAt" Width="90" Text="07:00"/>
+                            <TextBlock Text="Thumbprint:" Style="{DynamicResource Muted}" Margin="16,0,8,0"/>
+                            <TextBox x:Name="TbSchedThumb" Width="240"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
+                            <Button x:Name="BtnPreviewSchedule" Content="Build command" Style="{DynamicResource GhostButton}"/>
+                            <Button x:Name="BtnCreateSchedule"  Content="Create task"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBox x:Name="TbSchedCommand" DockPanel.Dock="Top" Margin="0,14,0,0" IsReadOnly="True"
+                             TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" MinHeight="80"
+                             VerticalScrollBarVisibility="Auto"/>
+                    <Grid/>
+                </DockPanel>
+
+            </Grid>
+        </Grid>
     </DockPanel>
 </Window>

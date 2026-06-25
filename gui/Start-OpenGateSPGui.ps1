@@ -22,6 +22,10 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $ModulePath) { $ModulePath = Join-Path (Split-Path $here -Parent) 'module\OpenGateSP\OpenGateSP.psd1' }
 if (-not (Test-Path -LiteralPath $ModulePath)) { throw "OpenGateSP module not found at $ModulePath" }
 
+# Scheduled-task command builder, shared with scripts/ and tests/ (pure, UI-thread safe).
+$schedHelper = Join-Path (Split-Path $here -Parent) 'scripts\scheduled\Get-SPScheduledCommand.ps1'
+if (Test-Path -LiteralPath $schedHelper) { . $schedHelper }
+
 # --- background worker runspace: holds the module + PnP connection ----------------------
 $script:Worker = [runspacefactory]::CreateRunspace()
 $script:Worker.ApartmentState = 'STA'
@@ -316,6 +320,107 @@ $script:XamlControls = @'
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Severity}" Value="Error"><Setter Property="Foreground" Value="{DynamicResource Danger}"/></DataTrigger>
+            <DataTrigger Binding="{Binding Severity}" Value="Warning"><Setter Property="Foreground" Value="{DynamicResource Warn}"/></DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Sidebar nav -->
+    <Style x:Key="NavGroupHeader" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FgFaint}"/>
+        <Setter Property="FontSize" Value="10.5"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="14,2,0,6"/>
+    </Style>
+    <Style x:Key="NavButton" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
+        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Margin" Value="0,1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid>
+                        <Border x:Name="bg" CornerRadius="8" Background="Transparent"/>
+                        <Border x:Name="bar" Width="3" HorizontalAlignment="Left" CornerRadius="2" Margin="0,7"
+                                Background="{DynamicResource Accent}" Visibility="Collapsed"/>
+                        <ContentPresenter Margin="16,9" VerticalAlignment="Center"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bg" Property="Background" Value="{DynamicResource BgElev2}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="bg" Property="Background" Value="{DynamicResource BgElev2}"/>
+                            <Setter TargetName="bar" Property="Visibility" Value="Visible"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Home cards -->
+    <Style x:Key="Card" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource BgElev}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Height" Value="150"/>
+        <Setter Property="Margin" Value="0,0,16,16"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="VerticalContentAlignment" Value="Top"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="cb" CornerRadius="14" Padding="18,16"
+                            Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                        <ContentPresenter VerticalAlignment="Top" HorizontalAlignment="Left"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="cb" Property="Background" Value="{DynamicResource BgElev2}"/>
+                            <Setter TargetName="cb" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="CardTitle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
+        <Setter Property="FontSize" Value="15.5"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+    <Style x:Key="CardBody" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
+        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Margin" Value="0,8,0,0"/>
+    </Style>
+    <Style x:Key="CardMeta" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FgFaint}"/>
+        <Setter Property="FontFamily" Value="Consolas"/>
+        <Setter Property="FontSize" Value="11.5"/>
+        <Setter Property="Margin" Value="0,12,0,0"/>
+    </Style>
+    <Style x:Key="Breadcrumb" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
+        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style x:Key="EmptyState" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FgFaint}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="MaxWidth" Value="380"/>
+        <Setter Property="TextAlignment" Value="Center"/>
     </Style>
 </ResourceDictionary>
 '@
@@ -395,10 +500,13 @@ $script:BtnTheme.Add_Click({ Set-Theme $(if ($script:CurrentTheme -eq 'Dark') { 
 # --- helpers ----------------------------------------------------------------------------
 function Set-Status([string]$text) { $script:StatusText.Text = $text }
 
-function Show-Grid($grid, $data) {
+function Show-Grid($grid, $data, $empty) {
     $arr = @($data)
     $grid.ItemsSource = $null
     if ($arr.Count -gt 0) { $grid.ItemsSource = $arr }
+    if ($empty) {
+        $empty.Visibility = if ($arr.Count -gt 0) { [System.Windows.Visibility]::Collapsed } else { [System.Windows.Visibility]::Visible }
+    }
     $arr
 }
 
@@ -432,6 +540,7 @@ function Invoke-Worker {
     )
     if ($script:Busy) { Set-Status 'Busy — wait for the current operation to finish.'; return }
     $script:Busy = $true
+    if ($script:BusyBar) { $script:BusyBar.Visibility = [System.Windows.Visibility]::Visible }
     Set-Status "Running $Command ..."
 
     $ps = [powershell]::Create()
@@ -458,6 +567,7 @@ function Invoke-Worker {
         }
         $st.Ps.Dispose()
         $script:Busy = $false
+        if ($script:BusyBar) { $script:BusyBar.Visibility = [System.Windows.Visibility]::Collapsed }
         & $st.OnDone $result $err
     })
     $timer.Start()
@@ -514,7 +624,7 @@ $script:BtnRunReport.Add_Click({
     Invoke-Worker -Command $cmd -Parameters $p -OnDone {
         param($result, $err)
         if ($err) { Set-Status "Report failed: $err"; return }
-        $script:LastReport = Show-Grid $script:GridReport $result
+        $script:LastReport = Show-Grid $script:GridReport $result $script:EmptyReport
         Set-Status "$($script:LastReport.Count) row(s)."
     }
 })
@@ -560,7 +670,7 @@ function Invoke-Migration([bool]$Preview) {
     Invoke-Worker -Command 'Start-SPFileMigration' -Parameters $p -OnDone {
         param($result, $err)
         if ($err) { Set-Status "Migration failed: $err"; return }
-        $rows = Show-Grid $script:GridMig $result
+        $rows = Show-Grid $script:GridMig $result $script:EmptyMig
         Set-Status "$($rows.Count) file row(s). See ./logs for the full transcript."
     }
 }
@@ -577,11 +687,14 @@ $script:BtnCreateSite.Add_Click({
 
     $p = @{ Title = $title; Type = $type }
     if ($type -eq 'TeamSite') { $p.Alias = $alias } else { $p.Url = $alias }
+    if ($script:TbTemplatePath.Text.Trim()) { $p.TemplatePath = $script:TbTemplatePath.Text.Trim() }
+    $libs = $script:TbLibraries.Text.Trim()
+    if ($libs) { $p.Libraries = @($libs -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
 
     Invoke-Worker -Command 'New-SPSiteFromTemplate' -Parameters $p -OnDone {
         param($result, $err)
         if ($err) { Set-Status "Create failed: $err"; return }
-        Show-Grid $script:GridProvision $result | Out-Null
+        Show-Grid $script:GridProvision $result $script:EmptyProvision | Out-Null
         Set-Status 'Site request submitted.'
     }
 })
@@ -604,12 +717,110 @@ function Invoke-Bulk([bool]$Preview) {
     Invoke-Worker -Command 'Set-SPBulkMetadata' -Parameters $p -OnDone {
         param($result, $err)
         if ($err) { Set-Status "Bulk update failed: $err"; return }
-        $rows = Show-Grid $script:GridProvision $result
+        $rows = Show-Grid $script:GridProvision $result $script:EmptyProvision
         Set-Status "$($rows.Count) item row(s)."
     }
 }
 $script:BtnPreviewBulk.Add_Click({ Invoke-Bulk $true })
 $script:BtnRunBulk.Add_Click({ Invoke-Bulk $false })
+
+# --- Provision: template picker ---------------------------------------------------------
+$script:BtnBrowseTemplate.Add_Click({ $f = Select-FilePath 'PnP templates (*.xml;*.pnp)|*.xml;*.pnp|All files (*.*)|*.*'; if ($f) { $script:TbTemplatePath.Text = $f } })
+
+# --- Pre-check --------------------------------------------------------------------------
+$script:BtnBrowsePreSource.Add_Click({ $f = Select-FolderPath; if ($f) { $script:TbPreSource.Text = $f } })
+$script:BtnRunPrecheck.Add_Click({
+    $src = $script:TbPreSource.Text.Trim()
+    if (-not $src) { Set-Status 'Choose a source folder to pre-check.'; return }
+    $p = @{ Source = $src }
+    if ($script:TbPreSite.Text.Trim())    { $p.SiteUrl = $script:TbPreSite.Text.Trim() }
+    if ($script:TbPreLibrary.Text.Trim()) { $p.Library = $script:TbPreLibrary.Text.Trim() }
+    $mp = 0
+    if ([int]::TryParse($script:TbPreMaxPath.Text.Trim(), [ref]$mp) -and $mp -gt 0) { $p.MaxPathLength = $mp }
+
+    Invoke-Worker -Command 'Test-SPMigrationReadiness' -Parameters $p -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Pre-check failed: $err"; return }
+        $rows = @(Show-Grid $script:GridPrecheck $result $script:EmptyPrecheck)
+        if ($rows.Count) {
+            $e = @($rows | Where-Object Severity -eq 'Error').Count
+            $w = @($rows | Where-Object Severity -eq 'Warning').Count
+            Set-Status "$($rows.Count) issue(s): $e error(s), $w warning(s)."
+        }
+        else {
+            $script:EmptyPrecheck.Text = 'No blockers found — this source is clear to migrate.'
+            Set-Status 'No blockers found — clear to migrate.'
+        }
+    }
+})
+
+# --- Scheduled reports ------------------------------------------------------------------
+function Get-SchedParams {
+    $reports = @()
+    if ($script:CbSchedSharing.IsChecked) { $reports += 'Sharing' }
+    if ($script:CbSchedPerms.IsChecked) { $reports += 'Permissions' }
+    $p = @{ SiteUrl = $script:TbSchedSite.Text.Trim(); Reports = $reports }
+    if ($script:TbSchedOut.Text.Trim())   { $p.OutDir = $script:TbSchedOut.Text.Trim() }
+    if ($script:TbSchedThumb.Text.Trim()) { $p.Thumbprint = $script:TbSchedThumb.Text.Trim() }
+    if ($script:TbClientId.Text.Trim())   { $p.ClientId = $script:TbClientId.Text.Trim() }
+    if ($script:TbTenant.Text.Trim())     { $p.Tenant = $script:TbTenant.Text.Trim() }
+    $p
+}
+$script:BtnPreviewSchedule.Add_Click({
+    if (-not (Get-Command Get-SPScheduledCommand -ErrorAction SilentlyContinue)) { Set-Status 'Scheduler helper not found (scripts/scheduled).'; return }
+    $p = Get-SchedParams
+    if (-not $p.SiteUrl) { Set-Status 'Enter a site URL to schedule.'; return }
+    if (-not $p.Reports.Count) { Set-Status 'Pick at least one report.'; return }
+    $script:TbSchedCommand.Text = (Get-SPScheduledCommand @p).CommandLine
+    Set-Status 'Command ready — copy it, or click Create task.'
+})
+$script:BtnCreateSchedule.Add_Click({
+    $p = Get-SchedParams
+    if (-not $p.SiteUrl) { Set-Status 'Enter a site URL to schedule.'; return }
+    if (-not $p.Reports.Count) { Set-Status 'Pick at least one report.'; return }
+    $freq = @('Daily', 'Weekly')[$script:CbSchedFreq.SelectedIndex]
+    $at = $script:TbSchedAt.Text.Trim(); if (-not $at) { $at = '07:00' }
+    if (-not (Confirm-Action "Create a $freq task to report on`n$($p.SiteUrl) at $at ?")) { Set-Status 'Cancelled.'; return }
+    $rp = $p.Clone(); $rp.Frequency = $freq; $rp.At = $at
+    $regScript = Join-Path (Split-Path $here -Parent) 'scripts\scheduled\Register-GovernanceReportTask.ps1'
+    Invoke-Worker -Command $regScript -Parameters $rp -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Schedule failed: $err"; return }
+        Set-Status "Scheduled task created ($($result.TaskName))."
+    }
+})
+
+# --- navigation -------------------------------------------------------------------------
+$script:ViewMap = [ordered]@{
+    Home     = $script:ViewHome; Connect = $script:ViewConnect; Migrate = $script:ViewMigrate
+    PreCheck = $script:ViewPreCheck; Provision = $script:ViewProvision; Reports = $script:ViewReports; Scheduled = $script:ViewScheduled
+}
+$script:CrumbMap = @{ Home = 'Home'; Connect = 'Connect'; Migrate = 'Migrate'; PreCheck = 'Pre-check'; Provision = 'Provision'; Reports = 'Reports'; Scheduled = 'Scheduled' }
+$script:GroupMap = @{ Home = 'Migration'; Connect = 'Migration'; Migrate = 'Migration'; PreCheck = 'Migration'; Provision = 'Migration'; Reports = 'Governance'; Scheduled = 'Governance' }
+
+function Show-View([string]$name) {
+    foreach ($entry in $script:ViewMap.GetEnumerator()) {
+        $entry.Value.Visibility = if ($entry.Key -eq $name) { [System.Windows.Visibility]::Visible } else { [System.Windows.Visibility]::Collapsed }
+    }
+    $script:Breadcrumb.Text = "$($script:GroupMap[$name])  ›  $($script:CrumbMap[$name])"
+}
+
+$script:NavHome.Add_Checked({ Show-View 'Home' })
+$script:NavConnect.Add_Checked({ Show-View 'Connect' })
+$script:NavMigrate.Add_Checked({ Show-View 'Migrate' })
+$script:NavPreCheck.Add_Checked({ Show-View 'PreCheck' })
+$script:NavProvision.Add_Checked({ Show-View 'Provision' })
+$script:NavReports.Add_Checked({ Show-View 'Reports' })
+$script:NavScheduled.Add_Checked({ Show-View 'Scheduled' })
+
+$script:CardMigrate.Add_Click({ $script:NavMigrate.IsChecked = $true })
+$script:CardPreCheck.Add_Click({ $script:NavPreCheck.IsChecked = $true })
+$script:CardReports.Add_Click({ $script:NavReports.IsChecked = $true })
+$script:CardProvision.Add_Click({ $script:NavProvision.IsChecked = $true })
+$script:CardScheduled.Add_Click({ $script:NavScheduled.IsChecked = $true })
+
+# Open on Home.
+$script:NavHome.IsChecked = $true
 
 # --- shutdown ---------------------------------------------------------------------------
 $window.Add_Closing({
