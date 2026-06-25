@@ -1,87 +1,87 @@
 # OpenGateSP
 
 [![CI](https://github.com/sameer-zahir/opengatesp/actions/workflows/ci.yml/badge.svg)](https://github.com/sameer-zahir/opengatesp/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sameer-zahir/opengatesp?color=82aaff)](https://github.com/sameer-zahir/opengatesp/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![PowerShell 7.4+](https://img.shields.io/badge/PowerShell-7.4%2B-5391FE?logo=powershell&logoColor=white)
 
-> **The free, open-source [ShareGate](https://sharegate.com) alternative** for SharePoint Online — **migrate** file shares into SharePoint, **audit** permissions and external sharing, and **provision** sites. A PowerShell engine, a Windows GUI, and an MCP server for AI assistants. MIT-licensed.
+> **The free, open-source [ShareGate](https://sharegate.com) alternative** for SharePoint Online and Microsoft 365 — **migrate** file shares into SharePoint, **audit** permissions and external sharing, and **provision** sites. A themed Windows app, a PowerShell engine, and an MCP server so your AI assistant can drive it. MIT-licensed.
 
-> **Status: v0.1.0 — early.** Engine + GUI + MCP server all ship in this release. Built as a real day-job utility for one enterprise tenant and open-sourced.
+![OpenGateSP — themed SharePoint admin GUI](docs/screenshot-dark.png)
 
-## Why this exists
+## Download & run (about 60 seconds)
 
-ShareGate is, under the hood, *scripts behind a GUI* — and it costs thousands per year. OpenGateSP is those scripts, free and modern: one engine that does the migration, governance, and provisioning work — with a GUI on top and an AI-driven interface for assistants like Claude.
+1. **[Download the latest release](https://github.com/sameer-zahir/opengatesp/releases/latest)** and unzip it.
+2. Double-click **`OpenGateSP.exe`** (or `Start-OpenGateSP.cmd`).
+3. On first run it installs the engine and shows you the one-time (free) Entra app registration, then opens the app.
 
-```
-PowerShell module (OpenGateSP)   ← the engine (built on PnP.PowerShell)
-   ├── Windows GUI               ← loads the module, calls its functions
-   └── MCP server                ← exposes the same functions to Claude / Codex / Gemini
-```
+> Needs **Windows + PowerShell 7.4+**. The `.exe` is an *unsigned* launcher, so Windows SmartScreen shows a one-time **"More info → Run anyway."** Prefer `Start-OpenGateSP.cmd` if you'd rather run the visible script — it's all open source.
+
+## OpenGateSP vs ShareGate
+
+ShareGate is, under the hood, scripts behind a GUI — and it costs thousands per year. OpenGateSP is those scripts, free and modern.
+
+| | ShareGate | OpenGateSP |
+|---|---|---|
+| **Price** | thousands / year | **Free (MIT)** |
+| File share / folder → SharePoint migration | ✅ | ✅ |
+| Permissions & external-sharing audit | ✅ | ✅ |
+| Site provisioning + CSV bulk metadata | ✅ | ✅ |
+| Drive it from an AI assistant (MCP) | — | **✅ built in** |
+| Open source you can read, fork, and own | — | **✅** |
+| Tenant-to-tenant, Teams, full content reorg | ✅ | on the roadmap |
+
+OpenGateSP doesn't (yet) match ShareGate's full migration surface — it nails the common 80%: file-share migration, governance reporting, and provisioning, free and scriptable.
+
+## Light & dark, built in
+
+The GUI ships in warm **Gruvbox light** and deep **Tokyo Night Moon dark** (the [Squintless](https://github.com/sameer-zahir/squintless) palettes), with a one-click toggle.
+
+![OpenGateSP light theme](docs/screenshot-light.png)
 
 ## What it does (v0.1.0)
 
 | Area | Function | What it does |
 |---|---|---|
-| **Migration** | `Start-SPFileMigration` | Local file share / folder → SharePoint library, preserving folder structure and timestamps. Dry-run by default. |
-| **Reporting / governance** | `Get-SPSiteInventory` | Sites + storage + last activity (tenant-wide) |
-| | `Get-SPPermissionReport` | Who has access to a site/library, and where inheritance is broken |
+| **Migration** | `Start-SPFileMigration` | Local file share / folder → SharePoint library, preserving structure + timestamps. Dry-run by default. |
+| **Reporting** | `Get-SPSiteInventory` | Tenant-wide sites + storage + last activity |
+| | `Get-SPPermissionReport` | Who has access; where inheritance is broken |
 | | `Get-SPSharingReport` | External users and sharing links |
-| **Provisioning / bulk** | `New-SPSiteFromTemplate` | Create a site or library from a template spec |
-| | `Set-SPBulkMetadata` | CSV-driven bulk column updates across a list/library |
+| **Provisioning** | `New-SPSiteFromTemplate` | Create a site or library from a template |
+| | `Set-SPBulkMetadata` | CSV-driven bulk column updates |
 
-Every function supports `-AsJson` for clean, structured output — the same contract the GUI and the MCP server consume.
+Same engine, three ways to use it: the **GUI**, the **PowerShell** module, or the **MCP server**.
 
 ## Drive it from an AI assistant
 
-The [MCP server](mcp-server/) lets Claude / Codex / Gemini run OpenGateSP conversationally — *"show external sharing on /sites/Marketing"*, *"preview migrating C:\Shares\HR into the HR site"*. Write tools **preview by default** (an agent must opt in to actually change anything). Setup: [mcp-server/README.md](mcp-server/README.md).
+The [MCP server](mcp-server/) lets Claude / Codex / Gemini run OpenGateSP conversationally — *"show external sharing on /sites/Marketing"*, *"preview migrating C:\Shares\HR into the HR site."* Write tools preview by default. Setup: [mcp-server/README.md](mcp-server/README.md).
 
-## What it is — and isn't
-
-- **It is:** a toolkit you run against *your own* tenant, with *your own* Entra ID app, bounded by *your own* permissions.
-- **It isn't:** a hosted service or a paid product with a support contract. There are already plenty of "SharePoint MCP servers" that let an AI *read files* — OpenGateSP does the migration and administration work that ShareGate actually charges for.
-
-## Requirements
-
-- **PowerShell 7.4+** (the GUI is Windows-only; the engine is cross-platform)
-- **[PnP.PowerShell](https://pnp.github.io/powershell/)** module
-- **Your own Entra ID app** — one command creates it (see [docs/02](docs/02-entra-app-registration.md))
-- For tenant-wide reports: the **SharePoint Administrator** role
-
-## Quickstart
+## Prefer the CLI?
 
 ```powershell
-# 1. Install the engine dependency
 Install-Module PnP.PowerShell -Scope CurrentUser
-
-# 2. Register your own Entra ID app (one time; opens a browser to consent)
 Register-PnPEntraIDAppForInteractiveLogin -ApplicationName "OpenGateSP" -Tenant contoso.onmicrosoft.com
-#    → note the ClientId it prints
-
-# 3. Import the module and connect (saves your defaults)
 Import-Module ./module/OpenGateSP/OpenGateSP.psd1
-Connect-SPTool -Url https://contoso.sharepoint.com -ClientId <clientId> -Tenant contoso.onmicrosoft.com -SaveConfig
-
-# 4. Preview a migration (nothing is written without -Confirm / removing -WhatIf)
-Start-SPFileMigration -Source "C:\Shares\Marketing" -SiteUrl https://contoso.sharepoint.com/sites/Marketing -WhatIf
+Connect-SPTool -Url https://contoso.sharepoint.com -ClientId <id> -Tenant contoso.onmicrosoft.com -SaveConfig
+Get-SPSharingReport -SiteUrl https://contoso.sharepoint.com/sites/Marketing
 ```
 
-Prefer a window? `pwsh -STA -File ./gui/Start-OpenGateSPGui.ps1`. Full walkthrough: [docs/03-quickstart.md](docs/03-quickstart.md).
+Full guide: [docs/03-quickstart.md](docs/03-quickstart.md) · setup: [docs/01](docs/01-prerequisites.md), [docs/02](docs/02-entra-app-registration.md), headless/scheduled: [docs/05](docs/05-app-only-auth.md).
 
 ## Safety
 
-- **Delegated auth** — OpenGateSP can never exceed what your own account can already do in SharePoint.
-- **Headless when you need it** — app-only certificate auth (`-Thumbprint`/`-CertificatePath`, [docs/05](docs/05-app-only-auth.md)) for scheduled jobs and a no-prompt MCP server.
-- **Write operations are cautious** — `Start-SPFileMigration`, `Set-SPBulkMetadata`, and `New-SPSiteFromTemplate` support `-WhatIf`/`-Confirm` and ask once before a real run; the MCP write tools preview by default. **Always test against a throwaway site before production.**
-- No client secret exists in this setup, so there is nothing secret to leak. `spconfig.json` (your tenant/client id) is git-ignored.
+- **Delegated auth** — the tool can never exceed your own SharePoint permissions. **App-only certificate** auth ([docs/05](docs/05-app-only-auth.md)) for headless / scheduled runs.
+- **Write operations are cautious** — migration, bulk metadata, and provisioning support `-WhatIf`/`-Confirm` and the MCP tools preview by default. **Test against a throwaway site before production.**
+- No client secret in the default setup, so there's nothing secret to leak.
 
 ## Roadmap
 
-Scheduled-report examples · tenant-to-tenant and full-site migration · Teams/Group migration · PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
+Tenant-to-tenant and full-site migration · Teams/Group migration · scheduled-report examples · PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
 
 ## License
 
-[MIT](LICENSE) — do whatever you want with it.
+[MIT](LICENSE).
 
 ---
 
-<sub>OpenGateSP is an independent open-source project and is not affiliated with or endorsed by ShareGate or Workleap. "ShareGate" is a trademark of its respective owner.</sub>
+<sub>OpenGateSP is an independent open-source project, not affiliated with or endorsed by ShareGate or Workleap. "ShareGate" is a trademark of its respective owner.</sub>
