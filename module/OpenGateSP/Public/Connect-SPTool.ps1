@@ -1,38 +1,49 @@
 function Connect-SPTool {
     <#
     .SYNOPSIS
-        Connect to SharePoint Online using your own registered Entra ID app
-        (interactive delegated auth by default).
+        Connect to SharePoint Online using your own registered Entra ID app — interactive
+        delegated auth by default, or app-only certificate auth for headless/unattended runs.
     .DESCRIPTION
-        Wraps Connect-PnPOnline. Since 2024-09-09 PnP.PowerShell requires your own
-        Entra ID app registration and a -ClientId (see docs/02-entra-app-registration.md).
-        Connection defaults (Url, ClientId, Tenant) can be saved with -SaveConfig and are
-        reused on later calls, so day-to-day you can just run `Connect-SPTool`.
+        Wraps Connect-PnPOnline. Since 2024-09-09 PnP.PowerShell requires your own Entra ID app
+        and a -ClientId. Connection defaults — including the auth mode — are saved with
+        -SaveConfig and reused on later calls, so day-to-day you can just run `Connect-SPTool`.
 
-        Delegated auth means the tool can never do more than the signed-in user is
-        already allowed to do in SharePoint.
+        - Delegated (default): the tool can never exceed the signed-in user's permissions.
+          See docs/02-entra-app-registration.md.
+        - App-only (-Thumbprint or -CertificatePath): no browser; for scheduled jobs and the
+          MCP server. See docs/05-app-only-auth.md.
     .PARAMETER Url
-        Site URL, e.g. https://contoso.sharepoint.com/sites/Team. If omitted, falls back
-        to saved config, or is derived from -Tenant (the root site).
+        Site URL. If omitted, falls back to saved config, or is derived from -Tenant.
     .PARAMETER ClientId
         Application (client) ID of your registered Entra ID app.
     .PARAMETER Tenant
         Tenant name, e.g. contoso.onmicrosoft.com.
     .PARAMETER Admin
-        Connect to the SharePoint admin centre (https://<tenant>-admin.sharepoint.com),
-        required for tenant-wide operations like Get-SPSiteInventory. Needs the
-        SharePoint Administrator role.
+        Connect to the SharePoint admin centre (needed for tenant-wide reports).
     .PARAMETER DeviceLogin
-        Use device-code flow instead of an interactive browser window (headless / SSH).
+        Delegated device-code flow instead of an interactive browser window.
+    .PARAMETER Thumbprint
+        App-only auth using a certificate (by thumbprint) from the certificate store.
+    .PARAMETER CertificatePath
+        App-only auth using a .pfx certificate file. The password is taken from
+        -CertificatePassword or the OPENGATESP_CERT_PASSWORD env var (never persisted).
+    .PARAMETER CertificatePassword
+        Password for the .pfx given by -CertificatePath.
     .PARAMETER SaveConfig
-        Persist Url/ClientId/Tenant to the user profile so future calls need no args.
+        Persist Url/ClientId/Tenant and the auth mode (and thumbprint/cert path, never the
+        password) so future calls — and the GUI/MCP server — reconnect with no arguments.
     .EXAMPLE
-        Connect-SPTool -Url https://contoso.sharepoint.com -ClientId 1111-2222 -Tenant contoso.onmicrosoft.com -SaveConfig
+        Connect-SPTool -Url https://contoso.sharepoint.com -ClientId 1111 -Tenant contoso.onmicrosoft.com -SaveConfig
+    .EXAMPLE
+        Connect-SPTool -Url https://contoso.sharepoint.com -ClientId 1111 -Tenant contoso.onmicrosoft.com -Thumbprint ABC123 -SaveConfig
+        App-only (headless) using a certificate from the store.
     .EXAMPLE
         Connect-SPTool -Admin
         Reconnect to the admin centre using saved defaults.
     #>
-    [CmdletBinding(DefaultParameterSetName = 'Interactive')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '',
+        Justification = 'Certificate password is supplied at runtime via env var for headless auth; never persisted.')]
+    [CmdletBinding()]
     [OutputType([pscustomobject])]
     param(
         [Parameter(Position = 0)]
@@ -44,8 +55,13 @@ function Connect-SPTool {
 
         [switch]$Admin,
 
-        [Parameter(ParameterSetName = 'DeviceLogin')]
         [switch]$DeviceLogin,
+
+        [string]$Thumbprint,
+
+        [string]$CertificatePath,
+
+        [securestring]$CertificatePassword,
 
         [switch]$SaveConfig
     )
@@ -56,7 +72,7 @@ function Connect-SPTool {
     if (-not $Url)      { $Url      = $cfg.Url }
 
     if (-not $ClientId) {
-        throw "No ClientId. Register an Entra ID app (docs/02-entra-app-registration.md), then pass -ClientId (optionally with -SaveConfig)."
+        throw "No ClientId. Register an Entra ID app (docs/02 for delegated, docs/05 for app-only), then pass -ClientId (optionally with -SaveConfig)."
     }
 
     # Derive the root site URL from the tenant when no URL is known yet.
@@ -71,16 +87,47 @@ function Connect-SPTool {
     $baseUrl    = $Url -replace '-admin\.sharepoint\.com', '.sharepoint.com'
     $connectUrl = if ($Admin) { $baseUrl -replace '\.sharepoint\.com', '-admin.sharepoint.com' } else { $Url }
 
-    $connectParams = @{ Url = $connectUrl; ClientId = $ClientId }
-    if ($Tenant)      { $connectParams['Tenant']      = $Tenant }
-    if ($DeviceLogin) { $connectParams['DeviceLogin'] = $true }
-    else              { $connectParams['Interactive'] = $true }
+    # App-only if cert args are given, or if no delegated flag is set and saved mode is AppOnly.
+    $useAppOnly = [bool]($Thumbprint -or $CertificatePath -or (-not $DeviceLogin -and $cfg.AuthMode -eq 'AppOnly'))
 
-    Write-SPLog "Connecting to $connectUrl ..."
-    Invoke-SPRetry -Operation 'connect' { Connect-PnPOnline @connectParams }
+    $p = @{ Url = $connectUrl; ClientId = $ClientId }
+    if ($Tenant) { $p['Tenant'] = $Tenant }
+
+    if ($useAppOnly) {
+        $tp = if ($Thumbprint)      { $Thumbprint }      else { $cfg.Thumbprint }
+        $cp = if ($CertificatePath) { $CertificatePath } else { $cfg.CertificatePath }
+        if ($tp) {
+            $p['Thumbprint'] = $tp
+        }
+        elseif ($cp) {
+            $p['CertificatePath'] = $cp
+            if ($CertificatePassword) {
+                $p['CertificatePassword'] = $CertificatePassword
+            }
+            elseif ($env:OPENGATESP_CERT_PASSWORD) {
+                $p['CertificatePassword'] = ConvertTo-SecureString $env:OPENGATESP_CERT_PASSWORD -AsPlainText -Force
+            }
+        }
+        else {
+            throw "App-only auth needs -Thumbprint or -CertificatePath (or saved app-only config). See docs/05-app-only-auth.md."
+        }
+        $mode = 'AppOnly'
+    }
+    else {
+        if ($DeviceLogin) { $p['DeviceLogin'] = $true } else { $p['Interactive'] = $true }
+        $mode = 'Delegated'
+    }
+
+    Write-SPLog "Connecting to $connectUrl ($mode) ..."
+    Invoke-SPRetry -Operation 'connect' { Connect-PnPOnline @p }
 
     if ($SaveConfig) {
-        Set-SPConfig -Settings @{ Url = $baseUrl; ClientId = $ClientId; Tenant = $Tenant } | Out-Null
+        $save = @{ Url = $baseUrl; ClientId = $ClientId; Tenant = $Tenant; AuthMode = $mode }
+        if ($mode -eq 'AppOnly') {
+            if ($Thumbprint)      { $save['Thumbprint']      = $Thumbprint }
+            if ($CertificatePath) { $save['CertificatePath'] = $CertificatePath }
+        }
+        Set-SPConfig -Settings $save | Out-Null
     }
 
     $web = $null
@@ -93,6 +140,7 @@ function Connect-SPTool {
         Title     = $web.Title
         ClientId  = $ClientId
         Tenant    = $Tenant
+        Mode      = $mode
         Admin     = [bool]$Admin
         Connected = $true
     }

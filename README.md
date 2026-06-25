@@ -70,12 +70,13 @@ Prefer a window? `pwsh -STA -File ./gui/Start-OpenGateSPGui.ps1`. Full walkthrou
 ## Safety
 
 - **Delegated auth** — OpenGateSP can never exceed what your own account can already do in SharePoint.
+- **Headless when you need it** — app-only certificate auth (`-Thumbprint`/`-CertificatePath`, [docs/05](docs/05-app-only-auth.md)) for scheduled jobs and a no-prompt MCP server.
 - **Write operations are cautious** — `Start-SPFileMigration`, `Set-SPBulkMetadata`, and `New-SPSiteFromTemplate` support `-WhatIf`/`-Confirm` and ask once before a real run; the MCP write tools preview by default. **Always test against a throwaway site before production.**
 - No client secret exists in this setup, so there is nothing secret to leak. `spconfig.json` (your tenant/client id) is git-ignored.
 
 ## Roadmap
 
-App-only certificate auth for scheduled/unattended runs (also makes the MCP server fully headless) · tenant-to-tenant and full-site migration · Teams/Group migration · PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
+Scheduled-report examples · tenant-to-tenant and full-site migration · Teams/Group migration · PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
 
 ## License
 

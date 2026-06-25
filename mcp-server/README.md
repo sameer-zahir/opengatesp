@@ -56,9 +56,10 @@ Then ask: *"Use OpenGateSP to show external sharing on https://contoso.sharepoin
 
 ## Auth & safety
 
-- **First SharePoint call opens a browser once** for interactive sign-in; the connection then
-  persists in the host process. (App-only certificate auth for fully headless runs is on the
-  [roadmap](../docs/roadmap.md).)
+- **Delegated:** the first SharePoint call opens a browser once; the connection then persists in
+  the host process.
+- **Headless:** configure app-only certificate auth ([docs/05](../docs/05-app-only-auth.md)) and
+  the server needs no sign-in at all.
 - **Delegated** — the agent can never exceed your own SharePoint permissions.
 - Engine host output is silenced (`OPENGATESP_QUIET`) so logging can't corrupt the protocol.
 - Override the PowerShell executable with the `OPENGATESP_PWSH` environment variable if needed.

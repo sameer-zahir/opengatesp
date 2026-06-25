@@ -1,18 +1,17 @@
 # Roadmap
 
-OpenGateSP v0.1.0 ships the engine (PowerShell module), a Windows GUI, and an MCP server. What's next, roughly in priority order:
+OpenGateSP v0.1.0 ships the engine (PowerShell module), a Windows GUI, an MCP server, and
+app-only certificate auth (headless/unattended). What's next, roughly in priority order:
 
 ## Next
-- **App-only certificate auth** — for unattended / scheduled runs (governance reports on a
-  timer) without an interactive sign-in. Also makes the MCP server fully headless (no
-  one-time browser sign-in).
+- **Scheduled reports** — a ready-made scheduled-task / cron example that drops a permissions or
+  sharing report to a library or email, using app-only auth (no sign-in).
+- **More provisioning templates** — a small library of common site/library templates.
 
 ## Later
 - **More migration types** — tenant-to-tenant, full site (lists + pages + navigation),
   and Teams/Microsoft 365 Group migration.
-- **Scheduled reports** — drop a permissions/sharing report to a library or email on a cron.
 - **PowerShell Gallery** — `Install-Module OpenGateSP`.
-- **More provisioning templates** — a small library of common site/library templates.
 
 ## Non-goals (for now)
 - A hosted SaaS or paid tier. OpenGateSP stays a tool you run against your own tenant.

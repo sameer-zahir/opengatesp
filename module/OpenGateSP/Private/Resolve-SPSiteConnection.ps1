@@ -26,13 +26,8 @@ function Resolve-SPSiteConnection {
         return $current   # already connected to the right site
     }
 
-    $cfg = Get-SPConfig
-    if (-not $cfg.ClientId) {
-        throw "No saved ClientId. Run 'Connect-SPTool -ClientId <id> -Tenant <t> -SaveConfig' once so functions can target any site by URL."
-    }
-
-    $p = @{ Url = $SiteUrl; ClientId = $cfg.ClientId; Interactive = $true }
-    if ($cfg.Tenant) { $p['Tenant'] = $cfg.Tenant }
+    # Reconnect to the requested site using saved config (delegated or app-only).
+    $p = Get-SPConnectParams -Url $SiteUrl
 
     Write-SPLog "Connecting to $SiteUrl ..."
     Invoke-SPRetry -Operation "connect $SiteUrl" { Connect-PnPOnline @p }

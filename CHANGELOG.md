@@ -21,8 +21,10 @@ follow [Semantic Versioning](https://semver.org/).
 - **MCP server** — TypeScript Model Context Protocol server (`mcp-server/`) exposing the
   engine to AI assistants via a persistent `pwsh` host; write tools preview by default.
 - Entra app-registration, prerequisites, quickstart, and operations docs; runnable examples.
+- **App-only certificate auth** — `Connect-SPTool -Thumbprint`/`-CertificatePath` for headless,
+  unattended runs (scheduled jobs, fully headless MCP). The auth mode persists in config; the
+  certificate password is read from `OPENGATESP_CERT_PASSWORD` and never saved.
 - PSScriptAnalyzer + Pester + MCP-build CI.
 
 ### Planned
-- App-only certificate auth for unattended/scheduled runs (fully headless MCP).
 - Tenant-to-tenant and full-site migration; PowerShell Gallery publish. See docs/roadmap.md.
