@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OpenGateSP.psm1'
-    ModuleVersion     = '0.2.0'
+    ModuleVersion     = '0.3.0'
     GUID              = 'a4d9b2e7-6c81-4f3a-9b5e-2f7c1d8e4a60'
     Author            = 'Sameer Zahir'
     CompanyName       = 'Sameer Zahir'
