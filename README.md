@@ -19,7 +19,7 @@
 
 ## OpenGateSP vs ShareGate
 
-ShareGate is, under the hood, scripts behind a GUI — and it costs thousands per year. OpenGateSP is those scripts, free and modern.
+ShareGate is a polished, expensive tool for work that ultimately comes down to SharePoint API calls anyone can script. OpenGateSP does that work with open PowerShell you can read and run yourself, for free. It's an independent project, built from scratch on [PnP PowerShell](https://pnp.github.io/powershell/) — not affiliated with ShareGate.
 
 | | ShareGate | OpenGateSP |
 |---|---|---|
