@@ -4,6 +4,7 @@
 BeforeAll {
     . (Join-Path $PSScriptRoot '..\module\OpenGateSP\Private\Select-SPEveryoneClaims.ps1')
     . (Join-Path $PSScriptRoot '..\module\OpenGateSP\Private\Select-SPOwnerlessGroups.ps1')
+    . (Join-Path $PSScriptRoot '..\module\OpenGateSP\Private\ConvertTo-SPExploreFinding.ps1')
 }
 
 Describe 'Select-SPEveryoneClaims' {
@@ -51,5 +52,19 @@ Describe 'Select-SPOwnerlessGroups' {
     }
     It 'handles an empty set' {
         @(Select-SPOwnerlessGroups -Group @()).Count | Should -Be 0
+    }
+}
+
+Describe 'Governance review normalization' {
+    It 'normalizes broad-access findings into graded review items' {
+        $broad = @(
+            [pscustomobject]@{ Claim = 'Everyone'; Scope = 'Site'; Location = 'Site'; Roles = 'Edit'; Severity = 'Error' }
+            [pscustomobject]@{ Claim = 'Everyone except external users'; Scope = 'List'; Location = 'Docs'; Roles = 'Read'; Severity = 'Warning' }
+        )
+        $f = @(ConvertTo-SPExploreFinding -Item $broad -Category 'Broad access (Everyone/EEEU)' -Severity 'Error' -ItemType 'Grant' -NameProperty 'Claim' -DetailProperty 'Roles')
+        $f.Count | Should -Be 2
+        $f[0].Category | Should -Be 'Broad access (Everyone/EEEU)'
+        $f[0].Severity | Should -Be 'Error'
+        ($f | Where-Object { $_.Name -eq 'Everyone' }).Detail | Should -Be 'Edit'
     }
 }

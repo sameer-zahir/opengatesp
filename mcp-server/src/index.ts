@@ -100,6 +100,17 @@ server.tool(
 );
 
 server.tool(
+  "sharepoint_governance_review",
+  "Consolidated read-only governance review of a site: broad-audience grants (Everyone/EEEU), external sharing, and orphaned/stale access in one severity-graded list. The 'Protect' companion to sharepoint_explore.",
+  {
+    siteUrl: z.string().url(),
+    includeListPermissions: z.boolean().optional().describe("Also scan lists/libraries with unique permissions."),
+  },
+  async ({ siteUrl, includeListPermissions }) =>
+    run("governance.review", { SiteUrl: siteUrl, IncludeListPermissions: includeListPermissions === true }),
+);
+
+server.tool(
   "sharepoint_explore",
   "Explore a SharePoint SOURCE site: a read-only, consolidated pre-migration assessment that surfaces blockers and review items (checked-out files, large files, external sharing, orphaned users, 2013 workflows) as one severity-graded list. The SharePoint-side companion to the local-folder pre-check.",
   {

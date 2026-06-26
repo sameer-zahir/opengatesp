@@ -990,6 +990,7 @@ $script:BtnRunReport.Add_Click({
         4 { $cmd = 'Get-SPOrphanedUsers';     $p = @{ SiteUrl = $site } }
         5 { $cmd = 'Find-SPEveryoneClaims';   $p = @{ SiteUrl = $site; IncludeListPermissions = $incl } }
         6 { $cmd = 'Get-SPOwnerlessGroups';   $p = @{} }
+        7 { $cmd = 'Invoke-SPGovernanceReview'; $p = @{ SiteUrl = $site; IncludeListPermissions = $incl } }
         default { return }
     }
     if ($cmd -ne 'Get-SPSiteInventory' -and -not $site) { Set-Status 'Enter a Site URL for this report.'; return }

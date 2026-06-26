@@ -20,6 +20,7 @@
         'Get-SPOrphanedUsers',
         'Find-SPEveryoneClaims',
         'Get-SPOwnerlessGroups',
+        'Invoke-SPGovernanceReview',
         'Set-SPSiteLifecycle',
         'Invoke-SPExplore',
         'Get-SPCheckedOutFiles',
