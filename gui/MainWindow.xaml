@@ -556,6 +556,7 @@
                             <ComboBoxItem Content="Permissions matrix (who can touch what)"/>
                             <ComboBoxItem Content="Orphaned users (stale access)"/>
                             <ComboBoxItem Content="Broad access — Everyone / EEEU"/>
+                            <ComboBoxItem Content="Ownerless M365 Groups"/>
                         </ComboBox>
                         <Button Grid.Row="0" Grid.Column="2" x:Name="BtnRunReport" Content="Run report"/>
 

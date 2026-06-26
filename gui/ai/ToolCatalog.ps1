@@ -51,6 +51,12 @@ function Get-SPAiToolCatalog {
             } }
         }
         @{
+            name = 'sharepoint_ownerless_groups'
+            description = 'Report Microsoft 365 Groups (and their Teams/sites) that have no owner — a governance risk. Read-only; needs Graph Group.Read.All.'
+            cmdlet = 'Get-SPOwnerlessGroups'; readOnly = $true
+            schema = @{ type = 'object'; required = @(); properties = [ordered]@{} }
+        }
+        @{
             name = 'sharepoint_explore'
             description = 'Explore a SharePoint source site: a read-only pre-migration assessment surfacing blockers and review items (checked-out files, large files, external sharing, orphaned users, 2013 workflows) as one severity-graded list.'
             cmdlet = 'Invoke-SPExplore'; readOnly = $true

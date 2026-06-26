@@ -3,6 +3,7 @@
 
 BeforeAll {
     . (Join-Path $PSScriptRoot '..\module\OpenGateSP\Private\Select-SPEveryoneClaims.ps1')
+    . (Join-Path $PSScriptRoot '..\module\OpenGateSP\Private\Select-SPOwnerlessGroups.ps1')
 }
 
 Describe 'Select-SPEveryoneClaims' {
@@ -30,5 +31,25 @@ Describe 'Select-SPEveryoneClaims' {
     It 'returns nothing for an empty or null set' {
         @(Select-SPEveryoneClaims -Assignment @()).Count | Should -Be 0
         @(Select-SPEveryoneClaims -Assignment $null).Count | Should -Be 0
+    }
+}
+
+Describe 'Select-SPOwnerlessGroups' {
+    It 'returns only groups with no owner' {
+        $groups = @(
+            [pscustomobject]@{ DisplayName = 'Marketing'; Mail = 'mktg@x.com'; Visibility = 'Private'; OwnerCount = 2 }
+            [pscustomobject]@{ DisplayName = 'Orphan A'; Mail = 'a@x.com'; Visibility = 'Public'; OwnerCount = 0 }
+            [pscustomobject]@{ DisplayName = 'Orphan B'; Mail = 'b@x.com'; Visibility = 'Private'; OwnerCount = 0 }
+        )
+        $o = @(Select-SPOwnerlessGroups -Group $groups)
+        $o.Count | Should -Be 2
+        ($o | Where-Object { $_.DisplayName -eq 'Orphan A' }).Severity | Should -Be 'Error'    # public
+        ($o | Where-Object { $_.DisplayName -eq 'Orphan B' }).Severity | Should -Be 'Warning'  # private
+    }
+    It 'returns nothing when every group has an owner' {
+        @(Select-SPOwnerlessGroups -Group @([pscustomobject]@{ DisplayName = 'X'; Visibility = 'Public'; OwnerCount = 1 })).Count | Should -Be 0
+    }
+    It 'handles an empty set' {
+        @(Select-SPOwnerlessGroups -Group @()).Count | Should -Be 0
     }
 }

@@ -19,6 +19,7 @@
         'Get-SPPermissionsMatrix',
         'Get-SPOrphanedUsers',
         'Find-SPEveryoneClaims',
+        'Get-SPOwnerlessGroups',
         'Set-SPSiteLifecycle',
         'Invoke-SPExplore',
         'Get-SPCheckedOutFiles',

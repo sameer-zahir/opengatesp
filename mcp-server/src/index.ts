@@ -93,6 +93,13 @@ server.tool(
 );
 
 server.tool(
+  "sharepoint_ownerless_groups",
+  "Report Microsoft 365 Groups (and the Teams/sites behind them) that have no owner — a governance risk. Read-only; needs Graph Group.Read.All. Ownerless public groups are graded Error, private ones Warning.",
+  {},
+  async () => run("governance.ownerless", {}),
+);
+
+server.tool(
   "sharepoint_explore",
   "Explore a SharePoint SOURCE site: a read-only, consolidated pre-migration assessment that surfaces blockers and review items (checked-out files, large files, external sharing, orphaned users, 2013 workflows) as one severity-graded list. The SharePoint-side companion to the local-folder pre-check.",
   {
