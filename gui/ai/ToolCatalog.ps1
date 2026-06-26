@@ -42,6 +42,15 @@ function Get-SPAiToolCatalog {
             } }
         }
         @{
+            name = 'sharepoint_everyone_claims'
+            description = "Find where 'Everyone' or 'Everyone except external users' (EEEU) has access on a site — the biggest oversharing risk. Read-only; grants are graded Error (writable) or Warning."
+            cmdlet = 'Find-SPEveryoneClaims'; readOnly = $true
+            schema = @{ type = 'object'; required = @('siteUrl'); properties = [ordered]@{
+                siteUrl                = @{ type = 'string'; description = 'Site URL' }
+                includeListPermissions = @{ type = 'boolean'; description = 'Also scan lists/libraries with unique permissions.' }
+            } }
+        }
+        @{
             name = 'sharepoint_explore'
             description = 'Explore a SharePoint source site: a read-only pre-migration assessment surfacing blockers and review items (checked-out files, large files, external sharing, orphaned users, 2013 workflows) as one severity-graded list.'
             cmdlet = 'Invoke-SPExplore'; readOnly = $true

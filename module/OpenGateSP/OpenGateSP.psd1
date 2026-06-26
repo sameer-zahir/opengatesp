@@ -18,6 +18,7 @@
         'Get-SPSharingReport',
         'Get-SPPermissionsMatrix',
         'Get-SPOrphanedUsers',
+        'Find-SPEveryoneClaims',
         'Set-SPSiteLifecycle',
         'Invoke-SPExplore',
         'Get-SPCheckedOutFiles',

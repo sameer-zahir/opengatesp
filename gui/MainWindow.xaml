@@ -555,6 +555,7 @@
                             <ComboBoxItem Content="Site inventory (admin, tenant-wide)"/>
                             <ComboBoxItem Content="Permissions matrix (who can touch what)"/>
                             <ComboBoxItem Content="Orphaned users (stale access)"/>
+                            <ComboBoxItem Content="Broad access — Everyone / EEEU"/>
                         </ComboBox>
                         <Button Grid.Row="0" Grid.Column="2" x:Name="BtnRunReport" Content="Run report"/>
 

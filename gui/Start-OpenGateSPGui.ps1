@@ -988,6 +988,7 @@ $script:BtnRunReport.Add_Click({
         2 { $cmd = 'Get-SPSiteInventory';     $p = @{ IncludeStorage = $true } }
         3 { $cmd = 'Get-SPPermissionsMatrix'; $p = @{ SiteUrl = $site; IncludeListPermissions = $incl } }
         4 { $cmd = 'Get-SPOrphanedUsers';     $p = @{ SiteUrl = $site } }
+        5 { $cmd = 'Find-SPEveryoneClaims';   $p = @{ SiteUrl = $site; IncludeListPermissions = $incl } }
         default { return }
     }
     if ($cmd -ne 'Get-SPSiteInventory' -and -not $site) { Set-Status 'Enter a Site URL for this report.'; return }
@@ -1337,17 +1338,42 @@ $script:WizStep = 1
 $script:WizPreviewHash = $null
 $script:Tasks = @()
 $script:RecentCopies = @()
+# Persist the task log + recent copies so the dashboard and the Tasks/Recent views survive restarts.
+$script:GuiStatePath = Join-Path $env:APPDATA 'OpenGateSP\gui-state.json'
+function Save-GuiState {
+    try {
+        $dir = Split-Path $script:GuiStatePath -Parent
+        if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        @{ Tasks = @($script:Tasks | Select-Object -First 50); RecentCopies = @($script:RecentCopies | Select-Object -First 50) } |
+            ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $script:GuiStatePath -Encoding utf8
+    }
+    catch { }
+}
+function Restore-GuiState {
+    if (-not (Test-Path -LiteralPath $script:GuiStatePath)) { return }
+    try {
+        $st = Get-Content -LiteralPath $script:GuiStatePath -Raw | ConvertFrom-Json
+        if ($st.Tasks) { $script:Tasks = @($st.Tasks) }
+        if ($st.RecentCopies) { $script:RecentCopies = @($st.RecentCopies) }
+    }
+    catch { }
+}
+Restore-GuiState
+Show-Grid $script:GridTasks $script:Tasks $script:EmptyTasks | Out-Null
+Show-Grid $script:GridRecent $script:RecentCopies $script:EmptyRecent | Out-Null
 $script:WizTitles = @{ structure = 'Structure & content'; structureonly = 'Structure only'; content = 'Content only'; list = 'A list or library' }
 
 function Add-TaskRow([string]$Operation, [string]$Target, [string]$Result) {
     $row = [pscustomobject]@{ Time = (Get-Date).ToString('HH:mm:ss'); Operation = $Operation; Target = $Target; Result = $Result }
     $script:Tasks = @($row) + @($script:Tasks)
     Show-Grid $script:GridTasks $script:Tasks $script:EmptyTasks | Out-Null
+    Save-GuiState
 }
 function Add-RecentCopy([string]$Result) {
     $row = [pscustomobject]@{ Type = $script:WizTitles[$script:CopyCtx.Type]; Source = $script:TbWizSource.Text.Trim(); Destination = $script:TbWizDest.Text.Trim(); Result = $Result; When = (Get-Date).ToString('g') }
     $script:RecentCopies = @($row) + @($script:RecentCopies)
     Show-Grid $script:GridRecent $script:RecentCopies $script:EmptyRecent | Out-Null
+    Save-GuiState
 }
 
 # --- dashboard (Home) -------------------------------------------------------------------
