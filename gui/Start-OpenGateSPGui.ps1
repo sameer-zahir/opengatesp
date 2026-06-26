@@ -1141,61 +1141,6 @@ function Invoke-Migration([bool]$Preview) {
 $script:BtnPreviewMig.Add_Click({ Invoke-Migration $true })
 $script:BtnRunMig.Add_Click({ Invoke-Migration $false })
 
-# --- Copy site (SharePoint → SharePoint) ------------------------------------------------
-function Invoke-CopySite([bool]$Preview) {
-    $src = $script:TbCopySource.Text.Trim()
-    $dst = $script:TbCopyDest.Text.Trim()
-    if (-not $src -or -not $dst) { Set-Status 'Source and destination site URLs are required.'; return }
-    if ($src.TrimEnd('/') -ieq $dst.TrimEnd('/')) { Set-Status 'Source and destination must be different sites.'; return }
-
-    $p = @{
-        SourceUrl      = $src
-        DestinationUrl = $dst
-        ConflictMode   = @('IfNewer', 'Skip', 'KeepBoth', 'Replace')[$script:CbCopyConflict.SelectedIndex]
-    }
-    if ($script:CbCopyContent.IsChecked)  { $p.IncludeContent = $true }
-    if ($script:CbCopyVersions.IsChecked) { $p.IncludeVersions = $true }
-    if ($script:CbCopyPerms.IsChecked)    { $p.CopyPermissions = $true }
-    $lists = $script:TbCopyLists.Text.Trim()
-    if ($lists) { $p.Lists = @($lists -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
-
-    if ($Preview) {
-        $p.WhatIf = $true
-        $script:CopyVerb = 'planned'
-    }
-    else {
-        $what = if ($p.IncludeContent) { 'structure + content' } else { 'structure' }
-        if (-not (Confirm-Action "Copy $what from`n$src`nto`n$dst ?`n`nRun a preview first if you haven't.")) { Set-Status 'Cancelled.'; return }
-        $p.Force = $true
-        $script:CopyVerb = 'copied'
-    }
-
-    Invoke-Worker -Command 'Copy-SPSite' -Parameters $p -OnDone {
-        param($result, $err)
-        if ($err) { Set-Status "Copy failed: $err"; return }
-        $rows = @(Show-Grid $script:GridCopy $result $script:EmptyCopy)
-        $errs = @($rows | Where-Object Status -eq 'Error').Count
-        $tail = if ($errs) { " — $errs error(s), see ./logs" } else { ' — see ./logs for the transcript.' }
-        Set-Status "$($rows.Count) object(s) $($script:CopyVerb)$tail"
-    }
-}
-$script:BtnPreviewCopy.Add_Click({ Invoke-CopySite $true })
-$script:BtnRunCopy.Add_Click({ Invoke-CopySite $false })
-$script:BtnValidateCopy.Add_Click({
-    $src = $script:TbCopySource.Text.Trim()
-    $dst = $script:TbCopyDest.Text.Trim()
-    if (-not $src -or -not $dst) { Set-Status 'Enter source and destination site URLs to validate.'; return }
-    $p = @{ SourceUrl = $src; DestinationUrl = $dst }
-    $listsText = $script:TbCopyLists.Text.Trim()
-    if ($listsText) { $p.Lists = @($listsText -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
-    Invoke-Worker -Command 'Compare-SPSite' -Parameters $p -OnDone {
-        param($result, $err)
-        if ($err) { Set-Status "Validate failed: $err"; return }
-        $rows = Show-Grid $script:GridCopy $result $script:EmptyCopy
-        Set-Status "$($rows.Count) object(s) compared."
-    }
-})
-
 # --- Provision --------------------------------------------------------------------------
 $script:BtnCreateSite.Add_Click({
     $title = $script:TbSiteTitle.Text.Trim()
@@ -1595,12 +1540,12 @@ $script:BtnCheckUpdates.Add_Click({
 $script:ViewMap = [ordered]@{
     Home = $script:ViewHome; AI = $script:ViewAI; Connect = $script:ViewConnect; Explore = $script:ViewExplore
     CopyLanding = $script:ViewCopyLanding; CopyWizard = $script:ViewCopyWizard
-    Migrate = $script:ViewMigrate; CopySite = $script:ViewCopySite; Collab = $script:ViewCollab
+    Migrate = $script:ViewMigrate; Collab = $script:ViewCollab
     PreCheck = $script:ViewPreCheck; Provision = $script:ViewProvision; Reports = $script:ViewReports
     Tasks = $script:ViewTasks; Scheduled = $script:ViewScheduled; Settings = $script:ViewSettings
 }
-$script:CrumbMap = @{ Home = 'Home'; AI = 'Assistant'; Connect = 'Connect'; Explore = 'Explore'; CopyLanding = 'Copy'; CopyWizard = 'Copy'; Migrate = 'Import file share'; CopySite = 'Copy site'; Collab = 'Teams & Groups'; PreCheck = 'Pre-check'; Provision = 'Provisioning'; Reports = 'Security'; Tasks = 'Tasks'; Scheduled = 'Scheduled'; Settings = 'Settings' }
-$script:GroupMap = @{ Home = 'Migration'; AI = 'Assistant'; Connect = 'Setup'; Explore = 'Migration'; CopyLanding = 'Migration'; CopyWizard = 'Migration'; Migrate = 'Migration'; CopySite = 'Migration'; Collab = 'Migration'; PreCheck = 'Migration'; Provision = 'Governance'; Reports = 'Migration'; Tasks = 'Activity'; Scheduled = 'Activity'; Settings = 'Setup' }
+$script:CrumbMap = @{ Home = 'Home'; AI = 'Assistant'; Connect = 'Connect'; Explore = 'Explore'; CopyLanding = 'Copy'; CopyWizard = 'Copy'; Migrate = 'Import file share'; Collab = 'Teams & Groups'; PreCheck = 'Pre-check'; Provision = 'Provisioning'; Reports = 'Security'; Tasks = 'Tasks'; Scheduled = 'Scheduled'; Settings = 'Settings' }
+$script:GroupMap = @{ Home = 'Migration'; AI = 'Assistant'; Connect = 'Setup'; Explore = 'Migration'; CopyLanding = 'Migration'; CopyWizard = 'Migration'; Migrate = 'Migration'; Collab = 'Migration'; PreCheck = 'Migration'; Provision = 'Governance'; Reports = 'Migration'; Tasks = 'Activity'; Scheduled = 'Activity'; Settings = 'Setup' }
 
 function Show-View([string]$name) {
     foreach ($entry in $script:ViewMap.GetEnumerator()) {
