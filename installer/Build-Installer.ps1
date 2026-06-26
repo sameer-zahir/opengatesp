@@ -32,8 +32,9 @@ if (-not $iscc) {
     throw "Inno Setup (ISCC.exe) not found. Install it once:  winget install JRSoftware.InnoSetup"
 }
 
-Write-Host "Compiling installer with $iscc ..." -ForegroundColor Cyan
-& $iscc (Join-Path $PSScriptRoot 'OpenGateSP.iss')
+$version = & (Join-Path $root 'tools\Get-OpenGateSPVersion.ps1')
+Write-Host "Compiling installer $version with $iscc ..." -ForegroundColor Cyan
+& $iscc "/DMyAppVersion=$version" (Join-Path $PSScriptRoot 'OpenGateSP.iss')
 $setup = Join-Path $root 'dist\OpenGateSP-Setup.exe'
 if (Test-Path -LiteralPath $setup) {
     Write-Host "Built $setup ($([Math]::Round((Get-Item $setup).Length/1mb,2)) MB)" -ForegroundColor Green

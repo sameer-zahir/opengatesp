@@ -56,6 +56,9 @@ function Invoke-EngineCommand {
         'report.inventory'   { Confirm-Connected; return (Get-SPSiteInventory @Params) }
         'report.matrix'      { Confirm-Connected; return (Get-SPPermissionsMatrix @Params) }
         'report.orphans'     { Confirm-Connected; return (Get-SPOrphanedUsers @Params) }
+        'governance.everyone' { Confirm-Connected; return (Find-SPEveryoneClaims @Params) }
+        'governance.ownerless' { Confirm-Connected; return (Get-SPOwnerlessGroups @Params) }
+        'governance.review'   { Confirm-Connected; return (Invoke-SPGovernanceReview @Params) }
         'explore.assess'     { Confirm-Connected; return (Invoke-SPExplore @Params) }
         'report.checkedout'  { Confirm-Connected; return (Get-SPCheckedOutFiles @Params) }
         'report.largefiles'  { Confirm-Connected; return (Get-SPLargeFiles @Params) }

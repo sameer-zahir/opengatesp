@@ -82,6 +82,35 @@ server.tool(
 );
 
 server.tool(
+  "sharepoint_everyone_claims",
+  "Find where 'Everyone' or 'Everyone except external users' (EEEU) has access on a SharePoint site — the biggest oversharing risk. Read-only; each grant is graded Error (allows writing) or Warning (read-only).",
+  {
+    siteUrl: z.string().url(),
+    includeListPermissions: z.boolean().optional().describe("Also scan lists/libraries with unique permissions."),
+  },
+  async ({ siteUrl, includeListPermissions }) =>
+    run("governance.everyone", { SiteUrl: siteUrl, IncludeListPermissions: includeListPermissions === true }),
+);
+
+server.tool(
+  "sharepoint_ownerless_groups",
+  "Report Microsoft 365 Groups (and the Teams/sites behind them) that have no owner — a governance risk. Read-only; needs Graph Group.Read.All. Ownerless public groups are graded Error, private ones Warning.",
+  {},
+  async () => run("governance.ownerless", {}),
+);
+
+server.tool(
+  "sharepoint_governance_review",
+  "Consolidated read-only governance review of a site: broad-audience grants (Everyone/EEEU), external sharing, and orphaned/stale access in one severity-graded list. The 'Protect' companion to sharepoint_explore.",
+  {
+    siteUrl: z.string().url(),
+    includeListPermissions: z.boolean().optional().describe("Also scan lists/libraries with unique permissions."),
+  },
+  async ({ siteUrl, includeListPermissions }) =>
+    run("governance.review", { SiteUrl: siteUrl, IncludeListPermissions: includeListPermissions === true }),
+);
+
+server.tool(
   "sharepoint_explore",
   "Explore a SharePoint SOURCE site: a read-only, consolidated pre-migration assessment that surfaces blockers and review items (checked-out files, large files, external sharing, orphaned users, 2013 workflows) as one severity-graded list. The SharePoint-side companion to the local-folder pre-check.",
   {

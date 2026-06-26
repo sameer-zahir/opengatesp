@@ -30,7 +30,9 @@
                             <TextBlock x:Name="ConnStatus" Text="Not connected" Style="{DynamicResource Muted}"/>
                         </StackPanel>
                     </Border>
-                    <Button x:Name="BtnSettings" Style="{DynamicResource ThemeToggle}" ToolTip="Settings"
+                    <Button x:Name="BtnHelp" Style="{DynamicResource ThemeToggle}" ToolTip="Help &amp; tour" AutomationProperties.Name="Help and tour"
+                            FontFamily="Segoe MDL2 Assets" Content="&#xE897;"/>
+                    <Button x:Name="BtnSettings" Style="{DynamicResource ThemeToggle}" ToolTip="Settings" AutomationProperties.Name="Settings"
                             FontFamily="Segoe MDL2 Assets" Content="&#xE713;"/>
                 </StackPanel>
             </Grid>
@@ -69,6 +71,9 @@
                         <RadioButton x:Name="NavHome" GroupName="Nav" Style="{DynamicResource NavButton}">
                             <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE80F;"/><TextBlock Text="Home" VerticalAlignment="Center"/></StackPanel>
                         </RadioButton>
+                        <RadioButton x:Name="NavAI" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE8BD;"/><TextBlock Text="Assistant" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
                         <TextBlock Text="MIGRATION" Style="{DynamicResource NavGroupHeader}" Margin="14,14,0,6"/>
                         <RadioButton x:Name="NavExplore" GroupName="Nav" Style="{DynamicResource NavButton}">
                             <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE721;"/><TextBlock Text="Explore" VerticalAlignment="Center"/></StackPanel>
@@ -105,11 +110,33 @@
 
                 <!-- HOME -->
                 <StackPanel x:Name="ViewHome" Margin="28,26">
-                        <TextBlock Text="What do you want to do?" FontSize="22" FontWeight="Bold"
-                                   Foreground="{DynamicResource Fg}"/>
-                        <TextBlock Text="Free and open. Run it from this window, a PowerShell prompt, or an AI assistant over MCP — same engine behind all three."
-                                   Style="{DynamicResource Muted}" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left"/>
-                        <WrapPanel Margin="0,22,0,0">
+                        <DockPanel>
+                            <Button x:Name="BtnDashRefresh" DockPanel.Dock="Right" Content="Refresh" Style="{DynamicResource GhostButton}" VerticalAlignment="Top"/>
+                            <StackPanel>
+                                <TextBlock Text="Your SharePoint at a glance" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                                <TextBlock x:Name="DashSubtitle" Text="Connect to your tenant to see this overview." Style="{DynamicResource Muted}" Margin="0,6,0,0" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <UniformGrid Rows="1" Columns="3" Margin="0,16,0,0" MaxWidth="640" HorizontalAlignment="Left">
+                            <Border Style="{DynamicResource KpiTile}">
+                                <StackPanel><TextBlock x:Name="KpiSites" Text="—" Style="{DynamicResource KpiNumber}"/><TextBlock Text="Site collections" Style="{DynamicResource KpiLabel}"/></StackPanel>
+                            </Border>
+                            <Border Style="{DynamicResource KpiTile}">
+                                <StackPanel><TextBlock x:Name="KpiStorage" Text="—" Style="{DynamicResource KpiNumber}"/><TextBlock Text="Storage (GB)" Style="{DynamicResource KpiLabel}"/></StackPanel>
+                            </Border>
+                            <Border Style="{DynamicResource KpiTile}">
+                                <StackPanel><TextBlock x:Name="KpiSharing" Text="—" Style="{DynamicResource KpiNumber}"/><TextBlock Text="External-sharing sites" Style="{DynamicResource KpiLabel}"/></StackPanel>
+                            </Border>
+                        </UniformGrid>
+                        <TextBlock Text="Recent activity" Style="{DynamicResource Section}" Margin="0,26,0,6"/>
+                        <Border CornerRadius="12" Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource Border}" BorderThickness="1" Padding="4" MaxWidth="640" HorizontalAlignment="Left">
+                            <Grid>
+                                <StackPanel x:Name="DashActivity"/>
+                                <TextBlock x:Name="DashActivityEmpty" Text="Your migrations and reports will show up here." Style="{DynamicResource Muted}" Margin="10,8"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock Text="Quick start" Style="{DynamicResource Section}" Margin="0,28,0,0"/>
+                        <WrapPanel Margin="0,12,0,0">
                             <Button x:Name="CardMigrate" Style="{DynamicResource Card}" Width="300">
                                 <StackPanel>
                                     <TextBlock Text="Migrate a file share" Style="{DynamicResource CardTitle}"/>
@@ -180,11 +207,11 @@
 
                     <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Connect to SharePoint" Style="{DynamicResource Section}" Margin="0,0,0,12"/>
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbUrl"/>
+                    <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbUrl" AutomationProperties.Name="Site URL"/>
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Client ID" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TbClientId"/>
+                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TbClientId" AutomationProperties.Name="Application (client) ID"/>
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Tenant" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbTenant"/>
+                    <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbTenant" AutomationProperties.Name="Tenant"/>
 
                     <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
                         <CheckBox x:Name="CbAdmin"  Content="Admin centre (tenant-wide)"/>
@@ -193,7 +220,7 @@
 
                     <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
                         <Button x:Name="BtnConnect" Content="Connect"/>
-                        <TextBlock Text="Saved defaults load automatically. Register an app first (docs/02)."
+                        <TextBlock Text="First time? The welcome screen's one-click sign-in sets this up. Saved defaults load automatically."
                                    Style="{DynamicResource Muted}" Margin="6,0,0,0"/>
                     </StackPanel>
                 </Grid>
@@ -240,102 +267,6 @@
                         <DataGrid x:Name="GridMig"/>
                         <TextBlock x:Name="EmptyMig" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
                                    Text="Pick a source folder and a site, then preview before you run."/>
-                    </Grid>
-                </DockPanel>
-
-                <!-- COPY SITE (SharePoint → SharePoint) -->
-                <DockPanel x:Name="ViewCopySite" Margin="28,26" Visibility="Collapsed">
-                    <TextBlock DockPanel.Dock="Top" Text="Copy a SharePoint site" Style="{DynamicResource Section}" Margin="0,0,0,4"/>
-                    <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,0,0,18" TextWrapping="Wrap"
-                               MaxWidth="680" HorizontalAlignment="Left"
-                               Text="Copy a site's structure — lists, libraries, columns, content types, views — and optionally its items and files to another site in the same tenant. Preview the plan first; nothing is written until you run the copy."/>
-                    <Grid DockPanel.Dock="Top">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Step 1 · Source -->
-                        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,4">
-                            <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Accent}">
-                                <TextBlock Text="1" Foreground="{DynamicResource AccentFg}" FontWeight="Bold" FontSize="12"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <TextBlock Text="Source" Foreground="{DynamicResource Fg}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                            <TextBlock Text="the site to copy from" Style="{DynamicResource Muted}" Margin="10,0,0,0"/>
-                        </StackPanel>
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
-                        <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbCopySource"/>
-
-                        <!-- Step 2 · Destination -->
-                        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,16,0,4">
-                            <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Accent}">
-                                <TextBlock Text="2" Foreground="{DynamicResource AccentFg}" FontWeight="Bold" FontSize="12"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <TextBlock Text="Destination" Foreground="{DynamicResource Fg}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                            <TextBlock Text="an existing site in the same tenant" Style="{DynamicResource Muted}" Margin="10,0,0,0"/>
-                        </StackPanel>
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
-                        <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbCopyDest"/>
-
-                        <!-- Step 3 · Options -->
-                        <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,16,0,4">
-                            <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Accent}">
-                                <TextBlock Text="3" Foreground="{DynamicResource AccentFg}" FontWeight="Bold" FontSize="12"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <TextBlock Text="Options" Foreground="{DynamicResource Fg}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        </StackPanel>
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Lists (optional)" VerticalAlignment="Center"/>
-                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
-                            <TextBox x:Name="TbCopyLists" Width="320"/>
-                            <TextBlock Text="comma-separated — blank copies every list and library" Style="{DynamicResource Muted}" Margin="12,0,0,0"/>
-                        </StackPanel>
-                        <TextBlock Grid.Row="6" Grid.Column="0" Text="On conflict" VerticalAlignment="Center"/>
-                        <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
-                            <ComboBox x:Name="CbCopyConflict" Width="160" SelectedIndex="0">
-                                <ComboBoxItem Content="IfNewer"/>
-                                <ComboBoxItem Content="Skip"/>
-                                <ComboBoxItem Content="KeepBoth"/>
-                                <ComboBoxItem Content="Replace"/>
-                            </ComboBox>
-                            <CheckBox x:Name="CbCopyContent" Content="Include content (items + files)" Margin="18,6,0,6"/>
-                            <CheckBox x:Name="CbCopyVersions" Content="Version history (experimental)" Margin="18,6,0,6"/>
-                            <CheckBox x:Name="CbCopyPerms" Content="Copy permissions" Margin="18,6,0,6"/>
-                        </StackPanel>
-
-                        <!-- Step 4 · Run -->
-                        <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,16,0,4">
-                            <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Accent}">
-                                <TextBlock Text="4" Foreground="{DynamicResource AccentFg}" FontWeight="Bold" FontSize="12"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <TextBlock Text="Preview, then copy" Foreground="{DynamicResource Fg}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                            <TextBlock Text="preview is a read-only pre-check — it writes nothing" Style="{DynamicResource Muted}" Margin="10,0,0,0"/>
-                        </StackPanel>
-                        <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal">
-                            <Button x:Name="BtnPreviewCopy" Content="Preview plan (WhatIf)" Style="{DynamicResource WarnButton}"/>
-                            <Button x:Name="BtnRunCopy"     Content="Copy site"/>
-                            <Button x:Name="BtnValidateCopy" Content="Validate copy" Style="{DynamicResource GhostButton}"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <Grid Margin="0,16,0,0">
-                        <DataGrid x:Name="GridCopy"/>
-                        <TextBlock x:Name="EmptyCopy" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
-                                   Text="Enter a source and destination site, then preview the plan before you copy."/>
                     </Grid>
                 </DockPanel>
 
@@ -528,6 +459,9 @@
                             <ComboBoxItem Content="Site inventory (admin, tenant-wide)"/>
                             <ComboBoxItem Content="Permissions matrix (who can touch what)"/>
                             <ComboBoxItem Content="Orphaned users (stale access)"/>
+                            <ComboBoxItem Content="Broad access — Everyone / EEEU"/>
+                            <ComboBoxItem Content="Ownerless M365 Groups"/>
+                            <ComboBoxItem Content="Governance review (all checks)"/>
                         </ComboBox>
                         <Button Grid.Row="0" Grid.Column="2" x:Name="BtnRunReport" Content="Run report"/>
 
@@ -923,6 +857,69 @@
                     </StackPanel>
                 </DockPanel>
 
+                <!-- ASSISTANT (bring-your-own-model AI) -->
+                <Grid x:Name="ViewAI" Margin="28,26" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="Assistant" Style="{DynamicResource Section}"/>
+                        <TextBlock Style="{DynamicResource Muted}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                   Text="Ask in plain English and the assistant uses your own AI to run OpenGateSP's reports for you. Bring your own model — a Claude or OpenAI key, or a local model (Ollama / LM Studio). Your key is encrypted on this PC and never leaves it except to your chosen provider."/>
+                    </StackPanel>
+
+                    <Border x:Name="AiConnectPanel" Grid.Row="1" CornerRadius="14" Padding="18,16" Margin="0,0,0,14"
+                            Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource Border}" BorderThickness="1" Effect="{DynamicResource ShadowSoft}">
+                        <StackPanel>
+                            <TextBlock Text="Connect your AI" Style="{DynamicResource CardTitle}"/>
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Provider" VerticalAlignment="Center"/>
+                                <ComboBox  Grid.Row="0" Grid.Column="1" x:Name="AiProvider" AutomationProperties.Name="AI provider"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Model" VerticalAlignment="Center"/>
+                                <TextBox   Grid.Row="1" Grid.Column="1" x:Name="AiModel" AutomationProperties.Name="AI model"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="API key" VerticalAlignment="Center"/>
+                                <PasswordBox Grid.Row="2" Grid.Column="1" x:Name="AiKey" AutomationProperties.Name="API key" Padding="9,7" Margin="0,5" FontSize="13"
+                                             Background="{DynamicResource BgElev}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource Border}" BorderThickness="1"/>
+                                <TextBlock x:Name="AiEndpointLabel" Grid.Row="3" Grid.Column="0" Text="Endpoint" VerticalAlignment="Center"/>
+                                <TextBox   x:Name="AiEndpoint" Grid.Row="3" Grid.Column="1" AutomationProperties.Name="AI endpoint"/>
+                            </Grid>
+                            <CheckBox x:Name="AiAllowWrites" Content="Allow write actions (always previewed first). Off = read-only." Margin="0,10,0,0"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <Button x:Name="AiTest" Content="Test" Style="{DynamicResource GhostButton}"/>
+                                <Button x:Name="AiSave" Content="Save"/>
+                                <TextBlock x:Name="AiCfgStatus" Style="{DynamicResource Muted}" Margin="8,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource Muted}" TextWrapping="Wrap" Margin="0,12,0,0"
+                                       Text="No key for local models — just start Ollama or LM Studio first. Already use an AI app? Add OpenGateSP to it:"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button x:Name="AiAddClaude" Content="Add to Claude Desktop" Style="{DynamicResource GhostButton}"/>
+                                <Button x:Name="AiHelpKey" Content="Where do I get a key?" Style="{DynamicResource GhostButton}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="2" CornerRadius="12" Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Border}" BorderThickness="1">
+                        <Grid>
+                            <ScrollViewer x:Name="AiScroll" VerticalScrollBarVisibility="Auto" Padding="14">
+                                <StackPanel x:Name="AiTranscript"/>
+                            </ScrollViewer>
+                            <TextBlock x:Name="AiEmpty" Style="{DynamicResource EmptyState}"
+                                       Text="Try: &quot;show external sharing on https://contoso.sharepoint.com/sites/Marketing&quot;, or &quot;explore the HR site for migration blockers.&quot;"/>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="3" Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox x:Name="AiInput" Grid.Column="0" AutomationProperties.Name="Ask the assistant"/>
+                        <Button x:Name="AiSend" Grid.Column="1" Content="Ask" Margin="8,5,0,5"/>
+                    </Grid>
+                </Grid>
+
                 </Grid>
               </ScrollViewer>
             </Grid>
@@ -932,6 +929,25 @@
     <!-- Toast overlay (top-right, above content) -->
     <StackPanel x:Name="ToastHost" HorizontalAlignment="Right" VerticalAlignment="Top"
                 Margin="0,66,18,0" Panel.ZIndex="100"/>
+
+    <!-- First-run guided tour (also reopen any time with the ? button) -->
+    <Grid x:Name="TourOverlay" Visibility="Collapsed" Panel.ZIndex="300" Background="#A6000000">
+        <Border Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1" CornerRadius="14"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Padding="30" MaxWidth="540" Effect="{DynamicResource ShadowMed}">
+            <StackPanel>
+                <TextBlock x:Name="TourTitle" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                <TextBlock x:Name="TourBody" TextWrapping="Wrap" Margin="0,12,0,0" FontSize="14" MinHeight="90" Foreground="{DynamicResource FgMute}"/>
+                <DockPanel Margin="0,22,0,0">
+                    <TextBlock x:Name="TourDots" DockPanel.Dock="Left" Style="{DynamicResource Muted}" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="TourSkip" Content="Skip" Style="{DynamicResource GhostButton}"/>
+                        <Button x:Name="TourBack" Content="Back" Style="{DynamicResource GhostButton}"/>
+                        <Button x:Name="TourNext" Content="Next"/>
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
 
     <!-- Keyboard shortcuts overlay (toggle with ?) -->
     <Grid x:Name="ShortcutsOverlay" Visibility="Collapsed" Panel.ZIndex="200" Background="#99000000">

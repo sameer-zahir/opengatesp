@@ -26,6 +26,11 @@ if (-not (Test-Path -LiteralPath $ModulePath)) { throw "OpenGateSP module not fo
 $schedHelper = Join-Path (Split-Path $here -Parent) 'scripts\scheduled\Get-SPScheduledCommand.ps1'
 if (Test-Path -LiteralPath $schedHelper) { . $schedHelper }
 
+# Pure GUI helpers: app-id extraction + pre-connect validation (unit-tested in tests/Gui.Tests.ps1).
+. (Join-Path $here 'Common.ps1')
+# Motion primitives (reduced-motion aware). See ~/.claude/design-playbook.md.
+. (Join-Path $here 'Motion.ps1')
+
 # --- background worker runspace: holds the module + PnP connection ----------------------
 $script:Worker = [runspacefactory]::CreateRunspace()
 $script:Worker.ApartmentState = 'STA'
@@ -33,12 +38,15 @@ $script:Worker.ThreadOptions  = 'ReuseThread'
 $script:Worker.Open()
 $boot = [powershell]::Create()
 $boot.Runspace = $script:Worker
-$null = $boot.AddScript("Import-Module '$ModulePath' -Force -ErrorAction Stop").Invoke()
+$aiDir = Join-Path $here 'ai'
+$bootCmds = "Import-Module '$ModulePath' -Force -ErrorAction Stop`n" +
+    ". '$(Join-Path $aiDir 'ToolCatalog.ps1')'`n. '$(Join-Path $aiDir 'Providers.ps1')'`n. '$(Join-Path $aiDir 'AiClient.ps1')'"
+$null = $boot.AddScript($bootCmds).Invoke()
 $boot.Dispose()
 $script:Busy       = $false
 $script:LastReport = @()
 $script:LastExplore = @()
-$script:AppVersion = '0.10.0'
+$script:AppVersion = try { [string](Import-PowerShellDataFile -LiteralPath $ModulePath).ModuleVersion } catch { '0.10.0' }
 
 # --- load the window --------------------------------------------------------------------
 [xml]$xamlDoc = Get-Content -LiteralPath (Join-Path $here 'MainWindow.xaml') -Raw
@@ -131,6 +139,7 @@ $script:XamlControls = @'
         <Setter Property="Margin" Value="0"/>
     </Style>
     <Style TargetType="TextBox">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}"/>
         <Setter Property="Background" Value="{DynamicResource BgElev}"/>
         <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
         <Setter Property="CaretBrush" Value="{DynamicResource Fg}"/>
@@ -156,6 +165,7 @@ $script:XamlControls = @'
         </Setter>
     </Style>
     <Style TargetType="CheckBox">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
         <Setter Property="Margin" Value="0,6,18,6"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -188,6 +198,7 @@ $script:XamlControls = @'
         </Setter>
     </Style>
     <Style TargetType="ComboBox">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
         <Setter Property="Background" Value="{DynamicResource BgElev}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
@@ -260,6 +271,7 @@ $script:XamlControls = @'
         </Setter>
     </Style>
     <Style TargetType="TabItem">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="FontSize" Value="13"/>
@@ -404,7 +416,7 @@ $script:XamlControls = @'
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="cb" CornerRadius="14" Padding="18,16"
+                    <Border x:Name="cb" CornerRadius="14" Padding="18,16" Effect="{DynamicResource ShadowSoft}"
                             Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                         <ContentPresenter VerticalAlignment="Top" HorizontalAlignment="Left"/>
                     </Border>
@@ -449,94 +461,136 @@ $script:XamlControls = @'
         <Setter Property="MaxWidth" Value="380"/>
         <Setter Property="TextAlignment" Value="Center"/>
     </Style>
+    <!-- Numeric grid columns: right-aligned, tabular (monospaced) figures so digits line up -->
+    <Style x:Key="NumericCell" TargetType="TextBlock">
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="FontFamily" Value="Consolas"/>
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
+        <Setter Property="Padding" Value="0,0,8,0"/>
+    </Style>
+    <Style x:Key="NumericHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        <Setter Property="Padding" Value="11,7,8,7"/>
+    </Style>
+    <!-- Dashboard KPI tiles -->
+    <Style x:Key="KpiTile" TargetType="Border">
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="Background" Value="{DynamicResource BgElev}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="18,16"/>
+        <Setter Property="Margin" Value="0,0,12,0"/>
+        <Setter Property="Effect" Value="{DynamicResource ShadowSoft}"/>
+    </Style>
+    <Style x:Key="KpiNumber" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
+        <Setter Property="FontFamily" Value="Consolas"/>
+        <Setter Property="FontSize" Value="30"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
+    </Style>
+    <Style x:Key="KpiLabel" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Margin" Value="0,4,0,0"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
 </ResourceDictionary>
 '@
 
 $script:XamlDark = @'
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="Bg" Color="#222436"/>
-    <SolidColorBrush x:Key="BgElev" Color="#2A2E44"/>
-    <SolidColorBrush x:Key="BgElev2" Color="#2F334D"/>
+    <SolidColorBrush x:Key="Bg" Color="#1B1D2B"/>
+    <SolidColorBrush x:Key="BgElev" Color="#222436"/>
+    <SolidColorBrush x:Key="BgElev2" Color="#2A2E44"/>
     <SolidColorBrush x:Key="Fg" Color="#C8D3F5"/>
     <SolidColorBrush x:Key="FgMute" Color="#9AA5D6"/>
-    <SolidColorBrush x:Key="FgFaint" Color="#8C95C6"/>
+    <SolidColorBrush x:Key="FgFaint" Color="#828BB8"/>
     <SolidColorBrush x:Key="Accent" Color="#82AAFF"/>
     <SolidColorBrush x:Key="AccentHover" Color="#A2BFFF"/>
     <SolidColorBrush x:Key="AccentFg" Color="#1B1D2B"/>
-    <SolidColorBrush x:Key="Border" Color="#353A57"/>
-    <SolidColorBrush x:Key="BorderStrong" Color="#444A73"/>
+    <SolidColorBrush x:Key="Border" Color="#2F334D"/>
+    <SolidColorBrush x:Key="BorderStrong" Color="#3B4261"/>
     <SolidColorBrush x:Key="Good" Color="#C3E88D"/>
     <SolidColorBrush x:Key="GoodFg" Color="#1B1D2B"/>
     <SolidColorBrush x:Key="Warn" Color="#FFC777"/>
     <SolidColorBrush x:Key="WarnFg" Color="#1B1D2B"/>
     <SolidColorBrush x:Key="Danger" Color="#FF757F"/>
     <SolidColorBrush x:Key="DangerFg" Color="#1B1D2B"/>
+    <DropShadowEffect x:Key="ShadowSoft" Color="#05060E" BlurRadius="16" ShadowDepth="2" Direction="270" Opacity="0.55" RenderingBias="Quality"/>
+    <DropShadowEffect x:Key="ShadowMed" Color="#05060E" BlurRadius="26" ShadowDepth="5" Direction="270" Opacity="0.65" RenderingBias="Quality"/>
 </ResourceDictionary>
 '@
 
 $script:XamlLight = @'
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <SolidColorBrush x:Key="Bg" Color="#FBF1C7"/>
-    <SolidColorBrush x:Key="BgElev" Color="#F2E5BC"/>
-    <SolidColorBrush x:Key="BgElev2" Color="#EBDBB2"/>
+    <SolidColorBrush x:Key="BgElev" Color="#F0E0B0"/>
+    <SolidColorBrush x:Key="BgElev2" Color="#E6D2A0"/>
     <SolidColorBrush x:Key="Fg" Color="#3C3836"/>
     <SolidColorBrush x:Key="FgMute" Color="#665C54"/>
     <SolidColorBrush x:Key="FgFaint" Color="#7C6F64"/>
     <SolidColorBrush x:Key="Accent" Color="#D65D0E"/>
     <SolidColorBrush x:Key="AccentHover" Color="#AF3A03"/>
     <SolidColorBrush x:Key="AccentFg" Color="#FFF8E8"/>
-    <SolidColorBrush x:Key="Border" Color="#E6D9AD"/>
-    <SolidColorBrush x:Key="BorderStrong" Color="#D5C4A1"/>
+    <SolidColorBrush x:Key="Border" Color="#E0D0A0"/>
+    <SolidColorBrush x:Key="BorderStrong" Color="#CDBA90"/>
     <SolidColorBrush x:Key="Good" Color="#427B58"/>
     <SolidColorBrush x:Key="GoodFg" Color="#FFF8E8"/>
     <SolidColorBrush x:Key="Warn" Color="#B57614"/>
     <SolidColorBrush x:Key="WarnFg" Color="#FFF8E8"/>
     <SolidColorBrush x:Key="Danger" Color="#9D0006"/>
     <SolidColorBrush x:Key="DangerFg" Color="#FFF8E8"/>
+    <DropShadowEffect x:Key="ShadowSoft" Color="#3C2E14" BlurRadius="14" ShadowDepth="2" Direction="270" Opacity="0.13" RenderingBias="Quality"/>
+    <DropShadowEffect x:Key="ShadowMed" Color="#3C2E14" BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.18" RenderingBias="Quality"/>
 </ResourceDictionary>
 '@
 
 $script:XamlFluentLight = @'
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <SolidColorBrush x:Key="Bg" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="BgElev" Color="#F3F2F1"/>
-    <SolidColorBrush x:Key="BgElev2" Color="#E9E7E5"/>
+    <SolidColorBrush x:Key="BgElev" Color="#ECEEF1"/>
+    <SolidColorBrush x:Key="BgElev2" Color="#DBDFE6"/>
     <SolidColorBrush x:Key="Fg" Color="#1B1A19"/>
-    <SolidColorBrush x:Key="FgMute" Color="#5D5A58"/>
-    <SolidColorBrush x:Key="FgFaint" Color="#797775"/>
+    <SolidColorBrush x:Key="FgMute" Color="#585D64"/>
+    <SolidColorBrush x:Key="FgFaint" Color="#6E737A"/>
     <SolidColorBrush x:Key="Accent" Color="#0078D4"/>
     <SolidColorBrush x:Key="AccentHover" Color="#106EBE"/>
     <SolidColorBrush x:Key="AccentFg" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="Border" Color="#E1DFDD"/>
-    <SolidColorBrush x:Key="BorderStrong" Color="#C8C6C4"/>
+    <SolidColorBrush x:Key="Border" Color="#E1E4E9"/>
+    <SolidColorBrush x:Key="BorderStrong" Color="#C2C8D0"/>
     <SolidColorBrush x:Key="Good" Color="#0E700E"/>
     <SolidColorBrush x:Key="GoodFg" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="Warn" Color="#8A6A00"/>
     <SolidColorBrush x:Key="WarnFg" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="Danger" Color="#A4262C"/>
     <SolidColorBrush x:Key="DangerFg" Color="#FFFFFF"/>
+    <DropShadowEffect x:Key="ShadowSoft" Color="#1B2733" BlurRadius="14" ShadowDepth="2" Direction="270" Opacity="0.14" RenderingBias="Quality"/>
+    <DropShadowEffect x:Key="ShadowMed" Color="#1B2733" BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.20" RenderingBias="Quality"/>
 </ResourceDictionary>
 '@
 
 $script:XamlFluentDark = @'
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="Bg" Color="#1F1F1F"/>
-    <SolidColorBrush x:Key="BgElev" Color="#2B2B2B"/>
-    <SolidColorBrush x:Key="BgElev2" Color="#383838"/>
+    <SolidColorBrush x:Key="Bg" Color="#1C1C1C"/>
+    <SolidColorBrush x:Key="BgElev" Color="#282828"/>
+    <SolidColorBrush x:Key="BgElev2" Color="#363636"/>
     <SolidColorBrush x:Key="Fg" Color="#F3F2F1"/>
     <SolidColorBrush x:Key="FgMute" Color="#C8C6C4"/>
-    <SolidColorBrush x:Key="FgFaint" Color="#A5A3A1"/>
+    <SolidColorBrush x:Key="FgFaint" Color="#9D9B99"/>
     <SolidColorBrush x:Key="Accent" Color="#479EF5"/>
     <SolidColorBrush x:Key="AccentHover" Color="#6CB2EE"/>
     <SolidColorBrush x:Key="AccentFg" Color="#1B1A19"/>
-    <SolidColorBrush x:Key="Border" Color="#3B3A39"/>
-    <SolidColorBrush x:Key="BorderStrong" Color="#4F4D4B"/>
+    <SolidColorBrush x:Key="Border" Color="#333333"/>
+    <SolidColorBrush x:Key="BorderStrong" Color="#474747"/>
     <SolidColorBrush x:Key="Good" Color="#6CCB5F"/>
     <SolidColorBrush x:Key="GoodFg" Color="#1F1F1F"/>
     <SolidColorBrush x:Key="Warn" Color="#FCD34D"/>
     <SolidColorBrush x:Key="WarnFg" Color="#1F1F1F"/>
     <SolidColorBrush x:Key="Danger" Color="#F1707B"/>
     <SolidColorBrush x:Key="DangerFg" Color="#1F1F1F"/>
+    <DropShadowEffect x:Key="ShadowSoft" Color="#000000" BlurRadius="16" ShadowDepth="2" Direction="270" Opacity="0.40" RenderingBias="Quality"/>
+    <DropShadowEffect x:Key="ShadowMed" Color="#000000" BlurRadius="26" ShadowDepth="5" Direction="270" Opacity="0.55" RenderingBias="Quality"/>
 </ResourceDictionary>
 '@
 
@@ -620,6 +674,7 @@ function Show-Toast([string]$Type, [string]$Title, [string]$Message) {
         if ($Message) { $m.Text = $Message } else { $m.Visibility = [System.Windows.Visibility]::Collapsed }
         $b.Add_MouseLeftButtonUp({ try { $script:ToastHost.Children.Remove($args[0]) } catch { } })
         $script:ToastHost.Children.Add($b) | Out-Null
+        Invoke-SlideIn $b
         $timer = New-Object System.Windows.Threading.DispatcherTimer
         $timer.Interval = [TimeSpan]::FromSeconds($(if ($Type -eq 'error') { 10 } else { 5 }))
         $timer.Tag = $b
@@ -630,32 +685,72 @@ function Show-Toast([string]$Type, [string]$Title, [string]$Message) {
 }
 
 function Show-Onboarding {
-    # First-run: guide the one-time (free) Entra app registration, in-app (not the console).
+    # First run: one-click, in-app Entra app registration. "Sign in to your tenant" runs
+    # Register-PnPEntraIDAppForInteractiveLogin in the worker runspace (interactive browser consent),
+    # captures the new app's client id, and saves it — no copy-paste-into-PowerShell dance. The
+    # Advanced section keeps the manual path for people who already have an app.
     $x = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Welcome to OpenGateSP" Width="580" Height="500" WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        Title="Welcome to OpenGateSP" Width="580" SizeToContent="Height" WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
         Background="{DynamicResource Bg}" TextElement.Foreground="{DynamicResource Fg}" TextElement.FontFamily="Segoe UI" TextElement.FontSize="14">
   <StackPanel Margin="30">
     <TextBlock Text="Welcome to OpenGateSP" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
-    <TextBlock TextWrapping="Wrap" Margin="0,8,0,18" Foreground="{DynamicResource FgMute}"
-               Text="One quick, free, one-time setup: register your own Entra ID app so OpenGateSP can sign in to your tenant. It takes about two minutes."/>
-    <TextBlock Text="1. Copy this command and run it in PowerShell" FontWeight="SemiBold" Margin="0,0,0,6" Foreground="{DynamicResource Fg}"/>
-    <Grid>
-      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-      <TextBox x:Name="CmdBox" Grid.Column="0" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" Height="54"
-               Text="Register-PnPEntraIDAppForInteractiveLogin -ApplicationName 'OpenGateSP' -Tenant &lt;you&gt;.onmicrosoft.com"/>
-      <Button x:Name="CopyBtn" Grid.Column="1" Content="Copy" Width="64" Margin="8,5,0,5" VerticalAlignment="Top"/>
-    </Grid>
-    <TextBlock Text="2. Paste the Application (client) ID it returns, and your tenant" FontWeight="SemiBold" Margin="0,16,0,6" Foreground="{DynamicResource Fg}"/>
-    <TextBlock Text="Application (client) ID" Foreground="{DynamicResource FgMute}" FontSize="12"/>
-    <TextBox x:Name="ClientIdBox"/>
-    <TextBlock Text="Tenant (e.g. contoso.onmicrosoft.com)" Foreground="{DynamicResource FgMute}" FontSize="12" Margin="0,8,0,0"/>
+    <TextBlock TextWrapping="Wrap" Margin="0,8,0,16" Foreground="{DynamicResource FgMute}"
+               Text="The friendly way to migrate and govern SharePoint — guided, previewed, and safe. (Prefer to drive it from your AI assistant? Everything here is also available over MCP.)"/>
+    <TextBlock Text="First, pick your look — change it anytime in Settings" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="{DynamicResource Fg}"/>
+    <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+      <Border x:Name="SwLight" Width="116" Height="48" Margin="0,0,8,0" CornerRadius="7" Cursor="Hand" Background="#FFFFFF" BorderBrush="#D6D6D6" BorderThickness="1" ToolTip="Fluent Light">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
+          <Border Width="16" Height="16" CornerRadius="4" Background="#0078D4"/>
+          <TextBlock Text="Fluent" Foreground="#1B1A19" FontSize="11" FontWeight="SemiBold" Margin="7,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Border>
+      <Border x:Name="SwDark" Width="116" Height="48" Margin="0,0,8,0" CornerRadius="7" Cursor="Hand" Background="#1C1C1C" BorderBrush="#3A3A3A" BorderThickness="1" ToolTip="Fluent Dark">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
+          <Border Width="16" Height="16" CornerRadius="4" Background="#479EF5"/>
+          <TextBlock Text="Dark" Foreground="#F3F2F1" FontSize="11" FontWeight="SemiBold" Margin="7,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Border>
+      <Border x:Name="SwGruv" Width="116" Height="48" Margin="0,0,8,0" CornerRadius="7" Cursor="Hand" Background="#FBF1C7" BorderBrush="#D5C4A1" BorderThickness="1" ToolTip="Gruvbox (warm)">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
+          <Border Width="16" Height="16" CornerRadius="4" Background="#D65D0E"/>
+          <TextBlock Text="Gruvbox" Foreground="#3C3836" FontSize="11" FontWeight="SemiBold" Margin="7,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Border>
+      <Border x:Name="SwTokyo" Width="116" Height="48" CornerRadius="7" Cursor="Hand" Background="#1B1D2B" BorderBrush="#2F334D" BorderThickness="1" ToolTip="Tokyo Night">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
+          <Border Width="16" Height="16" CornerRadius="4" Background="#82AAFF"/>
+          <TextBlock Text="Tokyo" Foreground="#C8D3F5" FontSize="11" FontWeight="SemiBold" Margin="7,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+    <TextBlock Text="Connect to your tenant" FontWeight="SemiBold" Margin="0,0,0,4" Foreground="{DynamicResource Fg}"/>
+    <TextBlock TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource FgMute}" FontSize="12"
+               Text="One quick, free, one-time setup — sign in once and OpenGateSP registers its own Entra ID app in your tenant. A browser opens for you to approve (about two minutes)."/>
+    <TextBlock Text="Your Microsoft 365 tenant" FontWeight="SemiBold" Margin="0,0,0,6" Foreground="{DynamicResource Fg}"/>
     <TextBox x:Name="TenantBox"/>
-    <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
-      <Button x:Name="SaveBtn" Content="Save &amp; continue"/>
+    <TextBlock Text="e.g. contoso.onmicrosoft.com" Foreground="{DynamicResource FgFaint}" FontSize="12" Margin="2,4,0,0"/>
+    <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+      <Button x:Name="SignInBtn" Content="Sign in to your tenant"/>
       <Button x:Name="SkipBtn" Content="Skip for now" Style="{DynamicResource GhostButton}"/>
       <Button x:Name="HelpBtn" Content="Need help?" Style="{DynamicResource GhostButton}"/>
     </StackPanel>
+    <TextBlock x:Name="OnbStatus" TextWrapping="Wrap" Margin="0,14,0,0" Foreground="{DynamicResource FgMute}" Text=""/>
+    <Expander Header="Advanced — already have an app, or prefer to run it yourself" Margin="0,18,0,0" Foreground="{DynamicResource FgMute}">
+      <StackPanel Margin="0,12,0,0">
+        <TextBlock TextWrapping="Wrap" Margin="0,0,0,6" Foreground="{DynamicResource FgMute}"
+                   Text="Run this in PowerShell, then paste the Application (client) ID it returns:"/>
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <TextBox x:Name="CmdBox" Grid.Column="0" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" Height="54"
+                   Text="Register-PnPEntraIDAppForInteractiveLogin -ApplicationName 'OpenGateSP' -Tenant &lt;you&gt;.onmicrosoft.com"/>
+          <Button x:Name="CopyBtn" Grid.Column="1" Content="Copy" Width="64" Margin="8,5,0,5" VerticalAlignment="Top"/>
+        </Grid>
+        <TextBlock Text="Application (client) ID" Foreground="{DynamicResource FgMute}" FontSize="12" Margin="0,10,0,0"/>
+        <TextBox x:Name="ClientIdBox"/>
+        <Button x:Name="SaveBtn" Content="Save &amp; continue" Margin="0,12,0,0" HorizontalAlignment="Left"/>
+      </StackPanel>
+    </Expander>
   </StackPanel>
 </Window>
 '@
@@ -663,33 +758,117 @@ function Show-Onboarding {
         $w = [Windows.Markup.XamlReader]::Parse($x)
         $w.Resources.MergedDictionaries.Add($script:Controls)
         if ($script:ThemeDict) { $w.Resources.MergedDictionaries.Add($script:ThemeDict) }
-        $cmdText = "Register-PnPEntraIDAppForInteractiveLogin -ApplicationName 'OpenGateSP' -Tenant <you>.onmicrosoft.com"
-        $w.FindName('CopyBtn').Add_Click({ try { [System.Windows.Clipboard]::SetText($cmdText) } catch { } })
-        $w.FindName('HelpBtn').Add_Click({ Start-Process 'https://github.com/sameer-zahir/opengatesp/blob/main/docs/02-entra-app-registration.md' })
-        $w.FindName('SkipBtn').Add_Click({ $w.Close() })
-        $w.FindName('SaveBtn').Add_Click({
-            $cid = $w.FindName('ClientIdBox').Text.Trim()
-            $tenant = $w.FindName('TenantBox').Text.Trim()
-            if (-not $cid) { [System.Windows.MessageBox]::Show('Paste the Application (client) ID first, or choose Skip for now.', 'OpenGateSP') | Out-Null; return }
+
+        # script-scoped so the worker's deferred OnDone callback can reach them safely.
+        $script:OnbWindow    = $w
+        $script:OnbTenantBox = $w.FindName('TenantBox')
+        $script:OnbClientBox = $w.FindName('ClientIdBox')
+        $script:OnbStatus    = $w.FindName('OnbStatus')
+        $script:OnbSignIn    = $w.FindName('SignInBtn')
+        $script:OnbSkip      = $w.FindName('SkipBtn')
+        if ($script:TbTenant -and $script:TbTenant.Text) { $script:OnbTenantBox.Text = $script:TbTenant.Text }
+
+        # Theme swatches: apply live to both the main window (Set-Theme persists it) and this dialog.
+        $script:OnbThemeDict = $script:ThemeDict
+        $script:ApplyOnbTheme = {
+            param($name)
+            try {
+                Set-Theme $name
+                $md = $script:OnbWindow.Resources.MergedDictionaries
+                if ($script:OnbThemeDict) { [void]$md.Remove($script:OnbThemeDict) }
+                $script:OnbThemeDict = Read-Dict $script:Themes[$name]
+                $md.Insert(0, $script:OnbThemeDict)
+            } catch { }
+        }
+        $w.FindName('SwLight').Add_MouseLeftButtonUp({ & $script:ApplyOnbTheme 'Fluent Light' })
+        $w.FindName('SwDark').Add_MouseLeftButtonUp({ & $script:ApplyOnbTheme 'Fluent Dark' })
+        $w.FindName('SwGruv').Add_MouseLeftButtonUp({ & $script:ApplyOnbTheme 'Gruvbox' })
+        $w.FindName('SwTokyo').Add_MouseLeftButtonUp({ & $script:ApplyOnbTheme 'Tokyo Night' })
+
+        $script:OnbSave = {
+            param($cid, $tenant)
             $dir = Join-Path $env:APPDATA 'OpenGateSP'
             if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
             @{ ClientId = $cid; Tenant = $tenant } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $dir 'spconfig.json') -Encoding utf8
             $script:TbClientId.Text = $cid
             if ($tenant) { $script:TbTenant.Text = $tenant }
-            $w.Close()
+        }
+
+        $cmdText = "Register-PnPEntraIDAppForInteractiveLogin -ApplicationName 'OpenGateSP' -Tenant <you>.onmicrosoft.com"
+        $w.FindName('CopyBtn').Add_Click({ try { [System.Windows.Clipboard]::SetText($cmdText) } catch { } })
+        $w.FindName('HelpBtn').Add_Click({ Start-Process 'https://github.com/sameer-zahir/opengatesp/blob/main/docs/02-entra-app-registration.md' })
+        $script:OnbSkip.Add_Click({ $script:OnbWindow.Close() })
+
+        # One-click: register the app interactively in the worker runspace, capture the id, save.
+        $script:OnbSignIn.Add_Click({
+            $tenant = $script:OnbTenantBox.Text.Trim()
+            if ($tenant -notmatch '^[\w.-]+\.[A-Za-z]{2,}$') {
+                $script:OnbStatus.Text = 'Enter your tenant first, e.g. contoso.onmicrosoft.com.'; return
+            }
+            $script:OnbSignIn.IsEnabled = $false; $script:OnbSkip.IsEnabled = $false
+            $script:OnbStatus.Text = 'Opening sign-in — approve in the browser window, then wait a moment...'
+            Invoke-Worker -Command 'Register-PnPEntraIDAppForInteractiveLogin' `
+                          -Parameters @{ ApplicationName = 'OpenGateSP'; Tenant = $tenant } -OnDone {
+                param($result, $err)
+                $script:OnbSignIn.IsEnabled = $true; $script:OnbSkip.IsEnabled = $true
+                if ($err) { $script:OnbStatus.Text = "Sign-in failed: $err  Try again, or use Advanced below."; return }
+                $cid = Get-SPAppIdFromResult $result
+                if (-not $cid) {
+                    $script:OnbStatus.Text = 'Signed in, but could not read the app ID automatically — paste it under Advanced below.'; return
+                }
+                & $script:OnbSave $cid $script:OnbTenantBox.Text.Trim()
+                $script:OnbStatus.Text = "All set — app $cid registered."
+                $script:OnbWindow.Close()
+            }
         })
+
+        # Manual fallback: paste a client id from an app you already registered.
+        $w.FindName('SaveBtn').Add_Click({
+            $cid = $script:OnbClientBox.Text.Trim()
+            $tenant = $script:OnbTenantBox.Text.Trim()
+            $problems = Test-SPConnectInput -ClientId $cid -Tenant $tenant
+            if ($problems.Count) { $script:OnbStatus.Text = $problems[0]; return }
+            & $script:OnbSave $cid $tenant
+            $script:OnbWindow.Close()
+        })
+
         $w.ShowDialog() | Out-Null
     }
     catch { }
 }
 
+# Numeric DataGrid columns get right-aligned, tabular (monospaced) figures — the biggest
+# "made by pros" signal for a data tool. PSCustomObject columns report PropertyType=object, so we
+# detect numeric columns by sampling the actual values (first rows) and match by property name.
+$script:WiredGrids = New-Object 'System.Collections.Generic.HashSet[object]'
+$script:GridNumericCols = @{}
+$script:OnAutoGenCol = {
+    $e = $args[1]
+    if ($script:GridNumericCols.ContainsKey($e.PropertyName) -and ($e.Column -is [System.Windows.Controls.DataGridTextColumn])) {
+        try { $e.Column.ElementStyle = $window.FindResource('NumericCell'); $e.Column.HeaderStyle = $window.FindResource('NumericHeader') } catch { }
+    }
+}
+
+function Test-SPNumericValue($v) {
+    $v -is [int] -or $v -is [long] -or $v -is [double] -or $v -is [decimal] -or $v -is [single] -or $v -is [int16] -or $v -is [byte] -or $v -is [uint32] -or $v -is [uint64]
+}
+
 function Show-Grid($grid, $data, $empty) {
     $arr = @($data)
+    $script:GridNumericCols = @{}
+    foreach ($item in ($arr | Select-Object -First 5)) {
+        if (-not $item) { continue }
+        foreach ($p in $item.PSObject.Properties) {
+            if (-not $script:GridNumericCols.ContainsKey($p.Name) -and (Test-SPNumericValue $p.Value)) { $script:GridNumericCols[$p.Name] = $true }
+        }
+    }
+    if ($script:WiredGrids.Add($grid)) { $grid.Add_AutoGeneratingColumn($script:OnAutoGenCol) }
     $grid.ItemsSource = $null
     if ($arr.Count -gt 0) { $grid.ItemsSource = $arr }
     if ($empty) {
         $empty.Visibility = if ($arr.Count -gt 0) { [System.Windows.Visibility]::Collapsed } else { [System.Windows.Visibility]::Visible }
     }
+    if ($arr.Count -gt 0) { Invoke-FadeIn $grid }
     $arr
 }
 
@@ -774,7 +953,12 @@ $script:BtnConnect.Add_Click({
     if ($script:TbUrl.Text.Trim())    { $p.Url    = $script:TbUrl.Text.Trim() }
     if ($script:CbAdmin.IsChecked)    { $p.Admin       = $true }
     if ($script:CbDevice.IsChecked)   { $p.DeviceLogin = $true }
-    if (-not $p.ClientId) { Set-Status 'Client ID is required (see docs/02).'; return }
+    $problems = Test-SPConnectInput -ClientId $script:TbClientId.Text -Tenant $script:TbTenant.Text -Url $script:TbUrl.Text
+    if ($problems.Count) {
+        Set-Status $problems[0]
+        if (-not $script:TbClientId.Text.Trim()) { Show-Onboarding }  # no app configured yet -> guide setup, not a dead end
+        return
+    }
 
     $script:ConnStatus.Text = 'Connecting...'
     Invoke-Worker -Command 'Connect-SPTool' -Parameters $p -OnDone {
@@ -788,6 +972,7 @@ $script:BtnConnect.Add_Click({
             $script:ConnStatus.Text = "Connected: $($r.Url)"
             $script:SetConnSummary.Text = "Connected to $($r.Url)"
             $script:ConnDot.Fill = $window.FindResource('Good')
+            $script:IsConnected = $true; $script:DashLoaded = $false
             Set-Status 'Connected.'
         }
     }
@@ -803,6 +988,9 @@ $script:BtnRunReport.Add_Click({
         2 { $cmd = 'Get-SPSiteInventory';     $p = @{ IncludeStorage = $true } }
         3 { $cmd = 'Get-SPPermissionsMatrix'; $p = @{ SiteUrl = $site; IncludeListPermissions = $incl } }
         4 { $cmd = 'Get-SPOrphanedUsers';     $p = @{ SiteUrl = $site } }
+        5 { $cmd = 'Find-SPEveryoneClaims';   $p = @{ SiteUrl = $site; IncludeListPermissions = $incl } }
+        6 { $cmd = 'Get-SPOwnerlessGroups';   $p = @{} }
+        7 { $cmd = 'Invoke-SPGovernanceReview'; $p = @{ SiteUrl = $site; IncludeListPermissions = $incl } }
         default { return }
     }
     if ($cmd -ne 'Get-SPSiteInventory' -and -not $site) { Set-Status 'Enter a Site URL for this report.'; return }
@@ -954,61 +1142,6 @@ function Invoke-Migration([bool]$Preview) {
 $script:BtnPreviewMig.Add_Click({ Invoke-Migration $true })
 $script:BtnRunMig.Add_Click({ Invoke-Migration $false })
 
-# --- Copy site (SharePoint → SharePoint) ------------------------------------------------
-function Invoke-CopySite([bool]$Preview) {
-    $src = $script:TbCopySource.Text.Trim()
-    $dst = $script:TbCopyDest.Text.Trim()
-    if (-not $src -or -not $dst) { Set-Status 'Source and destination site URLs are required.'; return }
-    if ($src.TrimEnd('/') -ieq $dst.TrimEnd('/')) { Set-Status 'Source and destination must be different sites.'; return }
-
-    $p = @{
-        SourceUrl      = $src
-        DestinationUrl = $dst
-        ConflictMode   = @('IfNewer', 'Skip', 'KeepBoth', 'Replace')[$script:CbCopyConflict.SelectedIndex]
-    }
-    if ($script:CbCopyContent.IsChecked)  { $p.IncludeContent = $true }
-    if ($script:CbCopyVersions.IsChecked) { $p.IncludeVersions = $true }
-    if ($script:CbCopyPerms.IsChecked)    { $p.CopyPermissions = $true }
-    $lists = $script:TbCopyLists.Text.Trim()
-    if ($lists) { $p.Lists = @($lists -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
-
-    if ($Preview) {
-        $p.WhatIf = $true
-        $script:CopyVerb = 'planned'
-    }
-    else {
-        $what = if ($p.IncludeContent) { 'structure + content' } else { 'structure' }
-        if (-not (Confirm-Action "Copy $what from`n$src`nto`n$dst ?`n`nRun a preview first if you haven't.")) { Set-Status 'Cancelled.'; return }
-        $p.Force = $true
-        $script:CopyVerb = 'copied'
-    }
-
-    Invoke-Worker -Command 'Copy-SPSite' -Parameters $p -OnDone {
-        param($result, $err)
-        if ($err) { Set-Status "Copy failed: $err"; return }
-        $rows = @(Show-Grid $script:GridCopy $result $script:EmptyCopy)
-        $errs = @($rows | Where-Object Status -eq 'Error').Count
-        $tail = if ($errs) { " — $errs error(s), see ./logs" } else { ' — see ./logs for the transcript.' }
-        Set-Status "$($rows.Count) object(s) $($script:CopyVerb)$tail"
-    }
-}
-$script:BtnPreviewCopy.Add_Click({ Invoke-CopySite $true })
-$script:BtnRunCopy.Add_Click({ Invoke-CopySite $false })
-$script:BtnValidateCopy.Add_Click({
-    $src = $script:TbCopySource.Text.Trim()
-    $dst = $script:TbCopyDest.Text.Trim()
-    if (-not $src -or -not $dst) { Set-Status 'Enter source and destination site URLs to validate.'; return }
-    $p = @{ SourceUrl = $src; DestinationUrl = $dst }
-    $listsText = $script:TbCopyLists.Text.Trim()
-    if ($listsText) { $p.Lists = @($listsText -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
-    Invoke-Worker -Command 'Compare-SPSite' -Parameters $p -OnDone {
-        param($result, $err)
-        if ($err) { Set-Status "Validate failed: $err"; return }
-        $rows = Show-Grid $script:GridCopy $result $script:EmptyCopy
-        Set-Status "$($rows.Count) object(s) compared."
-    }
-})
-
 # --- Provision --------------------------------------------------------------------------
 $script:BtnCreateSite.Add_Click({
     $title = $script:TbSiteTitle.Text.Trim()
@@ -1152,18 +1285,90 @@ $script:WizStep = 1
 $script:WizPreviewHash = $null
 $script:Tasks = @()
 $script:RecentCopies = @()
+# Persist the task log + recent copies so the dashboard and the Tasks/Recent views survive restarts.
+$script:GuiStatePath = Join-Path $env:APPDATA 'OpenGateSP\gui-state.json'
+function Save-GuiState {
+    try {
+        $dir = Split-Path $script:GuiStatePath -Parent
+        if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        @{ Tasks = @($script:Tasks | Select-Object -First 50); RecentCopies = @($script:RecentCopies | Select-Object -First 50) } |
+            ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $script:GuiStatePath -Encoding utf8
+    }
+    catch { }
+}
+function Restore-GuiState {
+    if (-not (Test-Path -LiteralPath $script:GuiStatePath)) { return }
+    try {
+        $st = Get-Content -LiteralPath $script:GuiStatePath -Raw | ConvertFrom-Json
+        if ($st.Tasks) { $script:Tasks = @($st.Tasks) }
+        if ($st.RecentCopies) { $script:RecentCopies = @($st.RecentCopies) }
+    }
+    catch { }
+}
+Restore-GuiState
+Show-Grid $script:GridTasks $script:Tasks $script:EmptyTasks | Out-Null
+Show-Grid $script:GridRecent $script:RecentCopies $script:EmptyRecent | Out-Null
 $script:WizTitles = @{ structure = 'Structure & content'; structureonly = 'Structure only'; content = 'Content only'; list = 'A list or library' }
 
 function Add-TaskRow([string]$Operation, [string]$Target, [string]$Result) {
     $row = [pscustomobject]@{ Time = (Get-Date).ToString('HH:mm:ss'); Operation = $Operation; Target = $Target; Result = $Result }
     $script:Tasks = @($row) + @($script:Tasks)
     Show-Grid $script:GridTasks $script:Tasks $script:EmptyTasks | Out-Null
+    Save-GuiState
 }
 function Add-RecentCopy([string]$Result) {
     $row = [pscustomobject]@{ Type = $script:WizTitles[$script:CopyCtx.Type]; Source = $script:TbWizSource.Text.Trim(); Destination = $script:TbWizDest.Text.Trim(); Result = $Result; When = (Get-Date).ToString('g') }
     $script:RecentCopies = @($row) + @($script:RecentCopies)
     Show-Grid $script:GridRecent $script:RecentCopies $script:EmptyRecent | Out-Null
+    Save-GuiState
 }
+
+# --- dashboard (Home) -------------------------------------------------------------------
+$script:DashLoaded = $false
+function Update-DashboardActivity {
+    if (-not $script:DashActivity) { return }
+    $script:DashActivity.Children.Clear()
+    $rows = @($script:Tasks) | Select-Object -First 6
+    foreach ($t in $rows) {
+        $tb = New-Object System.Windows.Controls.TextBlock
+        $tb.Text = "$($t.Time)    $($t.Operation): $($t.Target) — $($t.Result)"
+        $tb.Foreground = $window.FindResource('Fg'); $tb.FontSize = 12.5; $tb.Margin = '10,5'; $tb.TextTrimming = 'CharacterEllipsis'
+        [void]$script:DashActivity.Children.Add($tb)
+    }
+    $script:DashActivityEmpty.Visibility = if ($rows.Count) { [System.Windows.Visibility]::Collapsed } else { [System.Windows.Visibility]::Visible }
+}
+function Update-DashboardKpis {
+    if (-not $script:IsConnected) {
+        $script:DashSubtitle.Text = 'Connect to your tenant to see this overview.'
+        $script:KpiSites.Text = '—'; $script:KpiStorage.Text = '—'; $script:KpiSharing.Text = '—'
+        return
+    }
+    if ($script:Busy) { Set-Status 'Busy — the overview will refresh after the current operation.'; return }
+    $script:DashSubtitle.Text = 'Loading your tenant overview...'
+    foreach ($k in $script:KpiSites, $script:KpiStorage, $script:KpiSharing) { $k.Text = '...' }
+    Invoke-Worker -Command 'Get-SPSiteInventory' -Parameters @{ IncludeStorage = $true } -OnDone {
+        param($result, $err)
+        if ($err) {
+            $script:DashSubtitle.Text = 'Tick "Admin centre" on Connect to see your tenant-wide overview.'
+            foreach ($k in $script:KpiSites, $script:KpiStorage, $script:KpiSharing) { $k.Text = '—' }
+            return
+        }
+        $sites = @($result)
+        $gb = if ($sites.Count) { [math]::Round((($sites | Measure-Object -Property StorageUsedMB -Sum).Sum) / 1024, 0) } else { 0 }
+        $ext = @($sites | Where-Object { "$($_.Sharing)" -match 'External' }).Count
+        $script:DashLoaded = $true
+        $script:DashSubtitle.Text = "$($sites.Count) site collection(s) · refreshed $((Get-Date).ToString('t'))."
+        Start-CountUp $script:KpiSites $sites.Count
+        Start-CountUp $script:KpiStorage $gb
+        Start-CountUp $script:KpiSharing $ext
+    }
+}
+function Show-Dashboard {
+    Update-DashboardActivity
+    if ($script:IsConnected) { if (-not $script:DashLoaded) { Update-DashboardKpis } }
+    else { $script:DashSubtitle.Text = 'Connect to your tenant to see this overview.' }
+}
+$script:BtnDashRefresh.Add_Click({ $script:DashLoaded = $false; Update-DashboardKpis })
 
 function Build-CopyParams([bool]$Preview) {
     $type = $script:CopyCtx.Type
@@ -1328,25 +1533,32 @@ $script:BtnCheckUpdates.Add_Click({
     catch { Set-Status "Update check failed: $($_.Exception.Message)" }
 })
 
+# Assistant (BYOK AI) — config panel + chat loop. Pure AI core lives in ai\*.ps1 (unit-tested).
+. (Join-Path $here 'ai\Secrets.ps1')
+. (Join-Path $here 'ai\AiView.ps1')
+
 # --- navigation -------------------------------------------------------------------------
 $script:ViewMap = [ordered]@{
-    Home = $script:ViewHome; Connect = $script:ViewConnect; Explore = $script:ViewExplore
+    Home = $script:ViewHome; AI = $script:ViewAI; Connect = $script:ViewConnect; Explore = $script:ViewExplore
     CopyLanding = $script:ViewCopyLanding; CopyWizard = $script:ViewCopyWizard
-    Migrate = $script:ViewMigrate; CopySite = $script:ViewCopySite; Collab = $script:ViewCollab
+    Migrate = $script:ViewMigrate; Collab = $script:ViewCollab
     PreCheck = $script:ViewPreCheck; Provision = $script:ViewProvision; Reports = $script:ViewReports
     Tasks = $script:ViewTasks; Scheduled = $script:ViewScheduled; Settings = $script:ViewSettings
 }
-$script:CrumbMap = @{ Home = 'Home'; Connect = 'Connect'; Explore = 'Explore'; CopyLanding = 'Copy'; CopyWizard = 'Copy'; Migrate = 'Import file share'; CopySite = 'Copy site'; Collab = 'Teams & Groups'; PreCheck = 'Pre-check'; Provision = 'Provisioning'; Reports = 'Security'; Tasks = 'Tasks'; Scheduled = 'Scheduled'; Settings = 'Settings' }
-$script:GroupMap = @{ Home = 'Migration'; Connect = 'Setup'; Explore = 'Migration'; CopyLanding = 'Migration'; CopyWizard = 'Migration'; Migrate = 'Migration'; CopySite = 'Migration'; Collab = 'Migration'; PreCheck = 'Migration'; Provision = 'Governance'; Reports = 'Migration'; Tasks = 'Activity'; Scheduled = 'Activity'; Settings = 'Setup' }
+$script:CrumbMap = @{ Home = 'Home'; AI = 'Assistant'; Connect = 'Connect'; Explore = 'Explore'; CopyLanding = 'Copy'; CopyWizard = 'Copy'; Migrate = 'Import file share'; Collab = 'Teams & Groups'; PreCheck = 'Pre-check'; Provision = 'Provisioning'; Reports = 'Security'; Tasks = 'Tasks'; Scheduled = 'Scheduled'; Settings = 'Settings' }
+$script:GroupMap = @{ Home = 'Migration'; AI = 'Assistant'; Connect = 'Setup'; Explore = 'Migration'; CopyLanding = 'Migration'; CopyWizard = 'Migration'; Migrate = 'Migration'; Collab = 'Migration'; PreCheck = 'Migration'; Provision = 'Governance'; Reports = 'Migration'; Tasks = 'Activity'; Scheduled = 'Activity'; Settings = 'Setup' }
 
 function Show-View([string]$name) {
     foreach ($entry in $script:ViewMap.GetEnumerator()) {
         $entry.Value.Visibility = if ($entry.Key -eq $name) { [System.Windows.Visibility]::Visible } else { [System.Windows.Visibility]::Collapsed }
     }
     $script:Breadcrumb.Text = "$($script:GroupMap[$name])  ›  $($script:CrumbMap[$name])"
+    Invoke-ViewIn $script:ViewMap[$name]
+    if ($name -eq 'Home') { Show-Dashboard }
 }
 
 $script:NavHome.Add_Checked({ Show-View 'Home' })
+$script:NavAI.Add_Checked({ Show-View 'AI' })
 $script:NavConnect.Add_Checked({ Show-View 'Connect' })
 $script:NavExplore.Add_Checked({ Show-View 'Explore' })
 $script:NavCopy.Add_Checked({ Show-View 'CopyLanding' })
@@ -1379,6 +1591,42 @@ $window.Add_PreviewKeyDown({
     }
 })
 $script:ShortcutsOverlay.Add_MouseLeftButtonDown({ $script:ShortcutsOverlay.Visibility = [System.Windows.Visibility]::Collapsed })
+
+# --- guided tour + always-available help ------------------------------------------------
+$script:TourMarker = Join-Path $env:APPDATA 'OpenGateSP\tour.done'
+$script:TourSteps = @(
+    @{ t = 'Welcome to OpenGateSP'; b = "The guided way to migrate and govern SharePoint. Every action previews before it writes, so you can't break anything by trying. (Prefer to work from your own AI assistant? Everything here is also available over MCP.)" }
+    @{ t = 'Find your way around'; b = "The left menu is grouped by what you're doing: Migration (move & copy), Activity (track & schedule), and Governance (provision & report) — plus the Assistant, where you can just ask in plain English." }
+    @{ t = 'Copying is foolproof'; b = "Pick what to copy and a step-by-step wizard walks you through it, showing a preview of exactly what will happen. Nothing changes until you say so." }
+    @{ t = 'Help is always here'; b = "Click the ? button any time to reopen this tour. The gear opens Settings (connection, theme), the Assistant answers questions, and pressing ? shows keyboard shortcuts. Every screen explains itself." }
+)
+$script:TourIndex = 0
+function Set-TourStep([int]$i) {
+    $script:TourIndex = $i
+    $s = $script:TourSteps[$i]
+    $script:TourTitle.Text = $s.t
+    $script:TourBody.Text = $s.b
+    $script:TourDots.Text = "Step $($i + 1) of $($script:TourSteps.Count)"
+    $script:TourBack.Visibility = if ($i -gt 0) { [System.Windows.Visibility]::Visible } else { [System.Windows.Visibility]::Collapsed }
+    $script:TourNext.Content = if ($i -lt $script:TourSteps.Count - 1) { 'Next' } else { 'Get started' }
+}
+function Show-Tour { Set-TourStep 0; $script:TourOverlay.Visibility = [System.Windows.Visibility]::Visible }
+function Hide-Tour {
+    $script:TourOverlay.Visibility = [System.Windows.Visibility]::Collapsed
+    try {
+        $dir = Split-Path $script:TourMarker -Parent
+        if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        New-Item -ItemType File -Path $script:TourMarker -Force | Out-Null
+    } catch { }
+}
+$script:TourNext.Add_Click({ if ($script:TourIndex -lt $script:TourSteps.Count - 1) { Set-TourStep ($script:TourIndex + 1) } else { Hide-Tour } })
+$script:TourBack.Add_Click({ if ($script:TourIndex -gt 0) { Set-TourStep ($script:TourIndex - 1) } })
+$script:TourSkip.Add_Click({ Hide-Tour })
+$script:BtnHelp.Add_Click({ Show-Tour })
+# First run only: show the tour once the window has painted (guarded by a marker file).
+$window.Add_ContentRendered({
+        if (-not $script:TourShown -and -not (Test-Path -LiteralPath $script:TourMarker)) { $script:TourShown = $true; Show-Tour }
+    })
 
 # Open on Home.
 $script:NavHome.IsChecked = $true

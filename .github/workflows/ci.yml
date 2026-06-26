@@ -105,10 +105,24 @@ jobs:
             dist/OpenGateSP-Setup.exe "dist/OpenGateSP-$v.zip" `
             --title "OpenGateSP $v" --generate-notes
 
-      - name: Stamp winget installer hash
+      # Publish the new version to winget. Fully automated when a WINGET_TOKEN secret (a GitHub PAT
+      # with access to your microsoft/winget-pkgs fork) is configured; otherwise prints the exact
+      # one-liner to run by hand. wingetcreate fetches the released installer and hashes it itself,
+      # so there's no placeholder to stamp. First-ever publish is a one-time manual `wingetcreate new`.
+      - name: Submit winget manifest
         shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
-          $hash = (Get-FileHash dist/OpenGateSP-Setup.exe -Algorithm SHA256).Hash
-          $f = 'installer/winget/SameerZahir.OpenGateSP.installer.yaml'
-          (Get-Content $f -Raw) -replace 'REPLACE_WITH_SHA256_OF_SETUP_EXE', $hash | Set-Content $f -NoNewline
-          Write-Host "winget hash: $hash  (commit this, then: wingetcreate update --submit — see docs/distribution.md)"
+          $v   = "${{ github.ref_name }}".TrimStart('v')
+          $url = "${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/OpenGateSP-Setup.exe"
+          if ($env:WINGET_TOKEN) {
+            Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+            ./wingetcreate.exe update SameerZahir.OpenGateSP --version $v --urls $url --submit --token $env:WINGET_TOKEN
+            Write-Host "Submitted OpenGateSP $v to winget-pkgs."
+          } else {
+            $hash = (Get-FileHash dist/OpenGateSP-Setup.exe -Algorithm SHA256).Hash
+            Write-Host "WINGET_TOKEN not set — skipping automatic submission."
+            Write-Host "To publish manually:  wingetcreate update SameerZahir.OpenGateSP --version $v --urls $url --submit"
+            Write-Host "Installer SHA256: $hash"
+          }
