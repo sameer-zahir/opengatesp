@@ -1,6 +1,6 @@
 # winget version manifest. See docs/distribution.md for the submission flow.
 PackageIdentifier: SameerZahir.OpenGateSP
-PackageVersion: 0.2.0
+PackageVersion: 0.10.0
 DefaultLocale: en-US
 ManifestType: version
 ManifestVersion: 1.6.0

@@ -6,26 +6,32 @@
         TextElement.Foreground="{DynamicResource Fg}"
         TextElement.FontFamily="Segoe UI" TextElement.FontSize="14">
 
+    <Grid>
     <DockPanel>
         <!-- App bar -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource BgElev}" Padding="20,12"
                 BorderBrush="{DynamicResource Border}" BorderThickness="0,0,0,1">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="24" Height="24" CornerRadius="6" Background="{DynamicResource Accent}" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <TextBlock Text="O" Foreground="{DynamicResource AccentFg}" FontFamily="Consolas" FontWeight="Bold" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
                     <TextBlock Text="OpenGateSP" FontFamily="Consolas" FontSize="19" FontWeight="Bold"
                                Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
                     <Border Width="1" Height="18" Background="{DynamicResource BorderStrong}" Margin="14,0"/>
                     <TextBlock x:Name="Breadcrumb" Text="Migration  ›  Home" Style="{DynamicResource Breadcrumb}"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Border Background="{DynamicResource BgElev2}" CornerRadius="20" Padding="11,5" Margin="0,0,12,0">
+                    <Border x:Name="ConnPill" Background="{DynamicResource BgElev2}" CornerRadius="20" Padding="11,5" Margin="0,0,10,0"
+                            Cursor="Hand" ToolTip="Connection &amp; settings">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <Ellipse x:Name="ConnDot" Width="9" Height="9" Fill="{DynamicResource Warn}"
                                      VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock x:Name="ConnStatus" Text="Not connected" Style="{DynamicResource Muted}"/>
                         </StackPanel>
                     </Border>
-                    <ComboBox x:Name="CbTheme" Width="148" VerticalAlignment="Center" ToolTip="Theme"/>
+                    <Button x:Name="BtnSettings" Style="{DynamicResource ThemeToggle}" ToolTip="Settings"
+                            FontFamily="Segoe MDL2 Assets" Content="&#xE713;"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -53,22 +59,40 @@
                     BorderBrush="{DynamicResource Border}" BorderThickness="0,0,1,0">
                 <DockPanel Margin="12,16">
                     <StackPanel DockPanel.Dock="Bottom">
-                        <RadioButton x:Name="NavConnect" GroupName="Nav" Content="Connect" Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavConnect" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE774;"/><TextBlock Text="Connect" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
                         <TextBlock Text="PowerShell · MCP · GUI" FontFamily="Consolas" FontSize="11"
                                    Foreground="{DynamicResource FgMute}" Margin="14,12,0,2"/>
                     </StackPanel>
                     <StackPanel>
-                        <RadioButton x:Name="NavHome" GroupName="Nav" Content="Home" Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavHome" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE80F;"/><TextBlock Text="Home" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
                         <TextBlock Text="MIGRATION" Style="{DynamicResource NavGroupHeader}" Margin="14,14,0,6"/>
-                        <RadioButton x:Name="NavExplore"  GroupName="Nav" Content="Explore"   Style="{DynamicResource NavButton}"/>
-                        <RadioButton x:Name="NavCopy"     GroupName="Nav" Content="Copy"      Style="{DynamicResource NavButton}"/>
-                        <RadioButton x:Name="NavPreCheck" GroupName="Nav" Content="Pre-check" Style="{DynamicResource NavButton}"/>
-                        <RadioButton x:Name="NavReports"  GroupName="Nav" Content="Security"  Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavExplore" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE721;"/><TextBlock Text="Explore" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="NavCopy" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE8C8;"/><TextBlock Text="Copy" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="NavPreCheck" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE73E;"/><TextBlock Text="Pre-check" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="NavReports" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE72E;"/><TextBlock Text="Security" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
                         <TextBlock Text="ACTIVITY" Style="{DynamicResource NavGroupHeader}" Margin="14,18,0,6"/>
-                        <RadioButton x:Name="NavTasks"     GroupName="Nav" Content="Tasks"     Style="{DynamicResource NavButton}"/>
-                        <RadioButton x:Name="NavScheduled" GroupName="Nav" Content="Scheduled" Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavTasks" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE81C;"/><TextBlock Text="Tasks" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="NavScheduled" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE787;"/><TextBlock Text="Scheduled" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
                         <TextBlock Text="GOVERNANCE" Style="{DynamicResource NavGroupHeader}" Margin="14,18,0,6"/>
-                        <RadioButton x:Name="NavProvision" GroupName="Nav" Content="Provisioning" Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavProvision" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE710;"/><TextBlock Text="Provisioning" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -790,7 +814,7 @@
                                            Text="Load the lists on both sides to see what's there. Leave the box blank to copy everything, or list the names to copy just those."/>
                                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
                                     <TextBlock Text="Lists (optional)" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBox x:Name="TbWizLists" Width="360"/>
+                                    <TextBox x:Name="TbWizLists" Width="360" ToolTip="Blank copies every list and library. Comma-separate display names to copy only those."/>
                                     <Button x:Name="BtnWizLoadLists" Content="Load lists" Style="{DynamicResource GhostButton}"/>
                                     <TextBlock Text="blank = copy every list and library" Style="{DynamicResource Muted}" Margin="12,0,0,0"/>
                                 </StackPanel>
@@ -807,7 +831,8 @@
                                 <TextBlock Style="{DynamicResource Muted}" Margin="0,4,0,14" TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left"
                                            Text="How to handle what's already there, and what to bring along."/>
                                 <TextBlock Text="If items already exist at the destination" VerticalAlignment="Center"/>
-                                <ComboBox x:Name="CbWizConflict" Width="260" HorizontalAlignment="Left" SelectedIndex="0">
+                                <ComboBox x:Name="CbWizConflict" Width="260" HorizontalAlignment="Left" SelectedIndex="0"
+                                          ToolTip="What to do when an item already exists at the destination.">
                                     <ComboBoxItem Content="Copy if newer"/>
                                     <ComboBoxItem Content="Don't copy (skip)"/>
                                     <ComboBoxItem Content="Keep both"/>
@@ -867,9 +892,66 @@
                     </Grid>
                 </DockPanel>
 
+                <!-- SETTINGS (opened from the app-bar cog) -->
+                <DockPanel x:Name="ViewSettings" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="Settings" Style="{DynamicResource Section}" FontSize="18" Foreground="{DynamicResource Fg}" Margin="0,0,0,18"/>
+                    <StackPanel MaxWidth="620" HorizontalAlignment="Left">
+                        <TextBlock Text="Appearance" Style="{DynamicResource Section}" Foreground="{DynamicResource Fg}" Margin="0,0,0,6"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Text="Theme" VerticalAlignment="Center" Width="120"/>
+                            <ComboBox x:Name="CbTheme" Width="200" ToolTip="Theme"/>
+                        </StackPanel>
+                        <Border Height="1" Background="{DynamicResource Border}" Margin="0,18"/>
+
+                        <TextBlock Text="Connection" Style="{DynamicResource Section}" Foreground="{DynamicResource Fg}" Margin="0,0,0,6"/>
+                        <TextBlock x:Name="SetConnSummary" Text="Not connected." Style="{DynamicResource Muted}" Margin="0,0,0,10"/>
+                        <Button x:Name="BtnManageConnection" Content="Manage connection" Style="{DynamicResource GhostButton}" HorizontalAlignment="Left"/>
+                        <Border Height="1" Background="{DynamicResource Border}" Margin="0,18"/>
+
+                        <TextBlock Text="Logs &amp; data" Style="{DynamicResource Section}" Foreground="{DynamicResource Fg}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Run transcripts and report exports are written next to the app." Style="{DynamicResource Muted}" Margin="0,0,0,10"/>
+                        <Button x:Name="BtnOpenLogs" Content="Open logs folder" Style="{DynamicResource GhostButton}" HorizontalAlignment="Left"/>
+                        <Border Height="1" Background="{DynamicResource Border}" Margin="0,18"/>
+
+                        <TextBlock Text="About" Style="{DynamicResource Section}" Foreground="{DynamicResource Fg}" Margin="0,0,0,6"/>
+                        <TextBlock x:Name="SetAbout" Text="OpenGateSP" Foreground="{DynamicResource Fg}" Margin="0,0,0,2"/>
+                        <TextBlock Text="The free, open-source ShareGate alternative · MIT" Style="{DynamicResource Muted}" Margin="0,0,0,12"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="BtnCheckUpdates" Content="Check for updates"/>
+                            <Button x:Name="BtnDocs" Content="Documentation" Style="{DynamicResource GhostButton}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </DockPanel>
+
                 </Grid>
               </ScrollViewer>
             </Grid>
         </Grid>
     </DockPanel>
+
+    <!-- Toast overlay (top-right, above content) -->
+    <StackPanel x:Name="ToastHost" HorizontalAlignment="Right" VerticalAlignment="Top"
+                Margin="0,66,18,0" Panel.ZIndex="100"/>
+
+    <!-- Keyboard shortcuts overlay (toggle with ?) -->
+    <Grid x:Name="ShortcutsOverlay" Visibility="Collapsed" Panel.ZIndex="200" Background="#99000000">
+        <Border Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1" CornerRadius="12"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Padding="28" MaxWidth="440">
+            <StackPanel>
+                <TextBlock Text="Keyboard shortcuts" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Fg}" Margin="0,0,0,16"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="?" FontFamily="Consolas" Foreground="{DynamicResource Accent}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Show or hide this help" Foreground="{DynamicResource Fg}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Esc" FontFamily="Consolas" Foreground="{DynamicResource Accent}" Margin="0,8,0,0"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="Close this help or a dialog" Foreground="{DynamicResource Fg}" Margin="0,8,0,0"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Ctrl + ," FontFamily="Consolas" Foreground="{DynamicResource Accent}" Margin="0,8,0,0"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="Open Settings" Foreground="{DynamicResource Fg}" Margin="0,8,0,0"/>
+                </Grid>
+                <TextBlock Text="Press Esc or ? to close." Style="{DynamicResource Muted}" Margin="0,16,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+    </Grid>
 </Window>

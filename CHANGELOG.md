@@ -4,6 +4,30 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.10.0]
+
+A polished, human GUI and the groundwork for a seamless install. No engine cmdlet changes.
+
+### Added
+- **Navigation icons + app identity** — Segoe MDL2 glyphs on every nav item, a brand mark, and a window icon.
+- **Settings** — an app-bar cog opens a Settings view (theme, connection summary, logs folder,
+  about, and **Check for updates**); the connection pill opens it too.
+- **First-run onboarding** — a guided, in-app Entra app-registration dialog the first time you launch
+  (replaces the old console hints).
+- **Toasts** for operation results (copy, remediation), **keyboard shortcuts** (`?` help overlay,
+  `Esc`, `Ctrl+,` → Settings), **in-context tooltips**, warmer empty states, and a 2px keyboard
+  **focus ring** (accessibility).
+- **Installable-app groundwork** — the installer now *offers* to install PowerShell 7; a CI
+  release-on-tag job builds + publishes the installer and portable zip and stamps the winget hash;
+  winget manifests bumped and SignPath OSS signing prepped (see [docs/distribution.md](docs/distribution.md)).
+- Docs: [docs/design-system.md](docs/design-system.md) extended (nav icons, toast, focus ring,
+  Settings); [docs/TESTING.md](docs/TESTING.md) gains tenant-runtime + GUI smoke checks.
+
+### Changed
+- The theme picker moved into **Settings**; the app bar is now brand · breadcrumb · connection · cog.
+- The **PnP API surface was audited** against PnP.PowerShell 3.2.0 — every cmdlet/parameter the
+  engine uses is correct (only `Get-PnPWorkflowSubscription` is absent in 3.2.0, already guarded).
+
 ## [0.9.0]
 
 GUI redesign — ShareGate-aligned navigation and a guided Copy wizard. No engine cmdlet changes.

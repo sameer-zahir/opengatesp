@@ -32,15 +32,8 @@ if (-not (Get-Module -ListAvailable -Name PnP.PowerShell)) {
     }
 }
 
-# 2. First-run guidance (you need your own free Entra ID app once).
-$cfg = Join-Path $env:APPDATA 'OpenGateSP\spconfig.json'
-if (-not (Test-Path -LiteralPath $cfg)) {
-    Write-Host "  First run - OpenGateSP uses your own (free) Entra ID app." -ForegroundColor Cyan
-    Write-Host "  Register one with the command below, then paste the ClientId into the Connect tab:" -ForegroundColor Gray
-    Write-Host '    Register-PnPEntraIDAppForInteractiveLogin -ApplicationName "OpenGateSP" -Tenant <you>.onmicrosoft.com' -ForegroundColor White
-    Write-Host "  Full guide: docs\02-entra-app-registration.md" -ForegroundColor Gray
-    Write-Host ""
-}
+# 2. First-run Entra app setup is now guided inside the app itself (the GUI shows a
+#    one-time welcome dialog when no connection is saved) — no console steps needed here.
 
 # 3. Open the GUI.
 $gui = Join-Path $root 'gui\Start-OpenGateSPGui.ps1'

@@ -16,11 +16,11 @@ Then bundle the portable zip (the unzip-and-run option) and cut the release:
 
 ```powershell
 # Zip the app tree for the portable download (exclude dev-only folders):
-Compress-Archive -Path OpenGateSP.exe,Start-OpenGateSP.cmd,README.md,LICENSE,CHANGELOG.md,module,gui,tools,docs,scripts -DestinationPath dist\OpenGateSP-0.2.0.zip -Force
+Compress-Archive -Path OpenGateSP.exe,Start-OpenGateSP.cmd,README.md,LICENSE,CHANGELOG.md,module,gui,tools,docs,scripts -DestinationPath dist\OpenGateSP-0.10.0.zip -Force
 # (run from the repo root after copying dist\OpenGateSP.exe to the repo root, or adjust paths)
 
-gh release create v0.2.0 dist\OpenGateSP-Setup.exe dist\OpenGateSP-0.2.0.zip `
-  --title "OpenGateSP 0.2.0" --notes-file release-notes.md
+gh release create v0.10.0 dist\OpenGateSP-Setup.exe dist\OpenGateSP-0.10.0.zip `
+  --title "OpenGateSP 0.10.0" --notes-file release-notes.md
 ```
 
 ## Free code signing — SignPath Foundation (OSS)
@@ -79,8 +79,8 @@ After a release is published:
 3. Submit a PR to **microsoft/winget-pkgs** (easiest with `wingetcreate`):
    ```powershell
    winget install Microsoft.WingetCreate
-   wingetcreate update SameerZahir.OpenGateSP --version 0.2.0 `
-     --urls https://github.com/sameer-zahir/opengatesp/releases/download/v0.2.0/OpenGateSP-Setup.exe `
+   wingetcreate update SameerZahir.OpenGateSP --version 0.10.0 `
+     --urls https://github.com/sameer-zahir/opengatesp/releases/download/v0.10.0/OpenGateSP-Setup.exe `
      --submit
    ```
    Moderators review it; once merged, `winget install OpenGateSP` works for everyone.

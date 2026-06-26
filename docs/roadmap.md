@@ -14,6 +14,7 @@ The path toward ShareGate-style site migration, grounded in what PnP PowerShell 
 - **Phase 5 — deeper governance (shipped, 0.6.0):** `Get-SPPermissionsMatrix` (who-can-touch-what), `Get-SPOrphanedUsers` (stale access), `Set-SPSiteLifecycle` (lock / archive / unlock). See [docs/09](09-governance.md).
 - **Phase 6 — Explore + validation (shipped, 0.7.0):** `Invoke-SPExplore` source assessment + discovery reports (checked-out, large files, version bloat, inactive sites, workflows, content insights); `Compare-SPSite` post-migration validation. See [docs/10](10-explore.md) and [docs/TESTING.md](TESTING.md).
 - **Phase 7 — remediation + fidelity (shipped, 0.8.0):** remediation quick-actions (`Invoke-SPCheckIn`, `Clear-SPVersionHistory`, `Restore-SPInheritance`, `Remove-SPOrphanedUsers`); Person/Managed-Metadata column round-tripping and best-effort `-IncludeVersions` version history. See [docs/11](11-remediation.md).
+- **Phase 8 — polished, human GUI + install (shipped, 0.10.0):** nav icons + app identity, a Settings cog, first-run onboarding, toasts, keyboard shortcuts, and a focus ring; installer PowerShell-7 offer, in-app update check, CI release automation, and winget/SignPath prep. See [docs/design-system.md](design-system.md).
 - Maybe later: **Box** import.
 
 ## Also planned

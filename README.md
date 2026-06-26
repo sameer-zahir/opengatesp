@@ -43,11 +43,11 @@ OpenGateSP now spans source **Explore**, same- and cross-tenant copy, post-migra
 
 The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent dark and the warm **Gruvbox** / deep **Tokyo Night Moon** ([Squintless](https://github.com/sameer-zahir/squintless)) themes a click away in the picker.
 
-Navigation is grouped by the migration runbook — **Migration · Activity · Governance** — and **Copy** opens a guided *"what would you like to copy?"* chooser into a breadcrumb wizard (Source → Destination → Scope → Options → Preview & run) that previews before it writes, so a first-time user can't get lost. The whole visual system — tokens, components, the wizard pattern, and the human-interface principles behind it — is documented in [docs/design-system.md](docs/design-system.md) to build on.
+Navigation is grouped by the migration runbook — **Migration · Activity · Governance** — and **Copy** opens a guided *"what would you like to copy?"* chooser into a breadcrumb wizard (Source → Destination → Scope → Options → Preview & run) that previews before it writes, so a first-time user can't get lost. The whole visual system — tokens, components, the wizard pattern, and the human-interface principles behind it — is documented in [docs/design-system.md](docs/design-system.md) to build on. A **Settings** cog, **first-run onboarding** (guided Entra setup), nav icons, toasts, and keyboard shortcuts round out the feel; the installer offers to set up PowerShell 7 and the app checks for updates.
 
 ![OpenGateSP light theme](docs/screenshot-light.png)
 
-## What it does (v0.9.0)
+## What it does (v0.10.0)
 
 | Area | Function | What it does |
 |---|---|---|

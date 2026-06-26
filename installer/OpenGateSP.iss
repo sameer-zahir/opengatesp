@@ -2,7 +2,7 @@
 ; Build with:  pwsh installer\Build-Installer.ps1   (or: ISCC installer\OpenGateSP.iss)
 
 #define MyAppName "OpenGateSP"
-#define MyAppVersion "0.6.0"
+#define MyAppVersion "0.10.0"
 #define MyAppPublisher "Sameer Zahir"
 #define MyAppURL "https://sameerzahir.com"
 #define MyAppRepo "https://github.com/sameer-zahir/opengatesp"
@@ -73,13 +73,17 @@ begin
 end;
 
 function InitializeSetup(): Boolean;
+var ec: Integer;
 begin
   Result := True;
   if not PowerShell7Installed() then
-    MsgBox('OpenGateSP runs on PowerShell 7, which was not detected on this PC.'
-      + #13#10 + #13#10
-      + 'You can install OpenGateSP now, but install PowerShell 7 before launching it:'
-      + #13#10 + '    winget install Microsoft.PowerShell'
-      + #13#10 + 'or download it from https://aka.ms/powershell',
-      mbInformation, MB_OK);
+  begin
+    if MsgBox('OpenGateSP runs on PowerShell 7, which was not detected on this PC.'
+        + #13#10 + #13#10
+        + 'Open the PowerShell 7 download page now?'
+        + #13#10 + #13#10
+        + 'You can keep installing OpenGateSP either way — just install PowerShell 7 before you launch it.',
+        mbConfirmation, MB_YESNO) = IDYES then
+      ShellExec('open', 'https://aka.ms/powershell', '', '', SW_SHOW, ewNoWait, ec);
+  end;
 end;

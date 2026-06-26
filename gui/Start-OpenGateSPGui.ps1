@@ -38,6 +38,7 @@ $boot.Dispose()
 $script:Busy       = $false
 $script:LastReport = @()
 $script:LastExplore = @()
+$script:AppVersion = '0.10.0'
 
 # --- load the window --------------------------------------------------------------------
 [xml]$xamlDoc = Get-Content -LiteralPath (Join-Path $here 'MainWindow.xaml') -Raw
@@ -55,6 +56,17 @@ $script:GuiCfgPath = Join-Path $env:APPDATA 'OpenGateSP\gui.json'
 $script:XamlControls = @'
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Keyboard focus ring (visible on Tab; keyboard-only by WPF design) -->
+    <Style x:Key="FocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="-3" StrokeThickness="2" Stroke="{DynamicResource Accent}"
+                               RadiusX="9" RadiusY="9" SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <Style x:Key="Muted" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
@@ -67,6 +79,7 @@ $script:XamlControls = @'
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource AccentFg}"/>
         <Setter Property="Background" Value="{DynamicResource Accent}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
@@ -338,6 +351,7 @@ $script:XamlControls = @'
         <Setter Property="Margin" Value="14,2,0,6"/>
     </Style>
     <Style x:Key="NavButton" TargetType="RadioButton">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}"/>
         <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
@@ -368,8 +382,17 @@ $script:XamlControls = @'
         </Setter>
     </Style>
 
+    <!-- Nav icon (Segoe MDL2 Assets — present on Win10+) -->
+    <Style x:Key="NavIcon" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="Width" Value="26"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
     <!-- Home cards -->
     <Style x:Key="Card" TargetType="Button">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual}"/>
         <Setter Property="Background" Value="{DynamicResource BgElev}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -573,6 +596,93 @@ $window.Add_SizeChanged({ Update-UiScale })
 # --- helpers ----------------------------------------------------------------------------
 function Set-Status([string]$text) { $script:StatusText.Text = $text }
 
+# Top-right toast — success auto-dismisses (5s), errors persist longer (10s); click to dismiss.
+function Show-Toast([string]$Type, [string]$Title, [string]$Message) {
+    if (-not $script:ToastHost) { return }
+    $color = switch ($Type) { 'error' { 'Danger' } 'warn' { 'Warn' } default { 'Good' } }
+    $x = @"
+<Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        CornerRadius="8" Margin="0,0,0,10" Width="320" Cursor="Hand"
+        Background="{DynamicResource BgElev2}" BorderBrush="{DynamicResource Border}" BorderThickness="1">
+  <Grid>
+    <Border Width="4" HorizontalAlignment="Left" CornerRadius="8,0,0,8" Background="{DynamicResource $color}"/>
+    <StackPanel Margin="16,10,12,10">
+      <TextBlock x:Name="ToastTitle" FontWeight="SemiBold" Foreground="{DynamicResource Fg}" TextWrapping="Wrap"/>
+      <TextBlock x:Name="ToastMsg" Foreground="{DynamicResource FgMute}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"/>
+    </StackPanel>
+  </Grid>
+</Border>
+"@
+    try {
+        $b = [Windows.Markup.XamlReader]::Parse($x)
+        $b.FindName('ToastTitle').Text = $Title
+        $m = $b.FindName('ToastMsg')
+        if ($Message) { $m.Text = $Message } else { $m.Visibility = [System.Windows.Visibility]::Collapsed }
+        $b.Add_MouseLeftButtonUp({ try { $script:ToastHost.Children.Remove($args[0]) } catch { } })
+        $script:ToastHost.Children.Add($b) | Out-Null
+        $timer = New-Object System.Windows.Threading.DispatcherTimer
+        $timer.Interval = [TimeSpan]::FromSeconds($(if ($Type -eq 'error') { 10 } else { 5 }))
+        $timer.Tag = $b
+        $timer.Add_Tick({ $args[0].Stop(); try { $script:ToastHost.Children.Remove($args[0].Tag) } catch { } })
+        $timer.Start()
+    }
+    catch { }
+}
+
+function Show-Onboarding {
+    # First-run: guide the one-time (free) Entra app registration, in-app (not the console).
+    $x = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Welcome to OpenGateSP" Width="580" Height="500" WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        Background="{DynamicResource Bg}" TextElement.Foreground="{DynamicResource Fg}" TextElement.FontFamily="Segoe UI" TextElement.FontSize="14">
+  <StackPanel Margin="30">
+    <TextBlock Text="Welcome to OpenGateSP" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+    <TextBlock TextWrapping="Wrap" Margin="0,8,0,18" Foreground="{DynamicResource FgMute}"
+               Text="One quick, free, one-time setup: register your own Entra ID app so OpenGateSP can sign in to your tenant. It takes about two minutes."/>
+    <TextBlock Text="1. Copy this command and run it in PowerShell" FontWeight="SemiBold" Margin="0,0,0,6" Foreground="{DynamicResource Fg}"/>
+    <Grid>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <TextBox x:Name="CmdBox" Grid.Column="0" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" Height="54"
+               Text="Register-PnPEntraIDAppForInteractiveLogin -ApplicationName 'OpenGateSP' -Tenant &lt;you&gt;.onmicrosoft.com"/>
+      <Button x:Name="CopyBtn" Grid.Column="1" Content="Copy" Width="64" Margin="8,5,0,5" VerticalAlignment="Top"/>
+    </Grid>
+    <TextBlock Text="2. Paste the Application (client) ID it returns, and your tenant" FontWeight="SemiBold" Margin="0,16,0,6" Foreground="{DynamicResource Fg}"/>
+    <TextBlock Text="Application (client) ID" Foreground="{DynamicResource FgMute}" FontSize="12"/>
+    <TextBox x:Name="ClientIdBox"/>
+    <TextBlock Text="Tenant (e.g. contoso.onmicrosoft.com)" Foreground="{DynamicResource FgMute}" FontSize="12" Margin="0,8,0,0"/>
+    <TextBox x:Name="TenantBox"/>
+    <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
+      <Button x:Name="SaveBtn" Content="Save &amp; continue"/>
+      <Button x:Name="SkipBtn" Content="Skip for now" Style="{DynamicResource GhostButton}"/>
+      <Button x:Name="HelpBtn" Content="Need help?" Style="{DynamicResource GhostButton}"/>
+    </StackPanel>
+  </StackPanel>
+</Window>
+'@
+    try {
+        $w = [Windows.Markup.XamlReader]::Parse($x)
+        $w.Resources.MergedDictionaries.Add($script:Controls)
+        if ($script:ThemeDict) { $w.Resources.MergedDictionaries.Add($script:ThemeDict) }
+        $cmdText = "Register-PnPEntraIDAppForInteractiveLogin -ApplicationName 'OpenGateSP' -Tenant <you>.onmicrosoft.com"
+        $w.FindName('CopyBtn').Add_Click({ try { [System.Windows.Clipboard]::SetText($cmdText) } catch { } })
+        $w.FindName('HelpBtn').Add_Click({ Start-Process 'https://github.com/sameer-zahir/opengatesp/blob/main/docs/02-entra-app-registration.md' })
+        $w.FindName('SkipBtn').Add_Click({ $w.Close() })
+        $w.FindName('SaveBtn').Add_Click({
+            $cid = $w.FindName('ClientIdBox').Text.Trim()
+            $tenant = $w.FindName('TenantBox').Text.Trim()
+            if (-not $cid) { [System.Windows.MessageBox]::Show('Paste the Application (client) ID first, or choose Skip for now.', 'OpenGateSP') | Out-Null; return }
+            $dir = Join-Path $env:APPDATA 'OpenGateSP'
+            if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+            @{ ClientId = $cid; Tenant = $tenant } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $dir 'spconfig.json') -Encoding utf8
+            $script:TbClientId.Text = $cid
+            if ($tenant) { $script:TbTenant.Text = $tenant }
+            $w.Close()
+        })
+        $w.ShowDialog() | Out-Null
+    }
+    catch { }
+}
+
 function Show-Grid($grid, $data, $empty) {
     $arr = @($data)
     $grid.ItemsSource = $null
@@ -676,6 +786,7 @@ $script:BtnConnect.Add_Click({
         } else {
             $r = @($result)[0]
             $script:ConnStatus.Text = "Connected: $($r.Url)"
+            $script:SetConnSummary.Text = "Connected to $($r.Url)"
             $script:ConnDot.Fill = $window.FindResource('Good')
             Set-Status 'Connected.'
         }
@@ -802,9 +913,10 @@ function Invoke-Remediation([bool]$Preview) {
     }
     Invoke-Worker -Command $cmd -Parameters $p -OnDone {
         param($result, $err)
-        if ($err) { Set-Status "Remediation failed: $err"; return }
+        if ($err) { Set-Status "Remediation failed: $err"; Show-Toast 'error' 'Remediation failed' "$err"; return }
         $script:LastExplore = Show-Grid $script:GridExplore $result $script:EmptyExplore
         Set-Status "$($script:LastExplore.Count) row(s)."
+        Show-Toast 'success' 'Remediation applied' "$($script:LastExplore.Count) item(s)"
     }
 }
 $script:BtnRemediatePreview.Add_Click({ Invoke-Remediation $true })
@@ -1152,11 +1264,12 @@ function Invoke-CopyRun {
     $tgt = "$($script:TbWizSource.Text.Trim()) -> $($script:TbWizDest.Text.Trim())"
     Invoke-Worker -Command $bp.Command -Parameters $bp.Params -OnDone {
         param($result, $err)
-        if ($err) { Set-Status "Copy failed: $err"; Add-TaskRow 'Copy' $tgt "Error: $err"; return }
+        if ($err) { Set-Status "Copy failed: $err"; Show-Toast 'error' 'Copy failed' "$err"; Add-TaskRow 'Copy' $tgt "Error: $err"; return }
         $rows = @(Show-Grid $script:GridWizResult $result $script:EmptyWizResult)
         $errs = @($rows | Where-Object Status -eq 'Error').Count
         $summary = "$($rows.Count) object(s), $errs error(s)"
         Set-Status "Copy complete — $summary. See ./logs for the transcript."
+        Show-Toast $(if ($errs) { 'warn' } else { 'success' }) 'Copy complete' $summary
         Add-TaskRow 'Copy' $tgt $summary
         Add-RecentCopy $summary
     }
@@ -1190,16 +1303,41 @@ $script:BtnWizLoadLists.Add_Click({
 $script:TbWizSource.Add_TextChanged({ Update-WizardNav })
 $script:TbWizDest.Add_TextChanged({ Update-WizardNav })
 
+# --- Settings ---------------------------------------------------------------------------
+$script:SetAbout.Text = "OpenGateSP $script:AppVersion"
+$script:BtnSettings.Add_Click({ Show-View 'Settings' })
+$script:ConnPill.Add_MouseLeftButtonUp({ Show-View 'Settings' })
+$script:BtnManageConnection.Add_Click({ Show-View 'Connect' })
+$script:BtnDocs.Add_Click({ Start-Process 'https://github.com/sameer-zahir/opengatesp#readme' })
+$script:BtnOpenLogs.Add_Click({
+    $logs = Join-Path (Split-Path $PSScriptRoot -Parent) 'logs'
+    $target = if (Test-Path -LiteralPath $logs) { $logs } else { Split-Path $PSScriptRoot -Parent }
+    Start-Process -FilePath explorer.exe -ArgumentList $target
+})
+$script:BtnCheckUpdates.Add_Click({
+    Set-Status 'Checking for updates...'
+    try {
+        $r = Invoke-RestMethod 'https://api.github.com/repos/sameer-zahir/opengatesp/releases/latest' -Headers @{ 'User-Agent' = 'OpenGateSP' } -TimeoutSec 12
+        $latest = "$($r.tag_name)".TrimStart('v')
+        if ($latest -and [version]$latest -gt [version]$script:AppVersion) {
+            if (Confirm-Action "OpenGateSP $latest is available (you have $script:AppVersion).`n`nOpen the download page?") { Start-Process "$($r.html_url)" }
+            Set-Status "Update available: $latest"
+        }
+        else { Set-Status "You're on the latest version ($script:AppVersion)." }
+    }
+    catch { Set-Status "Update check failed: $($_.Exception.Message)" }
+})
+
 # --- navigation -------------------------------------------------------------------------
 $script:ViewMap = [ordered]@{
     Home = $script:ViewHome; Connect = $script:ViewConnect; Explore = $script:ViewExplore
     CopyLanding = $script:ViewCopyLanding; CopyWizard = $script:ViewCopyWizard
     Migrate = $script:ViewMigrate; CopySite = $script:ViewCopySite; Collab = $script:ViewCollab
     PreCheck = $script:ViewPreCheck; Provision = $script:ViewProvision; Reports = $script:ViewReports
-    Tasks = $script:ViewTasks; Scheduled = $script:ViewScheduled
+    Tasks = $script:ViewTasks; Scheduled = $script:ViewScheduled; Settings = $script:ViewSettings
 }
-$script:CrumbMap = @{ Home = 'Home'; Connect = 'Connect'; Explore = 'Explore'; CopyLanding = 'Copy'; CopyWizard = 'Copy'; Migrate = 'Import file share'; CopySite = 'Copy site'; Collab = 'Teams & Groups'; PreCheck = 'Pre-check'; Provision = 'Provisioning'; Reports = 'Security'; Tasks = 'Tasks'; Scheduled = 'Scheduled' }
-$script:GroupMap = @{ Home = 'Migration'; Connect = 'Setup'; Explore = 'Migration'; CopyLanding = 'Migration'; CopyWizard = 'Migration'; Migrate = 'Migration'; CopySite = 'Migration'; Collab = 'Migration'; PreCheck = 'Migration'; Provision = 'Governance'; Reports = 'Migration'; Tasks = 'Activity'; Scheduled = 'Activity' }
+$script:CrumbMap = @{ Home = 'Home'; Connect = 'Connect'; Explore = 'Explore'; CopyLanding = 'Copy'; CopyWizard = 'Copy'; Migrate = 'Import file share'; CopySite = 'Copy site'; Collab = 'Teams & Groups'; PreCheck = 'Pre-check'; Provision = 'Provisioning'; Reports = 'Security'; Tasks = 'Tasks'; Scheduled = 'Scheduled'; Settings = 'Settings' }
+$script:GroupMap = @{ Home = 'Migration'; Connect = 'Setup'; Explore = 'Migration'; CopyLanding = 'Migration'; CopyWizard = 'Migration'; Migrate = 'Migration'; CopySite = 'Migration'; Collab = 'Migration'; PreCheck = 'Migration'; Provision = 'Governance'; Reports = 'Migration'; Tasks = 'Activity'; Scheduled = 'Activity'; Settings = 'Setup' }
 
 function Show-View([string]$name) {
     foreach ($entry in $script:ViewMap.GetEnumerator()) {
@@ -1226,6 +1364,22 @@ $script:CardReports.Add_Click({ $script:NavReports.IsChecked = $true })
 $script:CardProvision.Add_Click({ $script:NavProvision.IsChecked = $true })
 $script:CardScheduled.Add_Click({ $script:NavScheduled.IsChecked = $true })
 
+# --- keyboard shortcuts -----------------------------------------------------------------
+$window.Add_PreviewKeyDown({
+    $ke = $args[1]
+    $inText = $ke.OriginalSource -is [System.Windows.Controls.TextBox]
+    $vis = [System.Windows.Visibility]::Visible; $col = [System.Windows.Visibility]::Collapsed
+    if ($ke.Key -eq 'Escape' -and $script:ShortcutsOverlay.Visibility -eq $vis) { $script:ShortcutsOverlay.Visibility = $col; $ke.Handled = $true; return }
+    if (-not $inText -and $ke.Key -eq 'OemQuestion') {
+        $script:ShortcutsOverlay.Visibility = if ($script:ShortcutsOverlay.Visibility -eq $vis) { $col } else { $vis }
+        $ke.Handled = $true; return
+    }
+    if ($ke.Key -eq 'OemComma' -and ([System.Windows.Input.Keyboard]::Modifiers -band [System.Windows.Input.ModifierKeys]::Control)) {
+        Show-View 'Settings'; $ke.Handled = $true
+    }
+})
+$script:ShortcutsOverlay.Add_MouseLeftButtonDown({ $script:ShortcutsOverlay.Visibility = [System.Windows.Visibility]::Collapsed })
+
 # Open on Home.
 $script:NavHome.IsChecked = $true
 
@@ -1233,5 +1387,13 @@ $script:NavHome.IsChecked = $true
 $window.Add_Closing({
     try { if ($script:Worker) { $script:Worker.Close(); $script:Worker.Dispose() } } catch { }
 })
+
+try {
+    $icoPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'tools\opengatesp.ico'
+    if (Test-Path -LiteralPath $icoPath) { $window.Icon = New-Object System.Windows.Media.Imaging.BitmapImage ([Uri]$icoPath) }
+} catch { }
+
+# First run: guide the one-time Entra app setup before the main window opens.
+if (-not (Test-Path -LiteralPath (Join-Path $env:APPDATA 'OpenGateSP\spconfig.json'))) { Show-Onboarding }
 
 $null = $window.ShowDialog()

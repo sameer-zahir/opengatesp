@@ -57,3 +57,32 @@ Test each feature through all three surfaces where it's exposed:
 - **PowerShell** — `Import-Module ./module/OpenGateSP/OpenGateSP.psd1`, call the cmdlet.
 - **MCP** — `npm --prefix mcp-server start`, drive the `sharepoint_*` tools from an AI client (write tools preview unless `execute=true`).
 - **GUI** — `./gui/Start-OpenGateSPGui.ps1`; every nav view runs its cmdlet and renders/export results.
+
+## 5. Runtime checks to confirm on a dev tenant (PnP behaviour)
+
+Static introspection confirmed every PnP cmdlet/parameter OpenGateSP uses exists in PnP.PowerShell
+3.2.0. These few behaviours can only be confirmed at runtime — verify them once on the seeded tenant:
+
+- **Field fidelity — People & Managed-Metadata** (`Copy-SPListItems` → `Resolve-SPFieldValue`):
+  confirm a copied item's **Person** field resolves from the email/login string, and a
+  **Managed-Metadata** field round-trips from the `"Label|TermGuid"` string passed to
+  `Add-PnPListItem -Values`. **If taxonomy doesn't take that string form**, the confirmed fix is a
+  post-add pass with `Set-PnPTaxonomyFieldValue -ListItem <item> -InternalFieldName <field> -TermId <guid>`
+  (the cmdlet is present in 3.2.0) — wire it into `Copy-SPListItems` once a tenant shows it's needed.
+- **Version history** (`Copy-SPFileVersions`, `-IncludeVersions`): confirm `Get-PnPFileVersion -Url`
+  returns objects with `.Url`/`.Size`/`.ID`, and that downloading each version's `.Url` and
+  re-uploading rebuilds the chain (content/order preserved; per-version author/date are not).
+- **Checked-out detection** (`Get-SPCheckedOutFiles`): confirm `FieldValues['CheckoutUser'].LookupValue`
+  yields the holder on the seeded checked-out file.
+- **Workflows** (`Get-SPWorkflowReport`): `Get-PnPWorkflowSubscription` is absent in 3.2.0 — confirm
+  the cmdlet's guard returns empty + a warning (no error).
+
+## 6. v0.10.0 GUI / install smoke checks
+
+- **First run:** delete `%APPDATA%\OpenGateSP\spconfig.json`, launch → the **Welcome** onboarding
+  modal appears (Copy command, paste Client ID + tenant, Save) → main window opens, Connect prefilled.
+- **Polish:** nav icons render; the app-bar **cog** opens **Settings**; the connection pill opens
+  Settings; a **toast** fires on a copy/remediation; **`?`** shows the shortcuts overlay; **Tab**
+  shows a focus ring; **Check for updates** in Settings reports latest/newer.
+- **Install:** `installer\Build-Installer.ps1` → run `OpenGateSP-Setup.exe` on a clean VM → PS7
+  *offer* if missing → app launches → onboarding. `winget validate installer\winget\`.

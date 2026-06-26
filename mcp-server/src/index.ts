@@ -5,7 +5,7 @@ import { EngineHost } from "./engine.js";
 
 const engine = new EngineHost();
 
-const server = new McpServer({ name: "opengatesp", version: "0.9.0" });
+const server = new McpServer({ name: "opengatesp", version: "0.10.0" });
 
 type ToolResult = {
   content: { type: "text"; text: string }[];

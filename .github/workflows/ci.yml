@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -53,3 +54,61 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm run build
+
+  # Build + publish artifacts when a vX.Y.Z tag is pushed. Gated on the test job.
+  release:
+    runs-on: windows-latest
+    needs: lint-and-test
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tooling (ps2exe + Inno Setup)
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module ps2exe -Scope CurrentUser -Force
+          choco install innosetup --no-progress -y
+
+      - name: Build installer + portable exe
+        shell: pwsh
+        run: pwsh installer/Build-Installer.ps1
+
+      - name: Package portable zip
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          Copy-Item dist/OpenGateSP.exe . -Force
+          Compress-Archive -Force -DestinationPath "dist/OpenGateSP-$v.zip" `
+            -Path OpenGateSP.exe, Start-OpenGateSP.cmd, README.md, LICENSE, CHANGELOG.md, module, gui, tools, docs, scripts
+
+      # Enable once the SignPath OSS certificate is approved (see docs/distribution.md):
+      # - name: Sign with SignPath
+      #   uses: signpath/github-action-submit-signing-request@v1
+      #   with:
+      #     api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+      #     organization-id: ${{ secrets.SIGNPATH_ORG_ID }}
+      #     project-slug: opengatesp
+      #     signing-policy-slug: release-signing
+      #     artifact-configuration-slug: setup-exe
+      #     github-artifact-id: <upload-id>
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          gh release create "${{ github.ref_name }}" `
+            dist/OpenGateSP-Setup.exe "dist/OpenGateSP-$v.zip" `
+            --title "OpenGateSP $v" --generate-notes
+
+      - name: Stamp winget installer hash
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash dist/OpenGateSP-Setup.exe -Algorithm SHA256).Hash
+          $f = 'installer/winget/SameerZahir.OpenGateSP.installer.yaml'
+          (Get-Content $f -Raw) -replace 'REPLACE_WITH_SHA256_OF_SETUP_EXE', $hash | Set-Content $f -NoNewline
+          Write-Host "winget hash: $hash  (commit this, then: wingetcreate update --submit — see docs/distribution.md)"

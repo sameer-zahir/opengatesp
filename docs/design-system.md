@@ -94,6 +94,11 @@ signature). Sizes/weights as used today:
 | `Breadcrumb` | wizard trail | `Group › View` today; the wizard extends it to `Copy › Source › …` |
 | `EmptyState` | empty grid | Centered, invites an action |
 | `DataGrid` (+ header/row/cell) | results | Zebra rows, severity colouring, read-only |
+| `NavIcon` + Segoe MDL2 glyphs | left nav | Icon + label per item — one icon set, single weight, on-grid |
+| `FocusVisual` | interactive | 2px Accent **keyboard focus ring** on buttons/nav/cards |
+| Toast (`Show-Toast`) | feedback | Top-right, status-coloured bar; success auto-dismisses, errors persist, click to dismiss |
+| App-bar cog → `ViewSettings` | settings | Theme, connection, logs, about + update-check in one place |
+| First-run onboarding (`Show-Onboarding`) | first launch | Guided, in-app Entra app setup when no connection is saved |
 
 ## 6. Layout & navigation
 
@@ -221,11 +226,14 @@ Concrete specifics to apply as the GUI matures — grounded in Fluent 2, WCAG 2.
 **Already applied (v0.9.0):** integer type ramp; paired on-fill tokens `WarnFg`/`DangerFg`
 (`WarnButton` no longer borrows `AccentFg`); validation-driven `Next`/`Run` gating in the wizard.
 
+**Already applied (v0.10.0):** nav icons + app identity; a Settings cog/view; first-run onboarding;
+toasts; keyboard shortcuts (`?` overlay / `Esc` / `Ctrl+,`); in-context tooltips; and the **2px
+keyboard focus ring** (`FocusVisual`, on buttons/nav/cards).
+
 **Prioritized follow-ups** (highest leverage first):
 
-1. **Keyboard focus ring on every control** — a visible 2px ring (Fluent uses a 2px dual-stroke that
-   shows on any background) via WPF `FocusVisualStyle`, applied to buttons, nav, cards and tabs (not
-   just inputs). The top accessibility gap. (learn.microsoft *styling-for-focus-and-focusvisualstyle*; WinUI focus specs)
+1. **Extend the focus ring to tabs + text inputs** — `FocusVisual` now applies to buttons/nav/cards
+   (v0.10.0); add it to `TabItem`, `TextBox`, `ComboBox`, `CheckBox` for full coverage. (learn.microsoft *styling-for-focus-and-focusvisualstyle*; WinUI focus specs)
 2. **Tabular, right-aligned numerals for numeric grid columns** — the single biggest "made by pros"
    signal for a data tool. In `Show-Grid`, right-align + `Consolas`/`Typography.NumeralAlignment="Tabular"`
    on count/size columns. (Stripe; Vercel Geist)

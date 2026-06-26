@@ -1,6 +1,6 @@
 # winget default-locale manifest.
 PackageIdentifier: SameerZahir.OpenGateSP
-PackageVersion: 0.2.0
+PackageVersion: 0.10.0
 PackageLocale: en-US
 Publisher: Sameer Zahir
 PublisherUrl: https://sameerzahir.com
