@@ -5,13 +5,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![PowerShell 7.4+](https://img.shields.io/badge/PowerShell-7.4%2B-5391FE?logo=powershell&logoColor=white)
 
-> **The free, open-source [ShareGate](https://sharegate.com) alternative** for SharePoint Online and Microsoft 365 — **migrate** file shares into SharePoint, **pre-check** sources before you move them, **audit** permissions and external sharing, **provision** sites, and **schedule** governance reports. A themed Windows app, a PowerShell engine, and an MCP server so your AI assistant can drive it. MIT-licensed.
+> **The free, open-source [ShareGate](https://sharegate.com) alternative** for SharePoint Online and Microsoft 365 — **migrate** file shares into SharePoint, **pre-check** sources before you move them, **audit** permissions and external sharing, **provision** sites, and **schedule** governance reports. A polished Windows app with a **built-in AI assistant that runs on your own model** (bring your own Claude / OpenAI key, or a local Ollama / LM Studio), a PowerShell engine, and an MCP server. MIT-licensed.
 
 ![OpenGateSP — themed SharePoint admin GUI](docs/screenshot-dark.png)
 
 ## Install
 
-**Easiest — the installer.** [Download **`OpenGateSP-Setup.exe`**](https://github.com/sameer-zahir/opengatesp/releases/latest) and double-click it. It installs per-user (no admin), drops a **Start Menu + desktop shortcut**, and registers an uninstaller — like any normal app. First launch shows the one-time (free) Entra app registration, then opens the app.
+**Easiest — the installer.** [Download **`OpenGateSP-Setup.exe`**](https://github.com/sameer-zahir/opengatesp/releases/latest) and double-click it. It installs per-user (no admin), drops a **Start Menu + desktop shortcut**, and registers an uninstaller — like any normal app. First launch lets you **pick your theme**, signs you in with a **one-click guided setup** (it registers a free Entra app for you — no copy-pasting commands), and gives you a **quick tour**. Then you're in.
 
 **Portable — no install.** Prefer to keep it in a folder? Download the `.zip`, unzip, and run **`OpenGateSP.exe`** (or `Start-OpenGateSP.cmd`).
 
@@ -33,24 +33,27 @@ ShareGate is a polished, expensive tool for work that ultimately comes down to S
 | Post-migration validation (compare) | ✅ | ✅ |
 | Tenant-to-tenant, Teams, Groups & Planner | ✅ | ✅ |
 | Remediation (check-in, trim versions, fix inheritance) | ✅ | ✅ |
-| Drive it from an AI assistant (MCP) | — | **✅ built in** |
+| **In-app AI assistant** — ask in English, bring your own model | — | **✅** |
+| Drive it from your own AI app over MCP | — | **✅** |
 | Open source you can read, fork, and own | — | **✅** |
 | Full per-version history fidelity | ✅ | best-effort |
+| ShareGate Protect-style automated governance policies | ✅ | partial |
 
-OpenGateSP now spans source **Explore**, same- and cross-tenant copy, post-migration validation, governance, and remediation — the bulk of ShareGate's surface, free and scriptable. The honest remaining gaps: full per-version history fidelity (best-effort here, needs the SharePoint Migration API) and ShareGate Protect's SaaS governance automation.
+OpenGateSP covers the bulk of **ShareGate Migrate** — source **Explore**, same- and cross-tenant copy, post-migration validation, governance reporting, and remediation — plus an **in-app AI assistant no closed tool can match**. The honest gaps are real: full per-version history fidelity (best-effort here; it needs the SharePoint Migration API), and most of **ShareGate Protect**'s *automated* governance (always-on policies, access-review campaigns). OpenGateSP does the reporting and the manual remediation today, not yet the policy engine.
 
-## Light & dark, built in
+## Built to feel like a product
 
-The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent dark and the warm **Gruvbox** / deep **Tokyo Night Moon** ([Squintless](https://github.com/sameer-zahir/squintless)) themes a click away in the picker.
+Four themes — **pick yours on first run** (the warm **Gruvbox**, a confident **Tokyo Night Moon**, or clean Fluent **light / dark** from [Squintless](https://github.com/sameer-zahir/squintless)), change it any time. The UI has real **depth** — layered surfaces, soft shadows, smooth motion, and right-aligned tabular numbers — navigation grouped by the migration runbook (**Migration · Activity · Governance**), and a foolproof, **preview-first** Copy wizard a first-timer can't get lost in. A **first-run tour** and an always-on **?** help button keep non-technical users oriented (power users reach for the MCP). The visual system is documented in [docs/design-system.md](docs/design-system.md).
 
-Navigation is grouped by the migration runbook — **Migration · Activity · Governance** — and **Copy** opens a guided *"what would you like to copy?"* chooser into a breadcrumb wizard (Source → Destination → Scope → Options → Preview & run) that previews before it writes, so a first-time user can't get lost. The whole visual system — tokens, components, the wizard pattern, and the human-interface principles behind it — is documented in [docs/design-system.md](docs/design-system.md) to build on. A **Settings** cog, **first-run onboarding** (guided Entra setup), nav icons, toasts, and keyboard shortcuts round out the feel; the installer offers to set up PowerShell 7 and the app checks for updates.
+![OpenGateSP — the in-app AI assistant (bring your own model)](docs/screenshot-ai.png)
 
 ![OpenGateSP light theme](docs/screenshot-light.png)
 
-## What it does (v0.10.0)
+## What it does
 
 | Area | Function | What it does |
 |---|---|---|
+| **Assistant** | In-app AI (bring your own model) | Ask in plain English — your own model (Claude / OpenAI / Ollama / LM Studio) runs the reports for you, summarizes them, and shows the exact PowerShell it ran. Read-only by default; key encrypted on-device. |
 | **Migration** | `Test-SPMigrationReadiness` | Pre-flight a local folder for SharePoint blockers (illegal names, over-long paths, oversized/empty files). Local, read-only. |
 | | `Start-SPFileMigration` | Local file share / folder → SharePoint library, preserving structure + timestamps. Dry-run by default. |
 | | `Copy-SPSite` | Copy a site's structure (lists, libraries, columns, views) and optionally its content to another site in the **same tenant**. Dry-run by default ([docs/07](docs/07-sharepoint-migration.md)). |
@@ -75,9 +78,11 @@ Navigation is grouped by the migration runbook — **Migration · Activity · Go
 
 Same engine, three ways to use it: the **GUI**, the **PowerShell** module, or the **MCP server**.
 
-## Drive it from an AI assistant
+## AI-driven, two ways
 
-The [MCP server](mcp-server/) lets Claude / Codex / Gemini run OpenGateSP conversationally — *"show external sharing on /sites/Marketing"*, *"preview migrating C:\Shares\HR into the HR site."* Write tools preview by default. Setup: [mcp-server/README.md](mcp-server/README.md).
+**In the app.** The **Assistant** tab runs on *your own* model — paste a Claude or OpenAI key, or point it at a local **Ollama / LM Studio** (no key, nothing leaves your machine). Ask *"show external sharing on /sites/Marketing"* and it runs the report, summarizes it, and shows the exact PowerShell it used — which you can copy. Your key is encrypted on-device, and nothing is bundled, so it stays free.
+
+**From your own AI app.** The [MCP server](mcp-server/) lets Claude / Codex / Gemini drive the same tools conversationally — *"preview migrating C:\Shares\HR into the HR site."* Write tools preview by default. Setup: [mcp-server/README.md](mcp-server/README.md).
 
 ## Prefer the CLI?
 

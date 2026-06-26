@@ -30,6 +30,8 @@
                             <TextBlock x:Name="ConnStatus" Text="Not connected" Style="{DynamicResource Muted}"/>
                         </StackPanel>
                     </Border>
+                    <Button x:Name="BtnHelp" Style="{DynamicResource ThemeToggle}" ToolTip="Help &amp; tour"
+                            FontFamily="Segoe MDL2 Assets" Content="&#xE897;"/>
                     <Button x:Name="BtnSettings" Style="{DynamicResource ThemeToggle}" ToolTip="Settings"
                             FontFamily="Segoe MDL2 Assets" Content="&#xE713;"/>
                 </StackPanel>
@@ -68,6 +70,9 @@
                     <StackPanel>
                         <RadioButton x:Name="NavHome" GroupName="Nav" Style="{DynamicResource NavButton}">
                             <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE80F;"/><TextBlock Text="Home" VerticalAlignment="Center"/></StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="NavAI" GroupName="Nav" Style="{DynamicResource NavButton}">
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE8BD;"/><TextBlock Text="Assistant" VerticalAlignment="Center"/></StackPanel>
                         </RadioButton>
                         <TextBlock Text="MIGRATION" Style="{DynamicResource NavGroupHeader}" Margin="14,14,0,6"/>
                         <RadioButton x:Name="NavExplore" GroupName="Nav" Style="{DynamicResource NavButton}">
@@ -193,7 +198,7 @@
 
                     <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
                         <Button x:Name="BtnConnect" Content="Connect"/>
-                        <TextBlock Text="Saved defaults load automatically. Register an app first (docs/02)."
+                        <TextBlock Text="First time? The welcome screen's one-click sign-in sets this up. Saved defaults load automatically."
                                    Style="{DynamicResource Muted}" Margin="6,0,0,0"/>
                     </StackPanel>
                 </Grid>
@@ -923,6 +928,69 @@
                     </StackPanel>
                 </DockPanel>
 
+                <!-- ASSISTANT (bring-your-own-model AI) -->
+                <Grid x:Name="ViewAI" Margin="28,26" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="Assistant" Style="{DynamicResource Section}"/>
+                        <TextBlock Style="{DynamicResource Muted}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                   Text="Ask in plain English and the assistant uses your own AI to run OpenGateSP's reports for you. Bring your own model — a Claude or OpenAI key, or a local model (Ollama / LM Studio). Your key is encrypted on this PC and never leaves it except to your chosen provider."/>
+                    </StackPanel>
+
+                    <Border x:Name="AiConnectPanel" Grid.Row="1" CornerRadius="14" Padding="18,16" Margin="0,0,0,14"
+                            Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource Border}" BorderThickness="1" Effect="{DynamicResource ShadowSoft}">
+                        <StackPanel>
+                            <TextBlock Text="Connect your AI" Style="{DynamicResource CardTitle}"/>
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Provider" VerticalAlignment="Center"/>
+                                <ComboBox  Grid.Row="0" Grid.Column="1" x:Name="AiProvider"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Model" VerticalAlignment="Center"/>
+                                <TextBox   Grid.Row="1" Grid.Column="1" x:Name="AiModel"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="API key" VerticalAlignment="Center"/>
+                                <PasswordBox Grid.Row="2" Grid.Column="1" x:Name="AiKey" Padding="9,7" Margin="0,5" FontSize="13"
+                                             Background="{DynamicResource BgElev}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource Border}" BorderThickness="1"/>
+                                <TextBlock x:Name="AiEndpointLabel" Grid.Row="3" Grid.Column="0" Text="Endpoint" VerticalAlignment="Center"/>
+                                <TextBox   x:Name="AiEndpoint" Grid.Row="3" Grid.Column="1"/>
+                            </Grid>
+                            <CheckBox x:Name="AiAllowWrites" Content="Allow write actions (always previewed first). Off = read-only." Margin="0,10,0,0"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <Button x:Name="AiTest" Content="Test" Style="{DynamicResource GhostButton}"/>
+                                <Button x:Name="AiSave" Content="Save"/>
+                                <TextBlock x:Name="AiCfgStatus" Style="{DynamicResource Muted}" Margin="8,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock Style="{DynamicResource Muted}" TextWrapping="Wrap" Margin="0,12,0,0"
+                                       Text="No key for local models — just start Ollama or LM Studio first. Already use an AI app? Add OpenGateSP to it:"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button x:Name="AiAddClaude" Content="Add to Claude Desktop" Style="{DynamicResource GhostButton}"/>
+                                <Button x:Name="AiHelpKey" Content="Where do I get a key?" Style="{DynamicResource GhostButton}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="2" CornerRadius="12" Background="{DynamicResource Bg}" BorderBrush="{DynamicResource Border}" BorderThickness="1">
+                        <Grid>
+                            <ScrollViewer x:Name="AiScroll" VerticalScrollBarVisibility="Auto" Padding="14">
+                                <StackPanel x:Name="AiTranscript"/>
+                            </ScrollViewer>
+                            <TextBlock x:Name="AiEmpty" Style="{DynamicResource EmptyState}"
+                                       Text="Try: &quot;show external sharing on https://contoso.sharepoint.com/sites/Marketing&quot;, or &quot;explore the HR site for migration blockers.&quot;"/>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="3" Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox x:Name="AiInput" Grid.Column="0"/>
+                        <Button x:Name="AiSend" Grid.Column="1" Content="Ask" Margin="8,5,0,5"/>
+                    </Grid>
+                </Grid>
+
                 </Grid>
               </ScrollViewer>
             </Grid>
@@ -932,6 +1000,25 @@
     <!-- Toast overlay (top-right, above content) -->
     <StackPanel x:Name="ToastHost" HorizontalAlignment="Right" VerticalAlignment="Top"
                 Margin="0,66,18,0" Panel.ZIndex="100"/>
+
+    <!-- First-run guided tour (also reopen any time with the ? button) -->
+    <Grid x:Name="TourOverlay" Visibility="Collapsed" Panel.ZIndex="300" Background="#A6000000">
+        <Border Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource BorderStrong}" BorderThickness="1" CornerRadius="14"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Padding="30" MaxWidth="540" Effect="{DynamicResource ShadowMed}">
+            <StackPanel>
+                <TextBlock x:Name="TourTitle" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                <TextBlock x:Name="TourBody" TextWrapping="Wrap" Margin="0,12,0,0" FontSize="14" MinHeight="90" Foreground="{DynamicResource FgMute}"/>
+                <DockPanel Margin="0,22,0,0">
+                    <TextBlock x:Name="TourDots" DockPanel.Dock="Left" Style="{DynamicResource Muted}" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="TourSkip" Content="Skip" Style="{DynamicResource GhostButton}"/>
+                        <Button x:Name="TourBack" Content="Back" Style="{DynamicResource GhostButton}"/>
+                        <Button x:Name="TourNext" Content="Next"/>
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
 
     <!-- Keyboard shortcuts overlay (toggle with ?) -->
     <Grid x:Name="ShortcutsOverlay" Visibility="Collapsed" Panel.ZIndex="200" Background="#99000000">

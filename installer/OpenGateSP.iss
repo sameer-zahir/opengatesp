@@ -2,7 +2,11 @@
 ; Build with:  pwsh installer\Build-Installer.ps1   (or: ISCC installer\OpenGateSP.iss)
 
 #define MyAppName "OpenGateSP"
-#define MyAppVersion "0.10.0"
+; Version comes from tools\Get-OpenGateSPVersion.ps1 via Build-Installer.ps1 (ISCC /DMyAppVersion=...).
+; The literal below is only a fallback for compiling the .iss directly.
+#ifndef MyAppVersion
+  #define MyAppVersion "0.10.0"
+#endif
 #define MyAppPublisher "Sameer Zahir"
 #define MyAppURL "https://sameerzahir.com"
 #define MyAppRepo "https://github.com/sameer-zahir/opengatesp"
