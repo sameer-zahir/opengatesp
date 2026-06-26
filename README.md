@@ -41,13 +41,14 @@ The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent 
 
 ![OpenGateSP light theme](docs/screenshot-light.png)
 
-## What it does (v0.2.0)
+## What it does (v0.3.0)
 
 | Area | Function | What it does |
 |---|---|---|
 | **Migration** | `Test-SPMigrationReadiness` | Pre-flight a local folder for SharePoint blockers (illegal names, over-long paths, oversized/empty files). Local, read-only. |
 | | `Start-SPFileMigration` | Local file share / folder → SharePoint library, preserving structure + timestamps. Dry-run by default. |
 | | `Copy-SPSite` | Copy a site's structure (lists, libraries, columns, views) and optionally its content to another site in the **same tenant**. Dry-run by default ([docs/07](docs/07-sharepoint-migration.md)). |
+| | `Copy-SPPermissions` | Copy role assignments to another site, remapping users/groups via a mapping CSV or domain swap. Dry-run by default. |
 | **Reporting** | `Get-SPSiteInventory` | Tenant-wide sites + storage + last activity |
 | | `Get-SPPermissionReport` | Who has access; where inheritance is broken |
 | | `Get-SPSharingReport` | External users and sharing links |

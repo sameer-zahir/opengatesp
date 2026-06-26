@@ -20,9 +20,9 @@ same-tenant only for now.
 
 - **Same-tenant only.** Tenant-to-tenant is Phase 3 (cross-tenant needs download/upload, not `Copy-PnPFile`).
 - **No version history** — latest version of each file only.
-- **Managed-metadata item values, complex/3rd-party web parts** — lossy or skipped (Phase 2).
-- **Permissions & identity mapping** — Phase 2 (structure includes groups/levels; per-item permission copy + user mapping come next).
-- **No incremental/delta yet** — re-running re-evaluates conflicts via `-ConflictMode` (Phase 2 adds change-tracking).
+- **Managed-metadata item values, complex/3rd-party web parts** — lossy or skipped.
+- **Permissions** — `Copy-SPPermissions` (or `Copy-SPSite -CopyPermissions`) copies site and unique-list role assignments and remaps users/groups via a mapping CSV or a domain swap. Deep per-file ACLs are still coarse.
+- **Incremental** — `-Since <date>` copies only items modified at/after a watermark (PnP has no native change-feed, so it's timestamp-based). Pair with `-ConflictMode IfNewer` for converging re-runs.
 - Out of scope entirely: Exchange/Gmail mailboxes, Google Drive, classic 2013 workflows.
 
 ## Use it
@@ -49,6 +49,29 @@ types, and views. Both are dry-run by default and share the same conflict modes:
 
 Also available as the MCP tools **`sharepoint_copy_site`** and **`sharepoint_copy_list`**
 (dry-run by default; `execute=true` to run).
+
+## Permissions & incremental (Phase 2)
+
+Copy role assignments and remap principals — the path for tenant-to-tenant, where domains differ:
+
+```powershell
+# Preview which grants would apply (flags anything that can't be mapped):
+Copy-SPPermissions -SourceUrl .../sites/A -DestinationUrl .../sites/B -IncludeListPermissions -WhatIf
+
+# Apply, swapping every @contoso.com principal to @fabrikam.com:
+Copy-SPPermissions -SourceUrl .../sites/A -DestinationUrl .../sites/B -DomainFrom contoso.com -DomainTo fabrikam.com -Force
+
+# Explicit per-principal mapping from a CSV (columns: Source,Destination):
+Copy-SPPermissions -SourceUrl .../sites/A -DestinationUrl .../sites/B -MappingCsv .\map.csv -Force
+
+# Incremental content: only items changed at/after a watermark:
+Copy-SPSite -SourceUrl .../sites/A -DestinationUrl .../sites/B -IncludeContent -Since '2026-06-01'
+```
+
+`Copy-SPSite -CopyPermissions` runs the permission copy as a final step after structure + content.
+In the **same tenant**, SharePoint groups and site grants already arrive with the structure template —
+so permission copy mainly adds unique list permissions and (cross-tenant) principal remapping.
+Also available as the MCP tool **`sharepoint_copy_permissions`**.
 
 ## Manual test plan (run against a tenant)
 

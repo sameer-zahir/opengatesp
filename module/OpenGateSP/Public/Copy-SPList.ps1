@@ -39,6 +39,7 @@ function Copy-SPList {
         [Parameter(Mandatory)][string]$List,
         [switch]$IncludeContent,
         [ValidateSet('Replace', 'Skip', 'KeepBoth', 'IfNewer')][string]$ConflictMode = 'IfNewer',
+        [Nullable[datetime]]$Since,
         [switch]$Force,
         [switch]$AsJson
     )
@@ -99,7 +100,7 @@ function Copy-SPList {
                 $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $List -Action 'Overwrite' -Status 'Success' -Detail 'Files copied'))
             }
             else {
-                $n = Copy-SPListItems -SourceConnection $src -DestinationConnection $dst -ListTitle $List
+                $n = Copy-SPListItems -SourceConnection $src -DestinationConnection $dst -ListTitle $List -Since $Since
                 $results.Add((New-SPCopyResult -ObjectType 'List' -Name $List -Action 'Overwrite' -Status 'Success' -Detail "$n item(s) copied"))
             }
         }

@@ -15,11 +15,19 @@ function Copy-SPListItems {
         [Parameter(Mandatory)]$DestinationConnection,
         [Parameter(Mandatory)][string]$ListTitle,
         [string[]]$Fields,
+        [Nullable[datetime]]$Since,
         [int]$PageSize = 500
     )
 
     $items = @(Get-PnPListItem -List $ListTitle -PageSize $PageSize -Connection $SourceConnection -ErrorAction Stop)
     if (-not $items.Count) { return 0 }
+
+    # Incremental: keep only items changed at/after the watermark (pure, tested helper).
+    if ($Since) {
+        $shaped = $items | ForEach-Object { [pscustomobject]@{ Id = $_.Id; Modified = $_['Modified']; Raw = $_ } }
+        $items = @(Select-SPChangedItems -SourceItem $shaped -Since $Since | ForEach-Object { $_.Raw })
+        if (-not $items.Count) { return 0 }
+    }
 
     if (-not $Fields) {
         $Fields = @(

@@ -58,6 +58,7 @@ function Invoke-EngineCommand {
         'precheck.readiness' { return (Test-SPMigrationReadiness @Params) }  # local scan, no connection
         'copy.site'          { return (Copy-SPSite @Params) }                # manages its own source+dest connections
         'copy.list'          { return (Copy-SPList @Params) }                # granular single list/library copy
+        'copy.permissions'   { return (Copy-SPPermissions @Params) }         # role-assignment copy + principal remap
 
 
         'provision.site'     { Confirm-Connected; return (New-SPSiteFromTemplate @Params) }

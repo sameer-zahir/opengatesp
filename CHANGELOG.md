@@ -4,6 +4,26 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.0]
+
+ShareGate-parity **Phase 2** — permissions, identity mapping, and incremental copy.
+
+### Added
+- **`Copy-SPPermissions`** — copy a site's role assignments (and, with `-IncludeListPermissions`,
+  unique list/library permissions) to another site, remapping users and groups via a
+  `-MappingCsv` (Source,Destination) and/or a `-DomainFrom`/`-DomainTo` swap. Dry-run by
+  default; flags principals that can't be mapped. Same-tenant or tenant-to-tenant.
+- **Incremental copy** — `-Since <date>` on `Copy-SPSite` / `Copy-SPList` copies only items
+  modified at/after a watermark (timestamp-based; PnP has no native change-feed).
+- **`Copy-SPSite -CopyPermissions`** — fold the permission copy into a site copy as a final step.
+- **MCP** — `sharepoint_copy_permissions` tool; `sharepoint_copy_site` gains
+  `copyPermissions` / `mappingCsv` / `domainFrom` / `domainTo` / `since`.
+- **GUI** — a **Copy permissions** option in the Copy-site wizard.
+
+### Changed
+- Pure, unit-tested core grows: principal-key normalization, principal mapping, and
+  incremental change-selection helpers (12 new Pester cases; 50 total, no tenant needed).
+
 ## [0.2.0]
 
 ### Added

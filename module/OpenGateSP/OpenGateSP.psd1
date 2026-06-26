@@ -20,6 +20,7 @@
         'Test-SPMigrationReadiness',
         'Copy-SPSite',
         'Copy-SPList',
+        'Copy-SPPermissions',
         'New-SPSiteFromTemplate',
         'Set-SPBulkMetadata'
     )
@@ -32,7 +33,7 @@
             Tags         = @('SharePoint', 'SharePointOnline', 'Microsoft365', 'PnP', 'Migration', 'FileShare', 'Governance', 'Permissions', 'ShareGate-alternative', 'migration-tool')
             LicenseUri   = 'https://github.com/sameer-zahir/opengatesp/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/sameer-zahir/opengatesp'
-            ReleaseNotes = 'v0.2.0 - add Copy-SPSite (same-tenant SharePoint site copy, structure + content, dry-run by default), Test-SPMigrationReadiness (local pre-migration readiness check), and scheduled governance reports; modernized GUI (sidebar nav, card home, Copy-site wizard, Fluent default theme + picker). v0.1.0 - initial engine.'
+            ReleaseNotes = 'v0.3.0 - Phase 2: Copy-SPPermissions (role-assignment copy with user/group remapping via mapping CSV or domain swap) and incremental copy (-Since watermark) on Copy-SPSite/Copy-SPList. v0.2.0 - Copy-SPSite/Copy-SPList (same-tenant SharePoint site/list copy), Test-SPMigrationReadiness (local pre-migration readiness check), scheduled governance reports, modernized GUI (Copy-site wizard, Fluent default theme + picker). v0.1.0 - initial engine.'
         }
     }
 }

@@ -754,6 +754,7 @@ function Invoke-CopySite([bool]$Preview) {
         ConflictMode   = @('IfNewer', 'Skip', 'KeepBoth', 'Replace')[$script:CbCopyConflict.SelectedIndex]
     }
     if ($script:CbCopyContent.IsChecked) { $p.IncludeContent = $true }
+    if ($script:CbCopyPerms.IsChecked)   { $p.CopyPermissions = $true }
     $lists = $script:TbCopyLists.Text.Trim()
     if ($lists) { $p.Lists = @($lists -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
 

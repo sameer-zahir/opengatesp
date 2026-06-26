@@ -114,16 +114,50 @@ server.tool(
     lists: z.array(z.string()).optional().describe("Limit to these list/library display names."),
     includeContent: z.boolean().optional().describe("Also copy items and files (default: structure only)."),
     conflictMode: z.enum(["Replace", "Skip", "KeepBoth", "IfNewer"]).optional().describe("Conflict handling for existing objects (default: IfNewer)."),
+    copyPermissions: z.boolean().optional().describe("Also copy role assignments (Phase 2), remapping principals via mappingCsv/domain swap."),
+    mappingCsv: z.string().optional().describe("Path to a Source,Destination CSV for principal remapping (used with copyPermissions)."),
+    domainFrom: z.string().optional().describe("Source domain for a blanket principal domain swap, e.g. contoso.com."),
+    domainTo: z.string().optional().describe("Destination domain for the swap, e.g. fabrikam.com."),
+    since: z.string().optional().describe("ISO date/time watermark: only copy items modified at/after it (incremental)."),
     execute: z.boolean().optional().describe("false = dry-run plan (default); true = perform the copy."),
   },
-  async ({ sourceUrl, destinationUrl, lists, includeContent, conflictMode, execute }) => {
+  async ({ sourceUrl, destinationUrl, lists, includeContent, conflictMode, copyPermissions, mappingCsv, domainFrom, domainTo, since, execute }) => {
     const params: Record<string, unknown> = { SourceUrl: sourceUrl, DestinationUrl: destinationUrl };
     if (lists) params.Lists = lists;
     if (includeContent === true) params.IncludeContent = true;
     if (conflictMode) params.ConflictMode = conflictMode;
+    if (copyPermissions === true) params.CopyPermissions = true;
+    if (mappingCsv) params.MappingCsv = mappingCsv;
+    if (domainFrom) params.DomainFrom = domainFrom;
+    if (domainTo) params.DomainTo = domainTo;
+    if (since) params.Since = since;
     if (execute === true) params.Force = true;
     else params.WhatIf = true;
     return run("copy.site", params);
+  },
+);
+
+server.tool(
+  "sharepoint_copy_permissions",
+  "Copy a site's role assignments to another site, remapping users/groups via a Source,Destination mapping CSV and/or a domain swap. Same-tenant or tenant-to-tenant. Previews a dry-run plan by default (and flags unmapped principals); set execute=true to apply.",
+  {
+    sourceUrl: z.string().url(),
+    destinationUrl: z.string().url(),
+    mappingCsv: z.string().optional().describe("Path to a CSV with Source,Destination columns (logins/emails)."),
+    domainFrom: z.string().optional().describe("Source domain for a blanket swap, e.g. contoso.com."),
+    domainTo: z.string().optional().describe("Destination domain for the swap, e.g. fabrikam.com."),
+    includeListPermissions: z.boolean().optional().describe("Also copy unique (broken-inheritance) list/library permissions."),
+    execute: z.boolean().optional().describe("false = dry-run plan (default); true = apply."),
+  },
+  async ({ sourceUrl, destinationUrl, mappingCsv, domainFrom, domainTo, includeListPermissions, execute }) => {
+    const params: Record<string, unknown> = { SourceUrl: sourceUrl, DestinationUrl: destinationUrl };
+    if (mappingCsv) params.MappingCsv = mappingCsv;
+    if (domainFrom) params.DomainFrom = domainFrom;
+    if (domainTo) params.DomainTo = domainTo;
+    if (includeListPermissions === true) params.IncludeListPermissions = true;
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("copy.permissions", params);
   },
 );
 

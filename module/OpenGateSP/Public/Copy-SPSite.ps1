@@ -43,6 +43,11 @@ function Copy-SPSite {
         [string[]]$Lists,
         [switch]$IncludeContent,
         [ValidateSet('Replace', 'Skip', 'KeepBoth', 'IfNewer')][string]$ConflictMode = 'IfNewer',
+        [switch]$CopyPermissions,
+        [string]$MappingCsv,
+        [string]$DomainFrom,
+        [string]$DomainTo,
+        [Nullable[datetime]]$Since,
         [switch]$Force,
         [switch]$AsJson
     )
@@ -104,7 +109,7 @@ function Copy-SPSite {
                     $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail 'Files copied'))
                 }
                 else {
-                    $n = Copy-SPListItems -SourceConnection $src -DestinationConnection $dst -ListTitle $l.Title
+                    $n = Copy-SPListItems -SourceConnection $src -DestinationConnection $dst -ListTitle $l.Title -Since $Since
                     $results.Add((New-SPCopyResult -ObjectType 'List' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail "$n item(s) copied"))
                 }
             }
@@ -112,6 +117,20 @@ function Copy-SPSite {
                 Write-SPLog "FAILED list '$($l.Title)': $($_.Exception.Message)" -Level Error
                 $results.Add((New-SPCopyResult -ObjectType $(if ($l.BaseType -eq 'DocumentLibrary') { 'Library' } else { 'List' }) -Name $l.Title -Action 'Overwrite' -Status 'Error' -Detail $_.Exception.Message))
             }
+        }
+    }
+
+    # 3) Permissions (optional): re-apply role assignments, remapping principals. We're past
+    # the dry-run guard here, so the site copy is already confirmed — run it -Force.
+    if ($CopyPermissions) {
+        try {
+            $permRows = Copy-SPPermissions -SourceUrl $SourceUrl -DestinationUrl $DestinationUrl `
+                -MappingCsv $MappingCsv -DomainFrom $DomainFrom -DomainTo $DomainTo `
+                -IncludeListPermissions -Force
+            foreach ($r in @($permRows)) { $results.Add($r) }
+        }
+        catch {
+            $results.Add((New-SPCopyResult -ObjectType 'Permissions' -Name $SourceUrl -Action 'Create' -Status 'Error' -Detail $_.Exception.Message))
         }
     }
 
