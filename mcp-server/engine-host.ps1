@@ -80,6 +80,9 @@ function Invoke-EngineCommand {
         }
 
 
+        'copy.team'          { Confirm-Connected; return (Copy-SPTeam @Params) }
+        'copy.m365group'     { Confirm-Connected; return (Copy-SPM365Group @Params) }
+        'copy.planner'       { Confirm-Connected; return (Copy-SPPlannerPlan @Params) }
         'provision.site'     { Confirm-Connected; return (New-SPSiteFromTemplate @Params) }
         'bulk.metadata'      { Confirm-Connected; return (Set-SPBulkMetadata @Params) }
         default              { throw "Unknown command: $Command" }

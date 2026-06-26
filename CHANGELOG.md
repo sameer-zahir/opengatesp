@@ -4,6 +4,24 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.5.0]
+
+ShareGate-parity **Phase 4** — Teams, Microsoft 365 Groups, and Planner.
+
+### Added
+- **`Copy-SPM365Group`** — create a new Microsoft 365 Group modelled on an existing one
+  (description + owner/member roster).
+- **`Copy-SPTeam`** — create a new Team modelled on an existing one: channels (except the
+  auto-created General) and the owner/member roster. Tabs/apps/messages aren't copied.
+- **`Copy-SPPlannerPlan`** — recreate a Planner plan's buckets and tasks on a destination group.
+- **MCP** — `sharepoint_copy_m365_group`, `sharepoint_copy_team`, `sharepoint_copy_planner_plan`.
+- New doc [docs/08](docs/08-teams-groups-planner.md). All dry-run by default; need Microsoft
+  Graph scopes on the app registration.
+
+### Changed
+- Pure core grows: `Get-SPMembershipDelta` (which members to add) is unit-tested (5 new Pester
+  cases; 60 total, no tenant needed).
+
 ## [0.4.0]
 
 ShareGate-parity **Phase 3** — tenant-to-tenant.

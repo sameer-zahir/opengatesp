@@ -41,7 +41,7 @@ The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent 
 
 ![OpenGateSP light theme](docs/screenshot-light.png)
 
-## What it does (v0.4.0)
+## What it does (v0.5.0)
 
 | Area | Function | What it does |
 |---|---|---|
@@ -50,6 +50,9 @@ The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent 
 | | `Copy-SPSite` | Copy a site's structure (lists, libraries, columns, views) and optionally its content to another site in the **same tenant**. Dry-run by default ([docs/07](docs/07-sharepoint-migration.md)). |
 | | `Copy-SPPermissions` | Copy role assignments to another site, remapping users/groups via a mapping CSV or domain swap. Dry-run by default. |
 | | `Copy-SPSite -CrossTenant` | Copy a site to a **different tenant** (files by download/upload, principals remapped). With `New-SPMigrationConnection` + `Copy-SPTermGroup`. |
+| **Collaboration** | `Copy-SPM365Group` | Clone a Microsoft 365 Group (description + owner/member roster) |
+| | `Copy-SPTeam` | Clone a Team (channels + membership) |
+| | `Copy-SPPlannerPlan` | Recreate a Planner plan (buckets + tasks) on a group |
 | **Reporting** | `Get-SPSiteInventory` | Tenant-wide sites + storage + last activity |
 | | `Get-SPPermissionReport` | Who has access; where inheritance is broken |
 | | `Get-SPSharingReport` | External users and sharing links |

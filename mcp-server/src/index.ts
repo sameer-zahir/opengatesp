@@ -5,7 +5,7 @@ import { EngineHost } from "./engine.js";
 
 const engine = new EngineHost();
 
-const server = new McpServer({ name: "opengatesp", version: "0.4.0" });
+const server = new McpServer({ name: "opengatesp", version: "0.5.0" });
 
 type ToolResult = {
   content: { type: "text"; text: string }[];
@@ -191,6 +191,57 @@ server.tool(
     if (a.execute === true) params.Force = true;
     else params.WhatIf = true;
     return run("copy.site.crosstenant", params);
+  },
+);
+
+server.tool(
+  "sharepoint_copy_m365_group",
+  "Create a new Microsoft 365 Group modelled on an existing one (description + owner/member roster). Dry-run by default; execute=true to create. Needs Graph Group.ReadWrite.All.",
+  {
+    sourceIdentity: z.string().describe("Source group id or display name."),
+    displayName: z.string().describe("Display name for the new group."),
+    mailNickname: z.string().describe("Mail nickname (alias) for the new group — must be unique."),
+    execute: z.boolean().optional().describe("false = dry-run (default); true = create."),
+  },
+  async ({ sourceIdentity, displayName, mailNickname, execute }) => {
+    const params: Record<string, unknown> = { SourceIdentity: sourceIdentity, DisplayName: displayName, MailNickname: mailNickname };
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("copy.m365group", params);
+  },
+);
+
+server.tool(
+  "sharepoint_copy_team",
+  "Create a new Microsoft Teams team modelled on an existing one (channels + owner/member roster; tabs/messages not copied). Dry-run by default; execute=true to create.",
+  {
+    sourceTeam: z.string().describe("Source team group id or display name."),
+    displayName: z.string().describe("Display name for the new team."),
+    mailNickname: z.string().describe("Mail nickname (alias) for the new team — must be unique."),
+    execute: z.boolean().optional().describe("false = dry-run (default); true = create."),
+  },
+  async ({ sourceTeam, displayName, mailNickname, execute }) => {
+    const params: Record<string, unknown> = { SourceTeam: sourceTeam, DisplayName: displayName, MailNickname: mailNickname };
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("copy.team", params);
+  },
+);
+
+server.tool(
+  "sharepoint_copy_planner_plan",
+  "Recreate a Planner plan (buckets + tasks) on a destination Microsoft 365 Group. Assignments/attachments not copied. Dry-run by default; execute=true to create.",
+  {
+    sourcePlanId: z.string().describe("Source plan id."),
+    destinationGroupId: z.string().describe("Microsoft 365 Group id that will own the new plan."),
+    title: z.string().describe("Title for the new plan."),
+    execute: z.boolean().optional().describe("false = dry-run (default); true = create."),
+  },
+  async ({ sourcePlanId, destinationGroupId, title, execute }) => {
+    const params: Record<string, unknown> = { SourcePlanId: sourcePlanId, DestinationGroupId: destinationGroupId, Title: title };
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("copy.planner", params);
   },
 );
 
