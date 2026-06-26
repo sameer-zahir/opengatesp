@@ -5,7 +5,7 @@ import { EngineHost } from "./engine.js";
 
 const engine = new EngineHost();
 
-const server = new McpServer({ name: "opengatesp", version: "0.5.0" });
+const server = new McpServer({ name: "opengatesp", version: "0.6.0" });
 
 type ToolResult = {
   content: { type: "text"; text: string }[];
@@ -59,6 +59,42 @@ server.tool(
   "Tenant-wide inventory of site collections with storage and last activity. Requires SharePoint admin.",
   {},
   async () => run("report.inventory", { IncludeStorage: true }),
+);
+
+server.tool(
+  "sharepoint_permissions_matrix",
+  "Report a site's access as a per-principal matrix (who can touch what, and at what level). Read-only.",
+  {
+    siteUrl: z.string().url(),
+    includeListPermissions: z.boolean().optional().describe("Also include lists/libraries with unique permissions."),
+  },
+  async ({ siteUrl, includeListPermissions }) =>
+    run("report.matrix", { SiteUrl: siteUrl, IncludeListPermissions: includeListPermissions === true }),
+);
+
+server.tool(
+  "sharepoint_orphaned_users",
+  "Report users who still have access to a site but no longer exist in the directory (stale access). Read-only; needs Graph User.Read.All.",
+  {
+    siteUrl: z.string().url(),
+  },
+  async ({ siteUrl }) => run("report.orphans", { SiteUrl: siteUrl }),
+);
+
+server.tool(
+  "sharepoint_set_site_lifecycle",
+  "Lock, make read-only (archive), or unlock a site. Requires SharePoint admin. Dry-run by default; execute=true to apply.",
+  {
+    siteUrl: z.string().url(),
+    lockState: z.enum(["Unlock", "ReadOnly", "NoAccess"]).describe("ReadOnly archives; NoAccess fully locks; Unlock restores."),
+    execute: z.boolean().optional().describe("false = preview (default); true = apply."),
+  },
+  async ({ siteUrl, lockState, execute }) => {
+    const params: Record<string, unknown> = { SiteUrl: siteUrl, LockState: lockState };
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("site.lifecycle", params);
+  },
 );
 
 server.tool(

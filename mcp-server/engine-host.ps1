@@ -54,6 +54,9 @@ function Invoke-EngineCommand {
         'report.sharing'     { Confirm-Connected; return (Get-SPSharingReport @Params) }
         'report.permissions' { Confirm-Connected; return (Get-SPPermissionReport @Params) }
         'report.inventory'   { Confirm-Connected; return (Get-SPSiteInventory @Params) }
+        'report.matrix'      { Confirm-Connected; return (Get-SPPermissionsMatrix @Params) }
+        'report.orphans'     { Confirm-Connected; return (Get-SPOrphanedUsers @Params) }
+        'site.lifecycle'     { Confirm-Connected; return (Set-SPSiteLifecycle @Params) }
         'migrate.files'      { Confirm-Connected; return (Start-SPFileMigration @Params) }
         'precheck.readiness' { return (Test-SPMigrationReadiness @Params) }  # local scan, no connection
         'copy.site'          { return (Copy-SPSite @Params) }                # manages its own source+dest connections

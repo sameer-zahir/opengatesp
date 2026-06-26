@@ -11,7 +11,7 @@ The path toward ShareGate-style site migration, grounded in what PnP PowerShell 
 - **Phase 2 — mappings, permissions, incremental (shipped, 0.3.0):** `Copy-SPPermissions` copies role assignments and remaps users/groups (mapping CSV or domain swap); `-CopyPermissions` folds it into a site copy; `-Since` makes content copy incremental. Conflict modes (Replace/Skip/KeepBoth/IfNewer) shipped in Phase 1.
 - **Phase 3 — tenant-to-tenant (shipped, 0.4.0):** `New-SPMigrationConnection` opens a connection per tenant; `Copy-SPSite -CrossTenant` copies structure + content across tenants (library files by download/upload) with principal remapping; `Copy-SPTermGroup` moves managed-metadata terms.
 - **Phase 4 — Teams + Planner + M365 Groups (shipped, 0.5.0):** `Copy-SPM365Group`, `Copy-SPTeam` (channels + membership), and `Copy-SPPlannerPlan` (buckets + tasks). Dry-run by default; need Graph scopes. See [docs/08](08-teams-groups-planner.md).
-- **Phase 5** — deeper governance (permissions-matrix / external-sharing / orphaned-user reports, lifecycle, provisioning requests).
+- **Phase 5 — deeper governance (shipped, 0.6.0):** `Get-SPPermissionsMatrix` (who-can-touch-what), `Get-SPOrphanedUsers` (stale access), `Set-SPSiteLifecycle` (lock / archive / unlock). See [docs/09](09-governance.md).
 - Maybe later: **Box** import.
 
 ## Also planned

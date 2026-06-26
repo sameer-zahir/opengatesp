@@ -41,7 +41,7 @@ The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent 
 
 ![OpenGateSP light theme](docs/screenshot-light.png)
 
-## What it does (v0.5.0)
+## What it does (v0.6.0)
 
 | Area | Function | What it does |
 |---|---|---|
@@ -56,6 +56,9 @@ The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent 
 | **Reporting** | `Get-SPSiteInventory` | Tenant-wide sites + storage + last activity |
 | | `Get-SPPermissionReport` | Who has access; where inheritance is broken |
 | | `Get-SPSharingReport` | External users and sharing links |
+| | `Get-SPPermissionsMatrix` | Per-principal access matrix — who can touch what |
+| | `Get-SPOrphanedUsers` | Users with access no longer in the directory (stale access) |
+| | `Set-SPSiteLifecycle` | Lock / archive (read-only) / unlock a site |
 | **Provisioning** | `New-SPSiteFromTemplate` | Create a site or library from a template |
 | | `Set-SPBulkMetadata` | CSV-driven bulk column updates |
 | **Scheduled** | `Run-GovernanceReport.ps1` | Unattended sharing/permission CSVs on a daily/weekly task ([docs/06](docs/06-scheduled-reports.md)). |

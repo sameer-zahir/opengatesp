@@ -4,6 +4,24 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.6.0]
+
+ShareGate-parity **Phase 5** — deeper governance.
+
+### Added
+- **`Get-SPPermissionsMatrix`** — pivot a site's role assignments into a per-principal access
+  matrix (who can touch what, at what level).
+- **`Get-SPOrphanedUsers`** — report users with site access who no longer exist in the
+  directory (stale-access cleanup); needs Graph `User.Read.All`.
+- **`Set-SPSiteLifecycle`** — lock / read-only (archive) / unlock a site via
+  `Set-PnPTenantSite` (SharePoint admin; dry-run by default).
+- **MCP** — `sharepoint_permissions_matrix`, `sharepoint_orphaned_users`,
+  `sharepoint_set_site_lifecycle`. New doc [docs/09](docs/09-governance.md).
+
+### Changed
+- Pure core grows: `ConvertTo-SPPermissionMatrix` and `Get-SPOrphanedPrincipals` are
+  unit-tested (6 new Pester cases; 66 total, no tenant needed).
+
 ## [0.5.0]
 
 ShareGate-parity **Phase 4** — Teams, Microsoft 365 Groups, and Planner.
