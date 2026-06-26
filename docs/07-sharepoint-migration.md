@@ -1,9 +1,8 @@
 # 07 — SharePoint → SharePoint migration
 
-`Copy-SPSite` copies a site's **structure** (and optionally its **content**) to another site
-in the **same tenant** — the open equivalent of ShareGate's "Copy structure and content". This
-is **Phase 1** of a phased program (see the roadmap below); it's dry-run by default and
-same-tenant only for now.
+`Copy-SPSite` copies a site's **structure** (and optionally its **content**) to another site —
+the open equivalent of ShareGate's "Copy structure and content". It's **dry-run by default**:
+same-tenant by default, with **tenant-to-tenant** via `-CrossTenant` (see below).
 
 > **Status:** the planning, conflict-resolution, and reporting logic is unit-tested; the live
 > PnP copy path is verified with the manual test plan below. Run a `-WhatIf` plan first, always.
@@ -13,12 +12,14 @@ same-tenant only for now.
 | Area | How | Fidelity |
 |---|---|---|
 | Lists, libraries, fields, content types, views, navigation, pages | PnP provisioning template (`Get-/Invoke-PnPSiteTemplate`) | Good for standard structures |
-| List items | Batched `Add-PnPListItem` | Simple columns clean; lookup/user/managed-metadata values are Phase 2 |
-| Library files + folders | `Copy-PnPFolder` + `Copy-PnPFileMetadata` (restores Created/Modified/Author) | Latest version only |
+| List items | Batched `Add-PnPListItem` | Simple columns clean; lookup/user/managed-metadata values may not round-trip |
+| Library files + folders | Same-tenant: `Copy-PnPFolder` + `Copy-PnPFileMetadata` (restores Created/Modified/Author). Cross-tenant: download + re-upload | Latest version only |
+| Role assignments | `Copy-SPPermissions` with principal remapping | Site + unique-list grants |
+| Managed-metadata terms | `Copy-SPTermGroup` (export/import XML) | Whole term group |
 
 ## Honest limits (this release)
 
-- **Same-tenant only.** Tenant-to-tenant is Phase 3 (cross-tenant needs download/upload, not `Copy-PnPFile`).
+- **Cross-tenant** works via `-CrossTenant` + two `New-SPMigrationConnection` connections (files copy by download/upload). Same-tenant uses the faster `Copy-PnPFolder`.
 - **No version history** — latest version of each file only.
 - **Managed-metadata item values, complex/3rd-party web parts** — lossy or skipped.
 - **Permissions** — `Copy-SPPermissions` (or `Copy-SPSite -CopyPermissions`) copies site and unique-list role assignments and remaps users/groups via a mapping CSV or a domain swap. Deep per-file ACLs are still coarse.
@@ -72,6 +73,31 @@ Copy-SPSite -SourceUrl .../sites/A -DestinationUrl .../sites/B -IncludeContent -
 In the **same tenant**, SharePoint groups and site grants already arrive with the structure template —
 so permission copy mainly adds unique list permissions and (cross-tenant) principal remapping.
 Also available as the MCP tool **`sharepoint_copy_permissions`**.
+
+## Tenant-to-tenant (Phase 3)
+
+Source and destination in **different tenants** (different Entra apps). Open a connection to
+each with `New-SPMigrationConnection`, then pass both to `Copy-SPSite -CrossTenant`. Library
+files copy by **download + re-upload** (`Copy-PnPFolder` can't cross tenants), and principals
+remap via the Phase 2 mapping:
+
+```powershell
+$src = New-SPMigrationConnection -Url https://contoso.sharepoint.com/sites/A  -ClientId $contosoApp  -Tenant contoso.onmicrosoft.com
+$dst = New-SPMigrationConnection -Url https://fabrikam.sharepoint.com/sites/B -ClientId $fabrikamApp -Tenant fabrikam.onmicrosoft.com
+
+# Preview, then run: structure + content + remapped permissions across tenants:
+Copy-SPSite -SourceUrl $src.Url -DestinationUrl $dst.Url -SourceConnection $src -DestinationConnection $dst `
+            -CrossTenant -IncludeContent -CopyPermissions -DomainFrom contoso.com -DomainTo fabrikam.com -WhatIf
+
+# Bring managed-metadata terms across first (so content can bind to them):
+Copy-SPTermGroup -SourceConnection $src -DestinationConnection $dst -TermGroup "Corporate Taxonomy" -Force
+```
+
+**Cross-tenant caveats:** you need an Entra app registered in **each** tenant; user/lookup/
+managed-metadata column *values* may not resolve across tenants (different directories/term
+ids) — copy the term group first and supply a principal mapping. Headless (MCP/scheduled)
+cross-tenant runs need **app-only** auth (a certificate per tenant). MCP tool:
+**`sharepoint_copy_site_cross_tenant`**.
 
 ## Manual test plan (run against a tenant)
 

@@ -41,7 +41,7 @@ The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent 
 
 ![OpenGateSP light theme](docs/screenshot-light.png)
 
-## What it does (v0.3.0)
+## What it does (v0.4.0)
 
 | Area | Function | What it does |
 |---|---|---|
@@ -49,6 +49,7 @@ The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent 
 | | `Start-SPFileMigration` | Local file share / folder → SharePoint library, preserving structure + timestamps. Dry-run by default. |
 | | `Copy-SPSite` | Copy a site's structure (lists, libraries, columns, views) and optionally its content to another site in the **same tenant**. Dry-run by default ([docs/07](docs/07-sharepoint-migration.md)). |
 | | `Copy-SPPermissions` | Copy role assignments to another site, remapping users/groups via a mapping CSV or domain swap. Dry-run by default. |
+| | `Copy-SPSite -CrossTenant` | Copy a site to a **different tenant** (files by download/upload, principals remapped). With `New-SPMigrationConnection` + `Copy-SPTermGroup`. |
 | **Reporting** | `Get-SPSiteInventory` | Tenant-wide sites + storage + last activity |
 | | `Get-SPPermissionReport` | Who has access; where inheritance is broken |
 | | `Get-SPSharingReport` | External users and sharing links |
@@ -82,7 +83,7 @@ Full guide: [docs/03-quickstart.md](docs/03-quickstart.md) · setup: [docs/01](d
 
 ## Roadmap
 
-Same-tenant **site-to-site copy** has shipped (Phase 1). Next: permissions/mappings, **tenant-to-tenant**, **Teams + M365 Groups**, PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
+Site-to-site copy, **permissions + identity mapping**, and **tenant-to-tenant** have shipped (Phases 1–3). Next: **Teams + Planner + M365 Groups**, deeper governance, PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
 
 ## License
 

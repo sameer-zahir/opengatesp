@@ -23,9 +23,9 @@ function Copy-SPLibraryFiles {
     $srcRoot = Get-PnPProperty -ClientObject $srcList -Property RootFolder -Connection $SourceConnection
     $srcServerRel = $srcRoot.ServerRelativeUrl
 
-    $srcWebPath = ([uri]$SourceWebUrl).AbsolutePath.TrimEnd('/')
-    $dstWebPath = ([uri]$DestinationWebUrl).AbsolutePath.TrimEnd('/')
-    $dstServerRel = $dstWebPath + $srcServerRel.Substring($srcWebPath.Length)
+    $srcWebPath = ([uri]$SourceWebUrl).AbsolutePath
+    $dstWebPath = ([uri]$DestinationWebUrl).AbsolutePath
+    $dstServerRel = Resolve-SPCrossTenantUrl -SourceServerRelativeUrl $srcServerRel -SourceWebServerRelativeUrl $srcWebPath -DestinationWebServerRelativeUrl $dstWebPath
     $forceCopy = [bool]$Overwrite
 
     if ($PSCmdlet.ShouldProcess($dstServerRel, "Copy files of '$ListTitle'")) {

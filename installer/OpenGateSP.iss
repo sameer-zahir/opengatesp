@@ -2,7 +2,7 @@
 ; Build with:  pwsh installer\Build-Installer.ps1   (or: ISCC installer\OpenGateSP.iss)
 
 #define MyAppName "OpenGateSP"
-#define MyAppVersion "0.3.0"
+#define MyAppVersion "0.4.0"
 #define MyAppPublisher "Sameer Zahir"
 #define MyAppURL "https://sameerzahir.com"
 #define MyAppRepo "https://github.com/sameer-zahir/opengatesp"

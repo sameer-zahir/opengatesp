@@ -5,7 +5,7 @@ import { EngineHost } from "./engine.js";
 
 const engine = new EngineHost();
 
-const server = new McpServer({ name: "opengatesp", version: "0.3.0" });
+const server = new McpServer({ name: "opengatesp", version: "0.4.0" });
 
 type ToolResult = {
   content: { type: "text"; text: string }[];
@@ -158,6 +158,39 @@ server.tool(
     if (execute === true) params.Force = true;
     else params.WhatIf = true;
     return run("copy.permissions", params);
+  },
+);
+
+server.tool(
+  "sharepoint_copy_site_cross_tenant",
+  "Copy a site between DIFFERENT tenants (Phase 3): structure via provisioning template, library files by download/upload, optional principal remap. The server opens an app-only connection per tenant, so a certificate thumbprint registered in each tenant is required (headless). Dry-run by default; execute=true to perform the copy.",
+  {
+    sourceUrl: z.string().url(),
+    sourceClientId: z.string().describe("Entra app (client) id registered in the SOURCE tenant."),
+    sourceTenant: z.string().describe("Source tenant, e.g. contoso.onmicrosoft.com."),
+    sourceThumbprint: z.string().describe("App-only certificate thumbprint in the source tenant's store."),
+    destinationUrl: z.string().url(),
+    destinationClientId: z.string().describe("Entra app (client) id registered in the DESTINATION tenant."),
+    destinationTenant: z.string().describe("Destination tenant, e.g. fabrikam.onmicrosoft.com."),
+    destinationThumbprint: z.string().describe("App-only certificate thumbprint in the destination tenant's store."),
+    includeContent: z.boolean().optional().describe("Also copy items and files (default: structure only)."),
+    copyPermissions: z.boolean().optional().describe("Also copy role assignments, remapping principals."),
+    domainFrom: z.string().optional().describe("Source domain for the principal swap, e.g. contoso.com."),
+    domainTo: z.string().optional().describe("Destination domain for the swap, e.g. fabrikam.com."),
+    execute: z.boolean().optional().describe("false = dry-run plan (default); true = perform the copy."),
+  },
+  async (a) => {
+    const params: Record<string, unknown> = {
+      SourceUrl: a.sourceUrl, SourceClientId: a.sourceClientId, SourceTenant: a.sourceTenant, SourceThumbprint: a.sourceThumbprint,
+      DestinationUrl: a.destinationUrl, DestinationClientId: a.destinationClientId, DestinationTenant: a.destinationTenant, DestinationThumbprint: a.destinationThumbprint,
+    };
+    if (a.includeContent === true) params.IncludeContent = true;
+    if (a.copyPermissions === true) params.CopyPermissions = true;
+    if (a.domainFrom) params.DomainFrom = a.domainFrom;
+    if (a.domainTo) params.DomainTo = a.domainTo;
+    if (a.execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("copy.site.crosstenant", params);
   },
 );
 

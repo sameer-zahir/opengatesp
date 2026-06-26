@@ -47,6 +47,8 @@ function Copy-SPPermissions {
         [string]$DomainFrom,
         [string]$DomainTo,
         [switch]$IncludeListPermissions,
+        [object]$SourceConnection,
+        [object]$DestinationConnection,
         [switch]$Force,
         [switch]$AsJson
     )
@@ -62,10 +64,17 @@ function Copy-SPPermissions {
     }
     $map = ConvertTo-SPPrincipalMap -Row $rows -DomainFrom $DomainFrom -DomainTo $DomainTo
 
-    $srcParams = Get-SPConnectParams -Url $SourceUrl
-    $dstParams = Get-SPConnectParams -Url $DestinationUrl
-    $src = Invoke-SPRetry -Operation 'connect source' { Connect-PnPOnline @srcParams -ReturnConnection }
-    $dst = Invoke-SPRetry -Operation 'connect destination' { Connect-PnPOnline @dstParams -ReturnConnection }
+    # Reuse pre-opened connections (cross-tenant) or build them from saved config (same tenant).
+    if ($SourceConnection -and $DestinationConnection) {
+        $src = $SourceConnection
+        $dst = $DestinationConnection
+    }
+    else {
+        $srcParams = Get-SPConnectParams -Url $SourceUrl
+        $dstParams = Get-SPConnectParams -Url $DestinationUrl
+        $src = Invoke-SPRetry -Operation 'connect source' { Connect-PnPOnline @srcParams -ReturnConnection }
+        $dst = Invoke-SPRetry -Operation 'connect destination' { Connect-PnPOnline @dstParams -ReturnConnection }
+    }
 
     $assignments = @(Get-SPRoleAssignments -Connection $src -IncludeListPermissions:$IncludeListPermissions)
     Write-SPLog "Read $($assignments.Count) source role assignment(s)."

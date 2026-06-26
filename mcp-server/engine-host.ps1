@@ -59,6 +59,25 @@ function Invoke-EngineCommand {
         'copy.site'          { return (Copy-SPSite @Params) }                # manages its own source+dest connections
         'copy.list'          { return (Copy-SPList @Params) }                # granular single list/library copy
         'copy.permissions'   { return (Copy-SPPermissions @Params) }         # role-assignment copy + principal remap
+        'copy.site.crosstenant' {
+            # Cross-tenant: open a connection per tenant here (objects can't cross the protocol),
+            # then hand both to Copy-SPSite -CrossTenant. App-only (thumbprint) needed headlessly.
+            $mk = {
+                param($u, $cid, $tn, $thumb)
+                $cp = @{ Url = $u; ClientId = $cid }
+                if ($tn) { $cp['Tenant'] = $tn }
+                if ($thumb) { $cp['Thumbprint'] = $thumb }
+                New-SPMigrationConnection @cp
+            }
+            $s = & $mk $Params.SourceUrl $Params.SourceClientId $Params.SourceTenant $Params.SourceThumbprint
+            $d = & $mk $Params.DestinationUrl $Params.DestinationClientId $Params.DestinationTenant $Params.DestinationThumbprint
+            $cp = @{ SourceUrl = $Params.SourceUrl; DestinationUrl = $Params.DestinationUrl
+                     SourceConnection = $s; DestinationConnection = $d; CrossTenant = $true }
+            foreach ($k in 'IncludeContent', 'CopyPermissions', 'DomainFrom', 'DomainTo', 'MappingCsv', 'Force', 'WhatIf') {
+                if ($Params.ContainsKey($k)) { $cp[$k] = $Params[$k] }
+            }
+            return (Copy-SPSite @cp)
+        }
 
 
         'provision.site'     { Confirm-Connected; return (New-SPSiteFromTemplate @Params) }

@@ -4,6 +4,28 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.4.0]
+
+ShareGate-parity **Phase 3** — tenant-to-tenant.
+
+### Added
+- **`New-SPMigrationConnection`** — open a PnP connection to a specific site in a specific
+  tenant and return it, so a migration can hold source + destination connections to two
+  different tenants at once (interactive, device-code, or app-only auth).
+- **`Copy-SPSite -CrossTenant`** — copy a site between different tenants: structure via the
+  provisioning template, library files by **download + re-upload** (`Copy-PnPFolder` can't
+  cross tenants), items via the destination connection, and permissions remapped with the
+  Phase 2 principal map. Requires `-SourceConnection`/`-DestinationConnection`.
+- **`Copy-SPTermGroup`** — copy a managed-metadata term group between tenants via XML
+  export/import (`Export-`/`Import-PnPTermGroup*`).
+- **MCP** — `sharepoint_copy_site_cross_tenant` (app-only per tenant; the server opens both
+  connections itself).
+
+### Changed
+- The same-tenant library path-mapping math is now the unit-tested pure helper
+  `Resolve-SPCrossTenantUrl`, shared by both same- and cross-tenant copy (5 new Pester cases;
+  55 total, no tenant needed).
+
 ## [0.3.0]
 
 ShareGate-parity **Phase 2** — permissions, identity mapping, and incremental copy.

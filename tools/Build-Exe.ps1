@@ -31,7 +31,7 @@ $params = @{
     Product     = 'OpenGateSP'
     Description = 'Free, open-source ShareGate alternative for SharePoint Online'
     Company     = 'Sameer Zahir'
-    Version     = '0.3.0.0'
+    Version     = '0.4.0.0'
     Copyright   = '(c) 2026 Sameer Zahir. MIT License.'
 }
 $ico = Join-Path $PSScriptRoot 'opengatesp.ico'

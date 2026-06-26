@@ -12,13 +12,21 @@ function Copy-SPSite {
         SAFETY: dry-run by default. It prints the plan and writes nothing until you confirm
         (or pass -Force). Run the plan first and read it.
 
-        SCOPE: same-tenant only in this release. Tenant-to-tenant, full permission/identity
-        mapping, version history, and managed-metadata item values are later milestones
-        (see docs/07-sharepoint-migration.md for the honest limits).
+        SCOPE: same-tenant by default. For tenant-to-tenant, pass -CrossTenant with two
+        connections from New-SPMigrationConnection — libraries then copy by download/upload and
+        principals remap via -DomainFrom/-DomainTo or -MappingCsv. Version history and
+        managed-metadata item values remain lossy (see docs/07-sharepoint-migration.md).
     .PARAMETER SourceUrl
         The site to copy from.
     .PARAMETER DestinationUrl
-        The site to copy into (in the same tenant). Pre-create it, or provision it first.
+        The site to copy into. Pre-create it, or provision it first.
+    .PARAMETER SourceConnection
+        A pre-opened source connection (from New-SPMigrationConnection). Required for -CrossTenant.
+    .PARAMETER DestinationConnection
+        A pre-opened destination connection. Required for -CrossTenant.
+    .PARAMETER CrossTenant
+        Treat source and destination as different tenants: copy library files by
+        download/upload instead of Copy-PnPFolder, and remap permission principals.
     .PARAMETER Lists
         Optional: limit the copy to these list/library display names.
     .PARAMETER IncludeContent
@@ -34,6 +42,10 @@ function Copy-SPSite {
         Copy-SPSite -SourceUrl https://contoso.sharepoint.com/sites/A -DestinationUrl https://contoso.sharepoint.com/sites/B -WhatIf
     .EXAMPLE
         Copy-SPSite -SourceUrl https://contoso.sharepoint.com/sites/A -DestinationUrl https://contoso.sharepoint.com/sites/B -IncludeContent
+    .EXAMPLE
+        $s = New-SPMigrationConnection -Url https://contoso.sharepoint.com/sites/A -ClientId $ca -Tenant contoso.onmicrosoft.com
+        $d = New-SPMigrationConnection -Url https://fabrikam.sharepoint.com/sites/B -ClientId $fa -Tenant fabrikam.onmicrosoft.com
+        Copy-SPSite -SourceUrl $s.Url -DestinationUrl $d.Url -SourceConnection $s -DestinationConnection $d -CrossTenant -IncludeContent -CopyPermissions -DomainFrom contoso.com -DomainTo fabrikam.com
     #>
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     [OutputType([pscustomobject])]
@@ -48,6 +60,9 @@ function Copy-SPSite {
         [string]$DomainFrom,
         [string]$DomainTo,
         [Nullable[datetime]]$Since,
+        [object]$SourceConnection,
+        [object]$DestinationConnection,
+        [switch]$CrossTenant,
         [switch]$Force,
         [switch]$AsJson
     )
@@ -56,11 +71,21 @@ function Copy-SPSite {
 
     Write-SPLog "Copy-SPSite: $SourceUrl -> $DestinationUrl (content=$IncludeContent, mode=$ConflictMode, WhatIf=$($WhatIfPreference))"
 
-    # Two connections in the same tenant (delegated opens a browser per site the first time).
-    $srcParams = Get-SPConnectParams -Url $SourceUrl
-    $dstParams = Get-SPConnectParams -Url $DestinationUrl
-    $src = Invoke-SPRetry -Operation 'connect source' { Connect-PnPOnline @srcParams -ReturnConnection }
-    $dst = Invoke-SPRetry -Operation 'connect destination' { Connect-PnPOnline @dstParams -ReturnConnection }
+    # Connections: same-tenant builds both from your saved config; cross-tenant needs two
+    # pre-opened connections to the two tenants (open them with New-SPMigrationConnection).
+    if ($CrossTenant -and -not ($SourceConnection -and $DestinationConnection)) {
+        throw 'Cross-tenant copy requires -SourceConnection and -DestinationConnection (open them with New-SPMigrationConnection).'
+    }
+    if ($SourceConnection -and $DestinationConnection) {
+        $src = $SourceConnection
+        $dst = $DestinationConnection
+    }
+    else {
+        $srcParams = Get-SPConnectParams -Url $SourceUrl
+        $dstParams = Get-SPConnectParams -Url $DestinationUrl
+        $src = Invoke-SPRetry -Operation 'connect source' { Connect-PnPOnline @srcParams -ReturnConnection }
+        $dst = Invoke-SPRetry -Operation 'connect destination' { Connect-PnPOnline @dstParams -ReturnConnection }
+    }
 
     # Inventory both sides (read-only) and build the plan with the pure planner.
     $srcLists = @(Get-PnPList -Connection $src | Where-Object { -not $_.Hidden })
@@ -105,8 +130,14 @@ function Copy-SPSite {
             }
             try {
                 if ($l.BaseType -eq 'DocumentLibrary') {
-                    Copy-SPLibraryFiles -SourceConnection $src -ListTitle $l.Title -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl -Overwrite:($ConflictMode -eq 'Replace')
-                    $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail 'Files copied'))
+                    if ($CrossTenant) {
+                        $fn = Copy-SPFilesCrossTenant -SourceConnection $src -DestinationConnection $dst -ListTitle $l.Title -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl
+                        $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail "$fn file(s) copied (cross-tenant)"))
+                    }
+                    else {
+                        Copy-SPLibraryFiles -SourceConnection $src -ListTitle $l.Title -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl -Overwrite:($ConflictMode -eq 'Replace')
+                        $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail 'Files copied'))
+                    }
                 }
                 else {
                     $n = Copy-SPListItems -SourceConnection $src -DestinationConnection $dst -ListTitle $l.Title -Since $Since
@@ -124,9 +155,17 @@ function Copy-SPSite {
     # the dry-run guard here, so the site copy is already confirmed — run it -Force.
     if ($CopyPermissions) {
         try {
-            $permRows = Copy-SPPermissions -SourceUrl $SourceUrl -DestinationUrl $DestinationUrl `
-                -MappingCsv $MappingCsv -DomainFrom $DomainFrom -DomainTo $DomainTo `
-                -IncludeListPermissions -Force
+            $permParams = @{
+                SourceUrl              = $SourceUrl
+                DestinationUrl         = $DestinationUrl
+                MappingCsv             = $MappingCsv
+                DomainFrom             = $DomainFrom
+                DomainTo               = $DomainTo
+                IncludeListPermissions = $true
+                Force                  = $true
+            }
+            if ($CrossTenant) { $permParams.SourceConnection = $src; $permParams.DestinationConnection = $dst }
+            $permRows = Copy-SPPermissions @permParams
             foreach ($r in @($permRows)) { $results.Add($r) }
         }
         catch {
