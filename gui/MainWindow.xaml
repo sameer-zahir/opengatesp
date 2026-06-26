@@ -58,15 +58,17 @@
                                    Foreground="{DynamicResource FgMute}" Margin="14,12,0,2"/>
                     </StackPanel>
                     <StackPanel>
-                        <TextBlock Text="MIGRATION" Style="{DynamicResource NavGroupHeader}"/>
-                        <RadioButton x:Name="NavHome"     GroupName="Nav" Content="Home"      Style="{DynamicResource NavButton}"/>
-                        <RadioButton x:Name="NavMigrate"  GroupName="Nav" Content="Migrate"   Style="{DynamicResource NavButton}"/>
-                        <RadioButton x:Name="NavCopySite" GroupName="Nav" Content="Copy site" Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavHome" GroupName="Nav" Content="Home" Style="{DynamicResource NavButton}"/>
+                        <TextBlock Text="MIGRATION" Style="{DynamicResource NavGroupHeader}" Margin="14,14,0,6"/>
+                        <RadioButton x:Name="NavExplore"  GroupName="Nav" Content="Explore"   Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavCopy"     GroupName="Nav" Content="Copy"      Style="{DynamicResource NavButton}"/>
                         <RadioButton x:Name="NavPreCheck" GroupName="Nav" Content="Pre-check" Style="{DynamicResource NavButton}"/>
-                        <RadioButton x:Name="NavProvision" GroupName="Nav" Content="Provision" Style="{DynamicResource NavButton}"/>
-                        <TextBlock Text="GOVERNANCE" Style="{DynamicResource NavGroupHeader}" Margin="14,18,0,6"/>
-                        <RadioButton x:Name="NavReports"   GroupName="Nav" Content="Reports"   Style="{DynamicResource NavButton}"/>
+                        <RadioButton x:Name="NavReports"  GroupName="Nav" Content="Security"  Style="{DynamicResource NavButton}"/>
+                        <TextBlock Text="ACTIVITY" Style="{DynamicResource NavGroupHeader}" Margin="14,18,0,6"/>
+                        <RadioButton x:Name="NavTasks"     GroupName="Nav" Content="Tasks"     Style="{DynamicResource NavButton}"/>
                         <RadioButton x:Name="NavScheduled" GroupName="Nav" Content="Scheduled" Style="{DynamicResource NavButton}"/>
+                        <TextBlock Text="GOVERNANCE" Style="{DynamicResource NavGroupHeader}" Margin="14,18,0,6"/>
+                        <RadioButton x:Name="NavProvision" GroupName="Nav" Content="Provisioning" Style="{DynamicResource NavButton}"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -103,6 +105,13 @@
                                     <TextBlock Text="Pre-check a source" Style="{DynamicResource CardTitle}"/>
                                     <TextBlock Text="Spot what SharePoint will reject before you copy." Style="{DynamicResource CardBody}"/>
                                     <TextBlock Text="Long paths · Bad names · Big files" Style="{DynamicResource CardMeta}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="CardExplore" Style="{DynamicResource Card}" Width="300">
+                                <StackPanel>
+                                    <TextBlock Text="Explore a source site" Style="{DynamicResource CardTitle}"/>
+                                    <TextBlock Text="Assess a SharePoint site before you migrate — blockers, big files, sharing." Style="{DynamicResource CardBody}"/>
+                                    <TextBlock Text="Checked-out · Large files · Sharing · Workflows" Style="{DynamicResource CardMeta}"/>
                                 </StackPanel>
                             </Button>
                             <Button x:Name="CardReports" Style="{DynamicResource Card}" Width="300">
@@ -279,6 +288,7 @@
                                 <ComboBoxItem Content="Replace"/>
                             </ComboBox>
                             <CheckBox x:Name="CbCopyContent" Content="Include content (items + files)" Margin="18,6,0,6"/>
+                            <CheckBox x:Name="CbCopyVersions" Content="Version history (experimental)" Margin="18,6,0,6"/>
                             <CheckBox x:Name="CbCopyPerms" Content="Copy permissions" Margin="18,6,0,6"/>
                         </StackPanel>
 
@@ -294,6 +304,7 @@
                         <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal">
                             <Button x:Name="BtnPreviewCopy" Content="Preview plan (WhatIf)" Style="{DynamicResource WarnButton}"/>
                             <Button x:Name="BtnRunCopy"     Content="Copy site"/>
+                            <Button x:Name="BtnValidateCopy" Content="Validate copy" Style="{DynamicResource GhostButton}"/>
                         </StackPanel>
                     </Grid>
 
@@ -345,6 +356,68 @@
                         <DataGrid x:Name="GridPrecheck"/>
                         <TextBlock x:Name="EmptyPrecheck" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
                                    Text="Choose a folder and run the check. Clean folders come back empty."/>
+                    </Grid>
+                </DockPanel>
+
+                <!-- EXPLORE (SharePoint source assessment) -->
+                <DockPanel x:Name="ViewExplore" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="Explore a source site" Style="{DynamicResource Section}" Margin="0,0,0,4"/>
+                    <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,0,0,12" TextWrapping="Wrap"
+                               MaxWidth="700" HorizontalAlignment="Left"
+                               Text="A read-only pre-migration assessment of a SharePoint source — checked-out files, large files, external sharing, orphaned users, 2013 workflows. Run the full assessment or one report. Nothing is written."/>
+                    <Grid DockPanel.Dock="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Report" VerticalAlignment="Center"/>
+                        <ComboBox  Grid.Row="0" Grid.Column="1" x:Name="CbExplore" SelectedIndex="0" HorizontalAlignment="Left" Width="320">
+                            <ComboBoxItem Content="Full assessment"/>
+                            <ComboBoxItem Content="Checked-out files"/>
+                            <ComboBoxItem Content="Large files"/>
+                            <ComboBoxItem Content="Version history"/>
+                            <ComboBoxItem Content="Content insights (by file type)"/>
+                            <ComboBoxItem Content="Workflows (2013)"/>
+                            <ComboBoxItem Content="Inactive sites (admin, tenant-wide)"/>
+                        </ComboBox>
+                        <Button    Grid.Row="0" Grid.Column="2" x:Name="BtnRunExplore" Content="Run"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbExploreSite"/>
+
+                        <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal">
+                            <TextBlock Text="Large file MB:" Style="{DynamicResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBox x:Name="TbExploreMB" Width="70" Text="100"/>
+                            <CheckBox x:Name="CbExploreVersions" Content="Include version history (slower)" Margin="18,6,0,6"/>
+                            <Button x:Name="BtnExploreCsv"  Content="Export CSV"  Style="{DynamicResource GoodButton}"/>
+                            <Button x:Name="BtnExploreHtml" Content="Export HTML" Style="{DynamicResource GoodButton}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Border DockPanel.Dock="Top" Margin="0,12,0,0" Padding="12,8" CornerRadius="6"
+                            Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource Border}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Remediate:" Style="{DynamicResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ComboBox x:Name="CbRemediate" Width="260" SelectedIndex="0">
+                                <ComboBoxItem Content="Check in all checked-out files"/>
+                                <ComboBoxItem Content="Remove orphaned users"/>
+                            </ComboBox>
+                            <Button x:Name="BtnRemediatePreview" Content="Preview (WhatIf)" Style="{DynamicResource WarnButton}"/>
+                            <Button x:Name="BtnRemediateApply" Content="Apply"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Margin="0,14,0,0">
+                        <DataGrid x:Name="GridExplore"/>
+                        <TextBlock x:Name="EmptyExplore" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                   Text="Pick a report and a source site, then run. A clean full assessment comes back empty."/>
                     </Grid>
                 </DockPanel>
 
@@ -429,6 +502,8 @@
                             <ComboBoxItem Content="Sharing (external users + links)"/>
                             <ComboBoxItem Content="Permissions (who has access)"/>
                             <ComboBoxItem Content="Site inventory (admin, tenant-wide)"/>
+                            <ComboBoxItem Content="Permissions matrix (who can touch what)"/>
+                            <ComboBoxItem Content="Orphaned users (stale access)"/>
                         </ComboBox>
                         <Button Grid.Row="0" Grid.Column="2" x:Name="BtnRunReport" Content="Run report"/>
 
@@ -441,6 +516,21 @@
                             <Button x:Name="BtnExportHtml" Content="Export HTML" Style="{DynamicResource GoodButton}"/>
                         </StackPanel>
                     </Grid>
+
+                    <Border DockPanel.Dock="Top" Margin="0,12,0,0" Padding="12,8" CornerRadius="6"
+                            Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource Border}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Site lifecycle:" Style="{DynamicResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ComboBox x:Name="CbLifecycle" Width="170" SelectedIndex="0">
+                                <ComboBoxItem Content="ReadOnly (archive)"/>
+                                <ComboBoxItem Content="NoAccess (lock)"/>
+                                <ComboBoxItem Content="Unlock"/>
+                            </ComboBox>
+                            <Button x:Name="BtnLifecyclePreview" Content="Preview (WhatIf)" Style="{DynamicResource WarnButton}"/>
+                            <Button x:Name="BtnLifecycleApply" Content="Apply"/>
+                            <TextBlock Text="uses the Site URL above · needs admin" Style="{DynamicResource Muted}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                        </StackPanel>
+                    </Border>
 
                     <Grid Margin="0,14,0,0">
                         <DataGrid x:Name="GridReport"/>
@@ -501,6 +591,280 @@
                              TextWrapping="Wrap" FontFamily="Consolas" FontSize="12" MinHeight="80"
                              VerticalScrollBarVisibility="Auto"/>
                     <Grid/>
+                </DockPanel>
+
+                <!-- COLLABORATION (Teams / M365 Groups / Planner) -->
+                <DockPanel x:Name="ViewCollab" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="Clone Teams, Groups &amp; Planner" Style="{DynamicResource Section}" Margin="0,0,0,4"/>
+                    <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,0,0,14" TextWrapping="Wrap"
+                               MaxWidth="700" HorizontalAlignment="Left"
+                               Text="Model a new Microsoft 365 Group, Team, or Planner plan on an existing one. Preview is a dry-run; Create writes. Needs Microsoft Graph scopes on the app registration."/>
+                    <Grid DockPanel.Dock="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="Microsoft 365 Group" Style="{DynamicResource Section}" Margin="0,0,0,6"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Source (id / name)" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbGroupSource"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="New display name" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TbGroupName"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Mail nickname" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+                            <TextBox x:Name="TbGroupAlias" Width="220"/>
+                            <Button x:Name="BtnPreviewGroup" Content="Preview" Style="{DynamicResource WarnButton}"/>
+                            <Button x:Name="BtnCreateGroup" Content="Create"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="4" Grid.ColumnSpan="2" Text="Microsoft Teams team" Style="{DynamicResource Section}" Margin="0,16,0,6"/>
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Source (id / name)" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="5" Grid.Column="1" x:Name="TbTeamSource"/>
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="New display name" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="6" Grid.Column="1" x:Name="TbTeamName"/>
+                        <TextBlock Grid.Row="7" Grid.Column="0" Text="Mail nickname" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal">
+                            <TextBox x:Name="TbTeamAlias" Width="220"/>
+                            <Button x:Name="BtnPreviewTeam" Content="Preview" Style="{DynamicResource WarnButton}"/>
+                            <Button x:Name="BtnCreateTeam" Content="Create"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="8" Grid.ColumnSpan="2" Text="Planner plan" Style="{DynamicResource Section}" Margin="0,16,0,6"/>
+                        <TextBlock Grid.Row="9" Grid.Column="0" Text="Source plan id" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="9" Grid.Column="1" x:Name="TbPlanSource"/>
+                        <TextBlock Grid.Row="10" Grid.Column="0" Text="Dest group id" VerticalAlignment="Center"/>
+                        <TextBox   Grid.Row="10" Grid.Column="1" x:Name="TbPlanGroup"/>
+                        <TextBlock Grid.Row="11" Grid.Column="0" Text="New plan title" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="11" Grid.Column="1" Orientation="Horizontal">
+                            <TextBox x:Name="TbPlanTitle" Width="220"/>
+                            <Button x:Name="BtnPreviewPlan" Content="Preview" Style="{DynamicResource WarnButton}"/>
+                            <Button x:Name="BtnCreatePlan" Content="Create"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,16,0,0">
+                        <DataGrid x:Name="GridCollab"/>
+                        <TextBlock x:Name="EmptyCollab" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                   Text="Pick a source and fill in the new names, then preview before you create."/>
+                    </Grid>
+                </DockPanel>
+
+                <!-- COPY — landing chooser ("What would you like to copy?") -->
+                <DockPanel x:Name="ViewCopyLanding" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="What would you like to copy?" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                    <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,8,0,16" TextWrapping="Wrap" MaxWidth="700" HorizontalAlignment="Left"
+                               Text="Pick what to copy. Every option previews before it writes — nothing changes until you run it."/>
+                    <TabControl DockPanel.Dock="Top" x:Name="TabCopyKind">
+                        <TabItem Header="SharePoint">
+                            <WrapPanel Margin="0,18,0,0">
+                                <Button x:Name="CardCopyStructure" Style="{DynamicResource Card}" Width="320">
+                                    <StackPanel>
+                                        <TextBlock Text="Structure &amp; content" Style="{DynamicResource CardTitle}"/>
+                                        <TextBlock Text="Lists &amp; libraries, columns, content types and views — plus the items and files inside them." Style="{DynamicResource CardBody}"/>
+                                        <TextBlock Text="Schema · Items · Files · Optional versions" Style="{DynamicResource CardMeta}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="CardCopyStructureOnly" Style="{DynamicResource Card}" Width="320">
+                                    <StackPanel>
+                                        <TextBlock Text="Structure only" Style="{DynamicResource CardTitle}"/>
+                                        <TextBlock Text="The site's shape — lists, libraries, columns, content types, views — with no items or files." Style="{DynamicResource CardBody}"/>
+                                        <TextBlock Text="Schema · Groups · Permission levels" Style="{DynamicResource CardMeta}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="CardCopyContent" Style="{DynamicResource Card}" Width="320">
+                                    <StackPanel>
+                                        <TextBlock Text="Content only" Style="{DynamicResource CardTitle}"/>
+                                        <TextBlock Text="Items and files into lists and libraries that already exist at the destination." Style="{DynamicResource CardBody}"/>
+                                        <TextBlock Text="Items · Files · Honours conflict mode" Style="{DynamicResource CardMeta}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="CardCopyList" Style="{DynamicResource Card}" Width="320">
+                                    <StackPanel>
+                                        <TextBlock Text="A single list or library" Style="{DynamicResource CardTitle}"/>
+                                        <TextBlock Text="One list or library — its schema and views, optionally its items and files." Style="{DynamicResource CardBody}"/>
+                                        <TextBlock Text="One list · Schema · Optional content" Style="{DynamicResource CardMeta}"/>
+                                    </StackPanel>
+                                </Button>
+                            </WrapPanel>
+                        </TabItem>
+                        <TabItem Header="Collaboration">
+                            <WrapPanel Margin="0,18,0,0">
+                                <Button x:Name="CardCopyTeam" Style="{DynamicResource Card}" Width="320">
+                                    <StackPanel>
+                                        <TextBlock Text="A Team" Style="{DynamicResource CardTitle}"/>
+                                        <TextBlock Text="Channels and the owner/member roster. Messages and files aren't copied." Style="{DynamicResource CardBody}"/>
+                                        <TextBlock Text="Channels · Members · Needs Graph" Style="{DynamicResource CardMeta}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="CardCopyGroup" Style="{DynamicResource Card}" Width="320">
+                                    <StackPanel>
+                                        <TextBlock Text="A Microsoft 365 Group" Style="{DynamicResource CardTitle}"/>
+                                        <TextBlock Text="A new group modelled on an existing one — description, owners and members." Style="{DynamicResource CardBody}"/>
+                                        <TextBlock Text="Group · Owners · Members" Style="{DynamicResource CardMeta}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="CardCopyPlanner" Style="{DynamicResource Card}" Width="320">
+                                    <StackPanel>
+                                        <TextBlock Text="A Planner plan" Style="{DynamicResource CardTitle}"/>
+                                        <TextBlock Text="Recreate a plan's buckets and tasks on a destination group." Style="{DynamicResource CardBody}"/>
+                                        <TextBlock Text="Plan · Buckets · Tasks" Style="{DynamicResource CardMeta}"/>
+                                    </StackPanel>
+                                </Button>
+                            </WrapPanel>
+                        </TabItem>
+                        <TabItem Header="Import external">
+                            <WrapPanel Margin="0,18,0,0">
+                                <Button x:Name="CardImportFileShare" Style="{DynamicResource Card}" Width="320">
+                                    <StackPanel>
+                                        <TextBlock Text="A file share" Style="{DynamicResource CardTitle}"/>
+                                        <TextBlock Text="A local or network folder into a SharePoint library, timestamps intact. Pre-checked for blockers first." Style="{DynamicResource CardBody}"/>
+                                        <TextBlock Text="Files · Folders · Timestamps" Style="{DynamicResource CardMeta}"/>
+                                    </StackPanel>
+                                </Button>
+                            </WrapPanel>
+                        </TabItem>
+                    </TabControl>
+                    <TextBlock DockPanel.Dock="Top" Text="Recent copies" Style="{DynamicResource Section}" Margin="0,22,0,8"/>
+                    <Grid>
+                        <DataGrid x:Name="GridRecent"/>
+                        <TextBlock x:Name="EmptyRecent" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                   Text="Your copies will show up here. Pick a card above to start."/>
+                    </Grid>
+                </DockPanel>
+
+                <!-- COPY — guided wizard -->
+                <Grid x:Name="ViewCopyWizard" Margin="28,20" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Step rail -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,18">
+                        <TextBlock x:Name="WizTypeChip" Text="Structure &amp; content" FontWeight="Bold"
+                                   Foreground="{DynamicResource AccentFg}" Background="{DynamicResource Accent}" Padding="10,4" Margin="0,0,14,0"/>
+                        <TextBlock x:Name="WizStep1" Text="1  Source"        FontWeight="Bold" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
+                        <TextBlock Text="  ›  " Style="{DynamicResource Muted}"/>
+                        <TextBlock x:Name="WizStep2" Text="2  Destination"   Foreground="{DynamicResource FgMute}" VerticalAlignment="Center"/>
+                        <TextBlock Text="  ›  " Style="{DynamicResource Muted}"/>
+                        <TextBlock x:Name="WizStep3" Text="3  Scope"         Foreground="{DynamicResource FgMute}" VerticalAlignment="Center"/>
+                        <TextBlock Text="  ›  " Style="{DynamicResource Muted}"/>
+                        <TextBlock x:Name="WizStep4" Text="4  Options"       Foreground="{DynamicResource FgMute}" VerticalAlignment="Center"/>
+                        <TextBlock Text="  ›  " Style="{DynamicResource Muted}"/>
+                        <TextBlock x:Name="WizStep5" Text="5  Preview &amp; run" Foreground="{DynamicResource FgMute}" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Step panels -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <Grid>
+                            <!-- 1 Source -->
+                            <StackPanel x:Name="PanelWizSource">
+                                <TextBlock Text="Select source" Style="{DynamicResource Section}" FontSize="18" Foreground="{DynamicResource Fg}"/>
+                                <TextBlock Style="{DynamicResource Muted}" Margin="0,4,0,14" TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left"
+                                           Text="The site you're copying from, in the tenant you're connected to. Connect from the bottom-left if the dot isn't green."/>
+                                <TextBlock Text="Source site URL" VerticalAlignment="Center"/>
+                                <TextBox x:Name="TbWizSource" Width="560" HorizontalAlignment="Left"/>
+                                <TextBlock Style="{DynamicResource Muted}" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"
+                                           Text="Same-tenant copy. For tenant-to-tenant, use the PowerShell or MCP surface (app-only certificate per tenant)."/>
+                            </StackPanel>
+
+                            <!-- 2 Destination -->
+                            <StackPanel x:Name="PanelWizDest" Visibility="Collapsed">
+                                <TextBlock Text="Select destination" Style="{DynamicResource Section}" FontSize="18" Foreground="{DynamicResource Fg}"/>
+                                <TextBlock Style="{DynamicResource Muted}" Margin="0,4,0,14" TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left"
+                                           Text="An existing site to copy into. It must be different from the source. Need a new one? Create it under Provisioning first."/>
+                                <TextBlock Text="Destination site URL" VerticalAlignment="Center"/>
+                                <TextBox x:Name="TbWizDest" Width="560" HorizontalAlignment="Left"/>
+                            </StackPanel>
+
+                            <!-- 3 Scope -->
+                            <DockPanel x:Name="PanelWizScope" Visibility="Collapsed">
+                                <TextBlock DockPanel.Dock="Top" Text="Choose what to copy" Style="{DynamicResource Section}" FontSize="18" Foreground="{DynamicResource Fg}"/>
+                                <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,4,0,12" TextWrapping="Wrap" MaxWidth="700" HorizontalAlignment="Left"
+                                           Text="Load the lists on both sides to see what's there. Leave the box blank to copy everything, or list the names to copy just those."/>
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="Lists (optional)" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBox x:Name="TbWizLists" Width="360"/>
+                                    <Button x:Name="BtnWizLoadLists" Content="Load lists" Style="{DynamicResource GhostButton}"/>
+                                    <TextBlock Text="blank = copy every list and library" Style="{DynamicResource Muted}" Margin="12,0,0,0"/>
+                                </StackPanel>
+                                <Grid>
+                                    <DataGrid x:Name="GridWizScope"/>
+                                    <TextBlock x:Name="EmptyWizScope" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                               Text="Load lists to compare source and destination before you copy."/>
+                                </Grid>
+                            </DockPanel>
+
+                            <!-- 4 Options -->
+                            <StackPanel x:Name="PanelWizOptions" Visibility="Collapsed">
+                                <TextBlock Text="Copy options" Style="{DynamicResource Section}" FontSize="18" Foreground="{DynamicResource Fg}"/>
+                                <TextBlock Style="{DynamicResource Muted}" Margin="0,4,0,14" TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left"
+                                           Text="How to handle what's already there, and what to bring along."/>
+                                <TextBlock Text="If items already exist at the destination" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="CbWizConflict" Width="260" HorizontalAlignment="Left" SelectedIndex="0">
+                                    <ComboBoxItem Content="Copy if newer"/>
+                                    <ComboBoxItem Content="Don't copy (skip)"/>
+                                    <ComboBoxItem Content="Keep both"/>
+                                    <ComboBoxItem Content="Copy and replace"/>
+                                </ComboBox>
+                                <TextBlock Text="Include" Style="{DynamicResource Section}" Foreground="{DynamicResource Fg}" Margin="0,16,0,4"/>
+                                <CheckBox x:Name="CbWizContent" Content="Items and files (content)" IsChecked="True"/>
+                                <CheckBox x:Name="CbWizVersions" Content="Version history (experimental — author/date not preserved per version)"/>
+                                <CheckBox x:Name="CbWizPerms" Content="Custom permissions"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <TextBlock Text="Only items modified since" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBox x:Name="TbWizSince" Width="160"/>
+                                    <TextBlock Text="optional — e.g. 2026-01-01 (incremental)" Style="{DynamicResource Muted}" Margin="10,0,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- 5 Preview &amp; run -->
+                            <DockPanel x:Name="PanelWizRun" Visibility="Collapsed">
+                                <TextBlock DockPanel.Dock="Top" Text="Preview, then run" Style="{DynamicResource Section}" FontSize="18" Foreground="{DynamicResource Fg}"/>
+                                <Border DockPanel.Dock="Top" Margin="0,8,0,12" Padding="14,12" CornerRadius="8"
+                                        Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource Border}" BorderThickness="1">
+                                    <TextBlock x:Name="WizSummary" TextWrapping="Wrap" Foreground="{DynamicResource Fg}"
+                                               Text="Review the plan, then run. Preview writes nothing."/>
+                                </Border>
+                                <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,0,0,8"
+                                           Text="Run is unlocked once you've previewed the current settings."/>
+                                <Grid>
+                                    <DataGrid x:Name="GridWizResult"/>
+                                    <TextBlock x:Name="EmptyWizResult" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                               Text="Preview the plan to see exactly what will be created, skipped or overwritten."/>
+                                </Grid>
+                            </DockPanel>
+                        </Grid>
+                    </ScrollViewer>
+
+                    <!-- Footer -->
+                    <DockPanel Grid.Row="2" Margin="0,14,0,0">
+                        <Button x:Name="BtnWizBack" DockPanel.Dock="Left" Content="‹ Back" Style="{DynamicResource GhostButton}"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="BtnWizPreview" Content="Preview plan" Style="{DynamicResource WarnButton}" Visibility="Collapsed"/>
+                            <Button x:Name="BtnWizRun" Content="Run copy" Visibility="Collapsed" IsEnabled="False"/>
+                            <Button x:Name="BtnWizNext" Content="Next ›"/>
+                        </StackPanel>
+                        <TextBlock x:Name="WizStepLabel" Text="Step 1 of 5" Style="{DynamicResource Muted}" HorizontalAlignment="Center"/>
+                    </DockPanel>
+                </Grid>
+
+                <!-- TASKS — recent run history -->
+                <DockPanel x:Name="ViewTasks" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="Tasks" Style="{DynamicResource Section}" FontSize="18" Foreground="{DynamicResource Fg}" Margin="0,0,0,4"/>
+                    <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,0,0,12" TextWrapping="Wrap"
+                               Text="What's run this session. Full transcripts are written to the ./logs folder next to the app."/>
+                    <Grid>
+                        <DataGrid x:Name="GridTasks"/>
+                        <TextBlock x:Name="EmptyTasks" IsHitTestVisible="False" Style="{DynamicResource EmptyState}"
+                                   Text="Operations you run will be listed here with their result."/>
+                    </Grid>
                 </DockPanel>
 
                 </Grid>

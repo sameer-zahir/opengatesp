@@ -29,19 +29,25 @@ ShareGate is a polished, expensive tool for work that ultimately comes down to S
 | Permissions & external-sharing audit | ✅ | ✅ |
 | Site provisioning + CSV bulk metadata | ✅ | ✅ |
 | Scheduled governance reports | ✅ | ✅ |
+| Source **Explore** / pre-migration assessment | ✅ | ✅ |
+| Post-migration validation (compare) | ✅ | ✅ |
+| Tenant-to-tenant, Teams, Groups & Planner | ✅ | ✅ |
+| Remediation (check-in, trim versions, fix inheritance) | ✅ | ✅ |
 | Drive it from an AI assistant (MCP) | — | **✅ built in** |
 | Open source you can read, fork, and own | — | **✅** |
-| Tenant-to-tenant, Teams, full content reorg | ✅ | on the roadmap |
+| Full per-version history fidelity | ✅ | best-effort |
 
-OpenGateSP doesn't (yet) match ShareGate's full migration surface — it nails the common 80%: file-share migration, governance reporting, and provisioning, free and scriptable.
+OpenGateSP now spans source **Explore**, same- and cross-tenant copy, post-migration validation, governance, and remediation — the bulk of ShareGate's surface, free and scriptable. The honest remaining gaps: full per-version history fidelity (best-effort here, needs the SharePoint Migration API) and ShareGate Protect's SaaS governance automation.
 
 ## Light & dark, built in
 
 The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent dark and the warm **Gruvbox** / deep **Tokyo Night Moon** ([Squintless](https://github.com/sameer-zahir/squintless)) themes a click away in the picker.
 
+Navigation is grouped by the migration runbook — **Migration · Activity · Governance** — and **Copy** opens a guided *"what would you like to copy?"* chooser into a breadcrumb wizard (Source → Destination → Scope → Options → Preview & run) that previews before it writes, so a first-time user can't get lost. The whole visual system — tokens, components, the wizard pattern, and the human-interface principles behind it — is documented in [docs/design-system.md](docs/design-system.md) to build on.
+
 ![OpenGateSP light theme](docs/screenshot-light.png)
 
-## What it does (v0.6.0)
+## What it does (v0.9.0)
 
 | Area | Function | What it does |
 |---|---|---|
@@ -50,6 +56,10 @@ The GUI defaults to a clean **Microsoft Fluent**-style light theme, with Fluent 
 | | `Copy-SPSite` | Copy a site's structure (lists, libraries, columns, views) and optionally its content to another site in the **same tenant**. Dry-run by default ([docs/07](docs/07-sharepoint-migration.md)). |
 | | `Copy-SPPermissions` | Copy role assignments to another site, remapping users/groups via a mapping CSV or domain swap. Dry-run by default. |
 | | `Copy-SPSite -CrossTenant` | Copy a site to a **different tenant** (files by download/upload, principals remapped). With `New-SPMigrationConnection` + `Copy-SPTermGroup`. |
+| | `Compare-SPSite` | Post-migration validation — diff destination vs source (lists, item/file counts). |
+| **Explore** | `Invoke-SPExplore` | Read-only **source assessment**: checked-out files, large files, external sharing, orphaned users, workflows — graded Error/Warning. |
+| | `Get-SPCheckedOutFiles` · `Get-SPLargeFiles` · `Get-SPVersionHistoryReport` · `Get-SPInactiveSites` · `Get-SPContentInsights` · `Get-SPWorkflowReport` | The individual discovery reports behind Explore. |
+| **Remediation** | `Invoke-SPCheckIn` · `Clear-SPVersionHistory` · `Restore-SPInheritance` · `Remove-SPOrphanedUsers` | Fix what Explore finds. Dry-run by default ([docs/11](docs/11-remediation.md)). |
 | **Collaboration** | `Copy-SPM365Group` | Clone a Microsoft 365 Group (description + owner/member roster) |
 | | `Copy-SPTeam` | Clone a Team (channels + membership) |
 | | `Copy-SPPlannerPlan` | Recreate a Planner plan (buckets + tasks) on a group |
@@ -89,7 +99,7 @@ Full guide: [docs/03-quickstart.md](docs/03-quickstart.md) · setup: [docs/01](d
 
 ## Roadmap
 
-Site-to-site copy, **permissions + identity mapping**, and **tenant-to-tenant** have shipped (Phases 1–3). Next: **Teams + Planner + M365 Groups**, deeper governance, PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md).
+Phases 1–5 (same-tenant copy, permissions/identity mapping, tenant-to-tenant, Teams/Groups/Planner, governance) plus **Explore** + post-migration validation (0.7.0) and **remediation** + migration fidelity (0.8.0) have shipped. Next: full per-version history fidelity (Migration API), ShareGate-Protect-style governance automation, PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md) and [docs/TESTING.md](docs/TESTING.md).
 
 ## License
 

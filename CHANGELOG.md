@@ -4,6 +4,27 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.9.0]
+
+GUI redesign — ShareGate-aligned navigation and a guided Copy wizard. No engine cmdlet changes.
+
+### Added
+- **Guided Copy flow** — a "What would you like to copy?" **chooser** (SharePoint / Collaboration /
+  Import external, with plain-language "what's copied" cards) that opens a **breadcrumb wizard**:
+  Source → Destination → Scope → Options → Preview & run. `Next` is disabled until each step is
+  valid; **`Run` is locked until you Preview** the current settings (preview-before-write); the Scope
+  step uses `Compare-SPSite` to show source-vs-destination lists in one grid. A new **Tasks** view
+  lists what's run this session with its result.
+- **`docs/design-system.md`** — the reusable design reference (color tokens, type scale, components,
+  navigation IA + rationale, the wizard pattern, and human-interface principles + do/don'ts) so the
+  GUI can be extended consistently.
+
+### Changed
+- **Left navigation** regrouped to the ShareGate model — Home (top); **Migration** (Explore, Copy,
+  Pre-check, Security); **Activity** (Tasks, Scheduled); **Governance** (Provisioning); Connect pinned
+  at the bottom. The old Migrate / Copy-site / Teams-&-Groups nav entries fold into the single
+  **Copy** chooser (those forms are still reached through it).
+
 ## [0.8.0]
 
 Remediation quick-actions and migration fidelity.

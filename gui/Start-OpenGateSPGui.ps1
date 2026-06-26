@@ -37,6 +37,7 @@ $null = $boot.AddScript("Import-Module '$ModulePath' -Force -ErrorAction Stop").
 $boot.Dispose()
 $script:Busy       = $false
 $script:LastReport = @()
+$script:LastExplore = @()
 
 # --- load the window --------------------------------------------------------------------
 [xml]$xamlDoc = Get-Content -LiteralPath (Join-Path $here 'MainWindow.xaml') -Raw
@@ -57,7 +58,7 @@ $script:XamlControls = @'
     <Style x:Key="Muted" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="FontSize" Value="12"/>
     </Style>
     <Style x:Key="Section" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
@@ -107,7 +108,7 @@ $script:XamlControls = @'
     </Style>
     <Style x:Key="WarnButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="{DynamicResource Warn}"/>
-        <Setter Property="Foreground" Value="{DynamicResource AccentFg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource WarnFg}"/>
     </Style>
     <Style x:Key="ThemeToggle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="Transparent"/>
@@ -284,7 +285,7 @@ $script:XamlControls = @'
         <Setter Property="CanUserResizeRows" Value="False"/>
         <Setter Property="RowHeight" Value="30"/>
         <Setter Property="ColumnHeaderHeight" Value="36"/>
-        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="FontSize" Value="12"/>
         <Setter Property="SelectionUnit" Value="FullRow"/>
     </Style>
     <Style TargetType="DataGridColumnHeader">
@@ -338,7 +339,7 @@ $script:XamlControls = @'
     </Style>
     <Style x:Key="NavButton" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
-        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="FontSize" Value="14"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Margin" Value="0,1"/>
@@ -396,12 +397,12 @@ $script:XamlControls = @'
     </Style>
     <Style x:Key="CardTitle" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
-        <Setter Property="FontSize" Value="15.5"/>
+        <Setter Property="FontSize" Value="16"/>
         <Setter Property="FontWeight" Value="Bold"/>
     </Style>
     <Style x:Key="CardBody" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
-        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="FontSize" Value="12"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="Margin" Value="0,8,0,0"/>
     </Style>
@@ -413,7 +414,7 @@ $script:XamlControls = @'
     </Style>
     <Style x:Key="Breadcrumb" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
-        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="FontSize" Value="14"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style x:Key="EmptyState" TargetType="TextBlock">
@@ -444,7 +445,9 @@ $script:XamlDark = @'
     <SolidColorBrush x:Key="Good" Color="#C3E88D"/>
     <SolidColorBrush x:Key="GoodFg" Color="#1B1D2B"/>
     <SolidColorBrush x:Key="Warn" Color="#FFC777"/>
+    <SolidColorBrush x:Key="WarnFg" Color="#1B1D2B"/>
     <SolidColorBrush x:Key="Danger" Color="#FF757F"/>
+    <SolidColorBrush x:Key="DangerFg" Color="#1B1D2B"/>
 </ResourceDictionary>
 '@
 
@@ -464,7 +467,9 @@ $script:XamlLight = @'
     <SolidColorBrush x:Key="Good" Color="#427B58"/>
     <SolidColorBrush x:Key="GoodFg" Color="#FFF8E8"/>
     <SolidColorBrush x:Key="Warn" Color="#B57614"/>
+    <SolidColorBrush x:Key="WarnFg" Color="#FFF8E8"/>
     <SolidColorBrush x:Key="Danger" Color="#9D0006"/>
+    <SolidColorBrush x:Key="DangerFg" Color="#FFF8E8"/>
 </ResourceDictionary>
 '@
 
@@ -484,7 +489,9 @@ $script:XamlFluentLight = @'
     <SolidColorBrush x:Key="Good" Color="#0E700E"/>
     <SolidColorBrush x:Key="GoodFg" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="Warn" Color="#8A6A00"/>
+    <SolidColorBrush x:Key="WarnFg" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="Danger" Color="#A4262C"/>
+    <SolidColorBrush x:Key="DangerFg" Color="#FFFFFF"/>
 </ResourceDictionary>
 '@
 
@@ -504,7 +511,9 @@ $script:XamlFluentDark = @'
     <SolidColorBrush x:Key="Good" Color="#6CCB5F"/>
     <SolidColorBrush x:Key="GoodFg" Color="#1F1F1F"/>
     <SolidColorBrush x:Key="Warn" Color="#FCD34D"/>
+    <SolidColorBrush x:Key="WarnFg" Color="#1F1F1F"/>
     <SolidColorBrush x:Key="Danger" Color="#F1707B"/>
+    <SolidColorBrush x:Key="DangerFg" Color="#1F1F1F"/>
 </ResourceDictionary>
 '@
 
@@ -678,9 +687,11 @@ $script:BtnRunReport.Add_Click({
     $site = $script:TbReportSite.Text.Trim()
     $incl = [bool]$script:CbInclLists.IsChecked
     switch ($script:CbReport.SelectedIndex) {
-        0 { $cmd = 'Get-SPSharingReport';    $p = @{ SiteUrl = $site; IncludeLinks = $incl } }
-        1 { $cmd = 'Get-SPPermissionReport'; $p = @{ SiteUrl = $site; IncludeListPermissions = $incl } }
-        2 { $cmd = 'Get-SPSiteInventory';    $p = @{ IncludeStorage = $true } }
+        0 { $cmd = 'Get-SPSharingReport';     $p = @{ SiteUrl = $site; IncludeLinks = $incl } }
+        1 { $cmd = 'Get-SPPermissionReport';  $p = @{ SiteUrl = $site; IncludeListPermissions = $incl } }
+        2 { $cmd = 'Get-SPSiteInventory';     $p = @{ IncludeStorage = $true } }
+        3 { $cmd = 'Get-SPPermissionsMatrix'; $p = @{ SiteUrl = $site; IncludeListPermissions = $incl } }
+        4 { $cmd = 'Get-SPOrphanedUsers';     $p = @{ SiteUrl = $site } }
         default { return }
     }
     if ($cmd -ne 'Get-SPSiteInventory' -and -not $site) { Set-Status 'Enter a Site URL for this report.'; return }
@@ -708,6 +719,96 @@ $script:BtnExportHtml.Add_Click({
         Set-Status "Saved $path"
     }
 })
+
+function Invoke-Lifecycle([bool]$Preview) {
+    $site = $script:TbReportSite.Text.Trim()
+    if (-not $site) { Set-Status 'Enter a Site URL (above) for a lifecycle action.'; return }
+    $state = @('ReadOnly', 'NoAccess', 'Unlock')[$script:CbLifecycle.SelectedIndex]
+    $p = @{ SiteUrl = $site; LockState = $state }
+    if ($Preview) {
+        $p.WhatIf = $true
+    }
+    else {
+        if (-not (Confirm-Action "Set lock state of`n$site`nto $state ?`n`nRequires SharePoint admin.")) { return }
+        $p.Force = $true
+    }
+    Invoke-Worker -Command 'Set-SPSiteLifecycle' -Parameters $p -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Lifecycle failed: $err"; return }
+        $script:LastReport = Show-Grid $script:GridReport $result $script:EmptyReport
+        Set-Status "Lifecycle: $($script:LastReport.Count) row(s)."
+    }
+}
+$script:BtnLifecyclePreview.Add_Click({ Invoke-Lifecycle $true })
+$script:BtnLifecycleApply.Add_Click({ Invoke-Lifecycle $false })
+
+# --- Explore (SharePoint source assessment) --------------------------------------------
+$script:BtnRunExplore.Add_Click({
+    $site = $script:TbExploreSite.Text.Trim()
+    $mb = 100; $tmp = 0
+    if ([int]::TryParse($script:TbExploreMB.Text.Trim(), [ref]$tmp)) { $mb = $tmp }
+    $incl = [bool]$script:CbExploreVersions.IsChecked
+    switch ($script:CbExplore.SelectedIndex) {
+        0 { $cmd = 'Invoke-SPExplore';          $p = @{ SiteUrl = $site; LargeFileMB = $mb }; if ($incl) { $p.IncludeVersions = $true } }
+        1 { $cmd = 'Get-SPCheckedOutFiles';     $p = @{ SiteUrl = $site } }
+        2 { $cmd = 'Get-SPLargeFiles';          $p = @{ SiteUrl = $site; MinSizeMB = $mb } }
+        3 { $cmd = 'Get-SPVersionHistoryReport'; $p = @{ SiteUrl = $site } }
+        4 { $cmd = 'Get-SPContentInsights';     $p = @{ SiteUrl = $site } }
+        5 { $cmd = 'Get-SPWorkflowReport';      $p = @{ SiteUrl = $site } }
+        6 { $cmd = 'Get-SPInactiveSites';       $p = @{ InactiveDays = 180 } }
+        default { return }
+    }
+    if ($cmd -ne 'Get-SPInactiveSites' -and -not $site) { Set-Status 'Enter a Site URL for this report.'; return }
+
+    Invoke-Worker -Command $cmd -Parameters $p -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Explore failed: $err"; return }
+        $script:LastExplore = Show-Grid $script:GridExplore $result $script:EmptyExplore
+        Set-Status "$($script:LastExplore.Count) finding(s)."
+    }
+})
+
+$script:BtnExploreCsv.Add_Click({
+    if (-not $script:LastExplore.Count) { Set-Status 'Nothing to export — run a report first.'; return }
+    $path = Save-FilePath 'CSV (*.csv)|*.csv' 'explore.csv'
+    if ($path) { $script:LastExplore | Export-Csv -LiteralPath $path -NoTypeInformation -Encoding utf8; Set-Status "Saved $path" }
+})
+
+$script:BtnExploreHtml.Add_Click({
+    if (-not $script:LastExplore.Count) { Set-Status 'Nothing to export — run a report first.'; return }
+    $path = Save-FilePath 'HTML (*.html)|*.html' 'explore.html'
+    if ($path) {
+        $style = '<style>body{font-family:Segoe UI,Arial;background:#1b1d2b;color:#c0caf5}table{border-collapse:collapse;width:100%}th,td{border:1px solid #3b4261;padding:6px 10px;text-align:left}th{background:#24283b;color:#7aa2f7}</style>'
+        $script:LastExplore | ConvertTo-Html -Head $style | Out-File -LiteralPath $path -Encoding utf8
+        Set-Status "Saved $path"
+    }
+})
+
+function Invoke-Remediation([bool]$Preview) {
+    $site = $script:TbExploreSite.Text.Trim()
+    if (-not $site) { Set-Status 'Enter a Site URL to remediate.'; return }
+    switch ($script:CbRemediate.SelectedIndex) {
+        0 { $cmd = 'Invoke-SPCheckIn';        $p = @{ SiteUrl = $site } }
+        1 { $cmd = 'Remove-SPOrphanedUsers';  $p = @{ SiteUrl = $site } }
+        default { return }
+    }
+    if ($Preview) {
+        $p.WhatIf = $true
+    }
+    else {
+        $label = "$($script:CbRemediate.SelectedItem.Content)"
+        if (-not (Confirm-Action "Apply '$label' to $site? This writes to SharePoint.")) { return }
+        $p.Force = $true
+    }
+    Invoke-Worker -Command $cmd -Parameters $p -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Remediation failed: $err"; return }
+        $script:LastExplore = Show-Grid $script:GridExplore $result $script:EmptyExplore
+        Set-Status "$($script:LastExplore.Count) row(s)."
+    }
+}
+$script:BtnRemediatePreview.Add_Click({ Invoke-Remediation $true })
+$script:BtnRemediateApply.Add_Click({ Invoke-Remediation $false })
 
 # --- Migrate ----------------------------------------------------------------------------
 $script:BtnBrowseSource.Add_Click({ $f = Select-FolderPath; if ($f) { $script:TbSource.Text = $f } })
@@ -753,8 +854,9 @@ function Invoke-CopySite([bool]$Preview) {
         DestinationUrl = $dst
         ConflictMode   = @('IfNewer', 'Skip', 'KeepBoth', 'Replace')[$script:CbCopyConflict.SelectedIndex]
     }
-    if ($script:CbCopyContent.IsChecked) { $p.IncludeContent = $true }
-    if ($script:CbCopyPerms.IsChecked)   { $p.CopyPermissions = $true }
+    if ($script:CbCopyContent.IsChecked)  { $p.IncludeContent = $true }
+    if ($script:CbCopyVersions.IsChecked) { $p.IncludeVersions = $true }
+    if ($script:CbCopyPerms.IsChecked)    { $p.CopyPermissions = $true }
     $lists = $script:TbCopyLists.Text.Trim()
     if ($lists) { $p.Lists = @($lists -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
 
@@ -780,6 +882,20 @@ function Invoke-CopySite([bool]$Preview) {
 }
 $script:BtnPreviewCopy.Add_Click({ Invoke-CopySite $true })
 $script:BtnRunCopy.Add_Click({ Invoke-CopySite $false })
+$script:BtnValidateCopy.Add_Click({
+    $src = $script:TbCopySource.Text.Trim()
+    $dst = $script:TbCopyDest.Text.Trim()
+    if (-not $src -or -not $dst) { Set-Status 'Enter source and destination site URLs to validate.'; return }
+    $p = @{ SourceUrl = $src; DestinationUrl = $dst }
+    $listsText = $script:TbCopyLists.Text.Trim()
+    if ($listsText) { $p.Lists = @($listsText -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
+    Invoke-Worker -Command 'Compare-SPSite' -Parameters $p -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Validate failed: $err"; return }
+        $rows = Show-Grid $script:GridCopy $result $script:EmptyCopy
+        Set-Status "$($rows.Count) object(s) compared."
+    }
+})
 
 # --- Provision --------------------------------------------------------------------------
 $script:BtnCreateSite.Add_Click({
@@ -894,13 +1010,196 @@ $script:BtnCreateSchedule.Add_Click({
     }
 })
 
+# --- Collaboration (Teams / Groups / Planner) ------------------------------------------
+function Invoke-Collab([string]$Command, [hashtable]$Params, [bool]$Preview, [string]$Need) {
+    foreach ($k in ($Need -split ',')) { if (-not $Params[$k.Trim()]) { Set-Status 'Fill in every field for this action.'; return } }
+    if ($Preview) {
+        $Params.WhatIf = $true
+    }
+    else {
+        if (-not (Confirm-Action "Create via $Command ? This writes to Microsoft 365.")) { return }
+        $Params.Force = $true
+    }
+    Invoke-Worker -Command $Command -Parameters $Params -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Create failed: $err"; return }
+        $rows = Show-Grid $script:GridCollab $result $script:EmptyCollab
+        Set-Status "$($rows.Count) row(s)."
+    }
+}
+$script:BtnPreviewGroup.Add_Click({ Invoke-Collab 'Copy-SPM365Group' @{ SourceIdentity = $script:TbGroupSource.Text.Trim(); DisplayName = $script:TbGroupName.Text.Trim(); MailNickname = $script:TbGroupAlias.Text.Trim() } $true 'SourceIdentity,DisplayName,MailNickname' })
+$script:BtnCreateGroup.Add_Click({ Invoke-Collab 'Copy-SPM365Group' @{ SourceIdentity = $script:TbGroupSource.Text.Trim(); DisplayName = $script:TbGroupName.Text.Trim(); MailNickname = $script:TbGroupAlias.Text.Trim() } $false 'SourceIdentity,DisplayName,MailNickname' })
+$script:BtnPreviewTeam.Add_Click({ Invoke-Collab 'Copy-SPTeam' @{ SourceTeam = $script:TbTeamSource.Text.Trim(); DisplayName = $script:TbTeamName.Text.Trim(); MailNickname = $script:TbTeamAlias.Text.Trim() } $true 'SourceTeam,DisplayName,MailNickname' })
+$script:BtnCreateTeam.Add_Click({ Invoke-Collab 'Copy-SPTeam' @{ SourceTeam = $script:TbTeamSource.Text.Trim(); DisplayName = $script:TbTeamName.Text.Trim(); MailNickname = $script:TbTeamAlias.Text.Trim() } $false 'SourceTeam,DisplayName,MailNickname' })
+$script:BtnPreviewPlan.Add_Click({ Invoke-Collab 'Copy-SPPlannerPlan' @{ SourcePlanId = $script:TbPlanSource.Text.Trim(); DestinationGroupId = $script:TbPlanGroup.Text.Trim(); Title = $script:TbPlanTitle.Text.Trim() } $true 'SourcePlanId,DestinationGroupId,Title' })
+$script:BtnCreatePlan.Add_Click({ Invoke-Collab 'Copy-SPPlannerPlan' @{ SourcePlanId = $script:TbPlanSource.Text.Trim(); DestinationGroupId = $script:TbPlanGroup.Text.Trim(); Title = $script:TbPlanTitle.Text.Trim() } $false 'SourcePlanId,DestinationGroupId,Title' })
+
+# --- Copy chooser + guided wizard ------------------------------------------------------
+$script:CopyCtx = [ordered]@{ Type = 'structure' }
+$script:WizStep = 1
+$script:WizPreviewHash = $null
+$script:Tasks = @()
+$script:RecentCopies = @()
+$script:WizTitles = @{ structure = 'Structure & content'; structureonly = 'Structure only'; content = 'Content only'; list = 'A list or library' }
+
+function Add-TaskRow([string]$Operation, [string]$Target, [string]$Result) {
+    $row = [pscustomobject]@{ Time = (Get-Date).ToString('HH:mm:ss'); Operation = $Operation; Target = $Target; Result = $Result }
+    $script:Tasks = @($row) + @($script:Tasks)
+    Show-Grid $script:GridTasks $script:Tasks $script:EmptyTasks | Out-Null
+}
+function Add-RecentCopy([string]$Result) {
+    $row = [pscustomobject]@{ Type = $script:WizTitles[$script:CopyCtx.Type]; Source = $script:TbWizSource.Text.Trim(); Destination = $script:TbWizDest.Text.Trim(); Result = $Result; When = (Get-Date).ToString('g') }
+    $script:RecentCopies = @($row) + @($script:RecentCopies)
+    Show-Grid $script:GridRecent $script:RecentCopies $script:EmptyRecent | Out-Null
+}
+
+function Build-CopyParams([bool]$Preview) {
+    $type = $script:CopyCtx.Type
+    $conflict = @('IfNewer', 'Skip', 'KeepBoth', 'Replace')[$script:CbWizConflict.SelectedIndex]
+    $p = [ordered]@{ SourceUrl = $script:TbWizSource.Text.Trim(); DestinationUrl = $script:TbWizDest.Text.Trim(); ConflictMode = $conflict }
+    if ($script:CbWizContent.IsChecked -or $type -eq 'content') { $p.IncludeContent = $true }
+    if ($script:CbWizVersions.IsChecked) { $p.IncludeVersions = $true }
+    if ($script:CbWizPerms.IsChecked) { $p.CopyPermissions = $true }
+    $since = $script:TbWizSince.Text.Trim()
+    if ($since) { try { $p.Since = [datetime]$since } catch { } }
+    $lists = $script:TbWizLists.Text.Trim()
+    $cmd = 'Copy-SPSite'
+    if ($type -eq 'list') {
+        $cmd = 'Copy-SPList'
+        if ($p.Contains('CopyPermissions')) { $p.Remove('CopyPermissions') }
+        if ($lists) { $p.List = (($lists -split ',')[0]).Trim() }
+    }
+    elseif ($lists) {
+        $p.Lists = @($lists -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    }
+    if ($Preview) { $p.WhatIf = $true } else { $p.Force = $true }
+    @{ Command = $cmd; Params = $p }
+}
+function Get-WizardParamHash {
+    $bp = Build-CopyParams $true
+    (($bp.Params.GetEnumerator() | Sort-Object Name | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join '|') + "|$($bp.Command)"
+}
+function Get-WizardSummary {
+    $t = $script:WizTitles[$script:CopyCtx.Type]
+    $lists = $script:TbWizLists.Text.Trim()
+    $scope = if ($lists) { $lists } else { 'all lists & libraries' }
+    $conf = @('Copy if newer', "Don't copy", 'Keep both', 'Copy and replace')[$script:CbWizConflict.SelectedIndex]
+    $opts = @(); if ($script:CbWizContent.IsChecked) { $opts += 'content' }; if ($script:CbWizVersions.IsChecked) { $opts += 'versions' }; if ($script:CbWizPerms.IsChecked) { $opts += 'permissions' }
+    $inc = if ($opts.Count) { ($opts -join ', ') } else { 'schema only' }
+    "$t`nFrom:  $($script:TbWizSource.Text.Trim())`nTo:     $($script:TbWizDest.Text.Trim())`nScope: $scope`nOn conflict: $conf   ·   Include: $inc"
+}
+
+function Update-WizardNav {
+    $ok = $true
+    switch ($script:WizStep) {
+        1 { $ok = [bool]($script:TbWizSource.Text.Trim()) }
+        2 { $s = $script:TbWizSource.Text.Trim(); $d = $script:TbWizDest.Text.Trim(); $ok = ($d -and ($s.TrimEnd('/') -ne $d.TrimEnd('/'))) }
+        default { $ok = $true }
+    }
+    $script:BtnWizNext.IsEnabled = $ok
+}
+function Set-WizardStep([int]$n) {
+    $script:WizStep = $n
+    $vis = [System.Windows.Visibility]::Visible; $col = [System.Windows.Visibility]::Collapsed
+    $panels = @($script:PanelWizSource, $script:PanelWizDest, $script:PanelWizScope, $script:PanelWizOptions, $script:PanelWizRun)
+    for ($i = 0; $i -lt $panels.Count; $i++) { $panels[$i].Visibility = if (($i + 1) -eq $n) { $vis } else { $col } }
+    $steps = @($script:WizStep1, $script:WizStep2, $script:WizStep3, $script:WizStep4, $script:WizStep5)
+    for ($i = 0; $i -lt $steps.Count; $i++) {
+        $steps[$i].SetResourceReference([System.Windows.Controls.TextBlock]::ForegroundProperty, $(if (($i + 1) -le $n) { 'Accent' } else { 'FgMute' }))
+        $steps[$i].FontWeight = if (($i + 1) -le $n) { 'Bold' } else { 'Normal' }
+    }
+    $script:WizStepLabel.Text = "Step $n of 5"
+    $isRun = ($n -eq 5)
+    $script:BtnWizBack.Visibility = if ($n -gt 1) { $vis } else { $col }
+    $script:BtnWizNext.Visibility = if ($isRun) { $col } else { $vis }
+    $script:BtnWizPreview.Visibility = if ($isRun) { $vis } else { $col }
+    $script:BtnWizRun.Visibility = if ($isRun) { $vis } else { $col }
+    if ($isRun) {
+        $script:WizSummary.Text = Get-WizardSummary
+        $script:BtnWizRun.IsEnabled = ($script:WizPreviewHash -and $script:WizPreviewHash -eq (Get-WizardParamHash))
+    }
+    Update-WizardNav
+}
+function Open-CopyWizard([string]$Type) {
+    $script:CopyCtx = [ordered]@{ Type = $Type }
+    $script:WizPreviewHash = $null
+    $script:TbWizSource.Text = ''; $script:TbWizDest.Text = ''; $script:TbWizLists.Text = ''; $script:TbWizSince.Text = ''
+    $script:CbWizContent.IsChecked = ($Type -ne 'structureonly')
+    $script:CbWizVersions.IsChecked = $false; $script:CbWizPerms.IsChecked = $false
+    $script:CbWizConflict.SelectedIndex = 0
+    $script:WizTypeChip.Text = $script:WizTitles[$Type]
+    Show-Grid $script:GridWizResult @() $script:EmptyWizResult | Out-Null
+    Show-Grid $script:GridWizScope @() $script:EmptyWizScope | Out-Null
+    $script:NavCopy.IsChecked = $true
+    Show-View 'CopyWizard'
+    Set-WizardStep 1
+}
+
+function Invoke-CopyPreview {
+    $bp = Build-CopyParams $true
+    Invoke-Worker -Command $bp.Command -Parameters $bp.Params -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Preview failed: $err"; return }
+        $rows = @(Show-Grid $script:GridWizResult $result $script:EmptyWizResult)
+        $script:WizPreviewHash = Get-WizardParamHash
+        $script:BtnWizRun.IsEnabled = $true
+        Set-Status "Preview: $($rows.Count) object(s). Review the plan, then Run copy."
+    }
+}
+function Invoke-CopyRun {
+    if (-not (Confirm-Action "Run this copy?`n`n$(Get-WizardSummary)`n`nNothing was written by the preview.")) { return }
+    $bp = Build-CopyParams $false
+    $tgt = "$($script:TbWizSource.Text.Trim()) -> $($script:TbWizDest.Text.Trim())"
+    Invoke-Worker -Command $bp.Command -Parameters $bp.Params -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Copy failed: $err"; Add-TaskRow 'Copy' $tgt "Error: $err"; return }
+        $rows = @(Show-Grid $script:GridWizResult $result $script:EmptyWizResult)
+        $errs = @($rows | Where-Object Status -eq 'Error').Count
+        $summary = "$($rows.Count) object(s), $errs error(s)"
+        Set-Status "Copy complete — $summary. See ./logs for the transcript."
+        Add-TaskRow 'Copy' $tgt $summary
+        Add-RecentCopy $summary
+    }
+}
+
+# Chooser cards
+$script:CardCopyStructure.Add_Click({ Open-CopyWizard 'structure' })
+$script:CardCopyStructureOnly.Add_Click({ Open-CopyWizard 'structureonly' })
+$script:CardCopyContent.Add_Click({ Open-CopyWizard 'content' })
+$script:CardCopyList.Add_Click({ Open-CopyWizard 'list' })
+$script:CardCopyTeam.Add_Click({ Show-View 'Collab' })
+$script:CardCopyGroup.Add_Click({ Show-View 'Collab' })
+$script:CardCopyPlanner.Add_Click({ Show-View 'Collab' })
+$script:CardImportFileShare.Add_Click({ Show-View 'Migrate' })
+
+# Wizard controls
+$script:BtnWizNext.Add_Click({ if ($script:WizStep -lt 5) { Set-WizardStep ($script:WizStep + 1) } })
+$script:BtnWizBack.Add_Click({ if ($script:WizStep -gt 1) { Set-WizardStep ($script:WizStep - 1) } })
+$script:BtnWizPreview.Add_Click({ Invoke-CopyPreview })
+$script:BtnWizRun.Add_Click({ Invoke-CopyRun })
+$script:BtnWizLoadLists.Add_Click({
+    $s = $script:TbWizSource.Text.Trim(); $d = $script:TbWizDest.Text.Trim()
+    if (-not $s -or -not $d) { Set-Status 'Enter source and destination (steps 1-2) before loading lists.'; return }
+    Invoke-Worker -Command 'Compare-SPSite' -Parameters @{ SourceUrl = $s; DestinationUrl = $d } -OnDone {
+        param($result, $err)
+        if ($err) { Set-Status "Load lists failed: $err"; return }
+        $rows = @(Show-Grid $script:GridWizScope $result $script:EmptyWizScope)
+        Set-Status "$($rows.Count) list(s)/librar(ies) compared."
+    }
+})
+$script:TbWizSource.Add_TextChanged({ Update-WizardNav })
+$script:TbWizDest.Add_TextChanged({ Update-WizardNav })
+
 # --- navigation -------------------------------------------------------------------------
 $script:ViewMap = [ordered]@{
-    Home     = $script:ViewHome; Connect = $script:ViewConnect; Migrate = $script:ViewMigrate; CopySite = $script:ViewCopySite
-    PreCheck = $script:ViewPreCheck; Provision = $script:ViewProvision; Reports = $script:ViewReports; Scheduled = $script:ViewScheduled
+    Home = $script:ViewHome; Connect = $script:ViewConnect; Explore = $script:ViewExplore
+    CopyLanding = $script:ViewCopyLanding; CopyWizard = $script:ViewCopyWizard
+    Migrate = $script:ViewMigrate; CopySite = $script:ViewCopySite; Collab = $script:ViewCollab
+    PreCheck = $script:ViewPreCheck; Provision = $script:ViewProvision; Reports = $script:ViewReports
+    Tasks = $script:ViewTasks; Scheduled = $script:ViewScheduled
 }
-$script:CrumbMap = @{ Home = 'Home'; Connect = 'Connect'; Migrate = 'Migrate'; CopySite = 'Copy site'; PreCheck = 'Pre-check'; Provision = 'Provision'; Reports = 'Reports'; Scheduled = 'Scheduled' }
-$script:GroupMap = @{ Home = 'Migration'; Connect = 'Migration'; Migrate = 'Migration'; CopySite = 'Migration'; PreCheck = 'Migration'; Provision = 'Migration'; Reports = 'Governance'; Scheduled = 'Governance' }
+$script:CrumbMap = @{ Home = 'Home'; Connect = 'Connect'; Explore = 'Explore'; CopyLanding = 'Copy'; CopyWizard = 'Copy'; Migrate = 'Import file share'; CopySite = 'Copy site'; Collab = 'Teams & Groups'; PreCheck = 'Pre-check'; Provision = 'Provisioning'; Reports = 'Security'; Tasks = 'Tasks'; Scheduled = 'Scheduled' }
+$script:GroupMap = @{ Home = 'Migration'; Connect = 'Setup'; Explore = 'Migration'; CopyLanding = 'Migration'; CopyWizard = 'Migration'; Migrate = 'Migration'; CopySite = 'Migration'; Collab = 'Migration'; PreCheck = 'Migration'; Provision = 'Governance'; Reports = 'Migration'; Tasks = 'Activity'; Scheduled = 'Activity' }
 
 function Show-View([string]$name) {
     foreach ($entry in $script:ViewMap.GetEnumerator()) {
@@ -911,16 +1210,18 @@ function Show-View([string]$name) {
 
 $script:NavHome.Add_Checked({ Show-View 'Home' })
 $script:NavConnect.Add_Checked({ Show-View 'Connect' })
-$script:NavMigrate.Add_Checked({ Show-View 'Migrate' })
-$script:NavCopySite.Add_Checked({ Show-View 'CopySite' })
+$script:NavExplore.Add_Checked({ Show-View 'Explore' })
+$script:NavCopy.Add_Checked({ Show-View 'CopyLanding' })
 $script:NavPreCheck.Add_Checked({ Show-View 'PreCheck' })
-$script:NavProvision.Add_Checked({ Show-View 'Provision' })
 $script:NavReports.Add_Checked({ Show-View 'Reports' })
+$script:NavTasks.Add_Checked({ Show-View 'Tasks' })
 $script:NavScheduled.Add_Checked({ Show-View 'Scheduled' })
+$script:NavProvision.Add_Checked({ Show-View 'Provision' })
 
-$script:CardMigrate.Add_Click({ $script:NavMigrate.IsChecked = $true })
-$script:CardCopySite.Add_Click({ $script:NavCopySite.IsChecked = $true })
+$script:CardMigrate.Add_Click({ $script:NavCopy.IsChecked = $true })
+$script:CardCopySite.Add_Click({ $script:NavCopy.IsChecked = $true })
 $script:CardPreCheck.Add_Click({ $script:NavPreCheck.IsChecked = $true })
+$script:CardExplore.Add_Click({ $script:NavExplore.IsChecked = $true })
 $script:CardReports.Add_Click({ $script:NavReports.IsChecked = $true })
 $script:CardProvision.Add_Click({ $script:NavProvision.IsChecked = $true })
 $script:CardScheduled.Add_Click({ $script:NavScheduled.IsChecked = $true })
