@@ -4,6 +4,30 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.7.0]
+
+Source **Explore** (pre-migration discovery) and post-migration validation.
+
+### Added
+- **`Invoke-SPExplore`** — a read-only, consolidated assessment of a SharePoint **source** site
+  (checked-out files, large files, external sharing, orphaned users, 2013 workflows), graded
+  Error/Warning — the SharePoint-side companion to `Test-SPMigrationReadiness` (which scans local
+  folders).
+- **Discovery reports** — `Get-SPCheckedOutFiles`, `Get-SPLargeFiles`, `Get-SPVersionHistoryReport`,
+  `Get-SPInactiveSites`, `Get-SPWorkflowReport`, `Get-SPContentInsights` (standalone, and reused
+  inside `Invoke-SPExplore`).
+- **`Compare-SPSite`** — post-migration validation: diffs destination vs source (lists, item/file
+  counts) → Match / CountMismatch / Missing / ExtraInDest.
+- **MCP** — `sharepoint_explore` + the discovery tools, and `sharepoint_compare_site`.
+- **GUI** — a new **Explore** view; the Reports view gains the permissions-matrix and orphaned-users
+  reports and a **Site lifecycle** control; a **Validate copy** action in the Copy-site view.
+- **Docs/tests** — [docs/10](docs/10-explore.md), a consolidated [docs/TESTING.md] matrix, and
+  `scripts/test/Seed-TestTenant.ps1` to seed a dev tenant for end-to-end testing.
+
+### Changed
+- Pure, unit-tested core grows: `ConvertTo-SPExploreFinding`, `Select-SPInactiveSites`,
+  `Measure-SPVersionBloat`, and `Compare-SPStructure` (no tenant needed).
+
 ## [0.6.0]
 
 ShareGate-parity **Phase 5** — deeper governance.

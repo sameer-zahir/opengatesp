@@ -5,7 +5,7 @@ import { EngineHost } from "./engine.js";
 
 const engine = new EngineHost();
 
-const server = new McpServer({ name: "opengatesp", version: "0.6.0" });
+const server = new McpServer({ name: "opengatesp", version: "0.7.0" });
 
 type ToolResult = {
   content: { type: "text"; text: string }[];
@@ -82,6 +82,104 @@ server.tool(
 );
 
 server.tool(
+  "sharepoint_explore",
+  "Explore a SharePoint SOURCE site: a read-only, consolidated pre-migration assessment that surfaces blockers and review items (checked-out files, large files, external sharing, orphaned users, 2013 workflows) as one severity-graded list. The SharePoint-side companion to the local-folder pre-check.",
+  {
+    siteUrl: z.string().url(),
+    largeFileMB: z.number().int().positive().optional().describe("Flag files at/above this size in MB (default 100)."),
+    includeVersions: z.boolean().optional().describe("Also scan version history (slower) and flag bloated files."),
+  },
+  async ({ siteUrl, largeFileMB, includeVersions }) => {
+    const params: Record<string, unknown> = { SiteUrl: siteUrl };
+    if (largeFileMB) params.LargeFileMB = largeFileMB;
+    if (includeVersions === true) params.IncludeVersions = true;
+    return run("explore.assess", params);
+  },
+);
+
+server.tool(
+  "sharepoint_checked_out_files",
+  "List files left checked out in a site's document libraries (a migration blocker). Read-only.",
+  {
+    siteUrl: z.string().url(),
+    library: z.string().optional().describe("Limit to one library (default: all document libraries)."),
+  },
+  async ({ siteUrl, library }) => {
+    const params: Record<string, unknown> = { SiteUrl: siteUrl };
+    if (library) params.Library = library;
+    return run("report.checkedout", params);
+  },
+);
+
+server.tool(
+  "sharepoint_large_files",
+  "List the largest files in a site's document libraries, at/above a size threshold. Read-only.",
+  {
+    siteUrl: z.string().url(),
+    minSizeMB: z.number().int().positive().optional().describe("Minimum size in MB (default 100)."),
+    library: z.string().optional(),
+  },
+  async ({ siteUrl, minSizeMB, library }) => {
+    const params: Record<string, unknown> = { SiteUrl: siteUrl };
+    if (minSizeMB) params.MinSizeMB = minSizeMB;
+    if (library) params.Library = library;
+    return run("report.largefiles", params);
+  },
+);
+
+server.tool(
+  "sharepoint_version_report",
+  "Report files with heavy version history (count + size) so you can trim before migrating. Read-only; slower (per-file calls), gated by minSizeMB.",
+  {
+    siteUrl: z.string().url(),
+    minSizeMB: z.number().int().positive().optional().describe("Only inspect files at/above this size (default 25)."),
+    library: z.string().optional(),
+  },
+  async ({ siteUrl, minSizeMB, library }) => {
+    const params: Record<string, unknown> = { SiteUrl: siteUrl };
+    if (minSizeMB) params.MinSizeMB = minSizeMB;
+    if (library) params.Library = library;
+    return run("report.versions", params);
+  },
+);
+
+server.tool(
+  "sharepoint_content_insights",
+  "Summarize a site's document libraries by file type (count + total MB per extension) for migration sizing. Read-only.",
+  {
+    siteUrl: z.string().url(),
+    library: z.string().optional(),
+  },
+  async ({ siteUrl, library }) => {
+    const params: Record<string, unknown> = { SiteUrl: siteUrl };
+    if (library) params.Library = library;
+    return run("report.content", params);
+  },
+);
+
+server.tool(
+  "sharepoint_workflow_report",
+  "List SharePoint 2013-platform workflows on a site (they don't migrate; rebuild as Power Automate). Read-only, best-effort.",
+  {
+    siteUrl: z.string().url(),
+  },
+  async ({ siteUrl }) => run("report.workflows", { SiteUrl: siteUrl }),
+);
+
+server.tool(
+  "sharepoint_inactive_sites",
+  "List site collections with no content change for at least N days (archive/cleanup candidates). Requires SharePoint admin. Read-only.",
+  {
+    inactiveDays: z.number().int().positive().optional().describe("Inactivity threshold in days (default 180)."),
+  },
+  async ({ inactiveDays }) => {
+    const params: Record<string, unknown> = {};
+    if (inactiveDays) params.InactiveDays = inactiveDays;
+    return run("report.inactive", params);
+  },
+);
+
+server.tool(
   "sharepoint_set_site_lifecycle",
   "Lock, make read-only (archive), or unlock a site. Requires SharePoint admin. Dry-run by default; execute=true to apply.",
   {
@@ -149,6 +247,7 @@ server.tool(
     destinationUrl: z.string().url(),
     lists: z.array(z.string()).optional().describe("Limit to these list/library display names."),
     includeContent: z.boolean().optional().describe("Also copy items and files (default: structure only)."),
+
     conflictMode: z.enum(["Replace", "Skip", "KeepBoth", "IfNewer"]).optional().describe("Conflict handling for existing objects (default: IfNewer)."),
     copyPermissions: z.boolean().optional().describe("Also copy role assignments (Phase 2), remapping principals via mappingCsv/domain swap."),
     mappingCsv: z.string().optional().describe("Path to a Source,Destination CSV for principal remapping (used with copyPermissions)."),
@@ -161,6 +260,7 @@ server.tool(
     const params: Record<string, unknown> = { SourceUrl: sourceUrl, DestinationUrl: destinationUrl };
     if (lists) params.Lists = lists;
     if (includeContent === true) params.IncludeContent = true;
+
     if (conflictMode) params.ConflictMode = conflictMode;
     if (copyPermissions === true) params.CopyPermissions = true;
     if (mappingCsv) params.MappingCsv = mappingCsv;
@@ -289,16 +389,33 @@ server.tool(
     destinationUrl: z.string().url(),
     list: z.string().describe("Display name of the list or library to copy."),
     includeContent: z.boolean().optional().describe("Also copy items/files (default: schema only)."),
+
     conflictMode: z.enum(["Replace", "Skip", "KeepBoth", "IfNewer"]).optional().describe("Conflict handling if the list already exists (default: IfNewer)."),
     execute: z.boolean().optional().describe("false = dry-run plan (default); true = perform the copy."),
   },
   async ({ sourceUrl, destinationUrl, list, includeContent, conflictMode, execute }) => {
     const params: Record<string, unknown> = { SourceUrl: sourceUrl, DestinationUrl: destinationUrl, List: list };
     if (includeContent === true) params.IncludeContent = true;
+
     if (conflictMode) params.ConflictMode = conflictMode;
     if (execute === true) params.Force = true;
     else params.WhatIf = true;
     return run("copy.list", params);
+  },
+);
+
+server.tool(
+  "sharepoint_compare_site",
+  "Validate a finished copy: compare a destination site against its source and report lists/libraries that are missing or have different item counts (Match / CountMismatch / Missing / ExtraInDest). Read-only, same-tenant.",
+  {
+    sourceUrl: z.string().url(),
+    destinationUrl: z.string().url(),
+    lists: z.array(z.string()).optional().describe("Limit to these list/library display names."),
+  },
+  async ({ sourceUrl, destinationUrl, lists }) => {
+    const params: Record<string, unknown> = { SourceUrl: sourceUrl, DestinationUrl: destinationUrl };
+    if (lists) params.Lists = lists;
+    return run("compare.site", params);
   },
 );
 

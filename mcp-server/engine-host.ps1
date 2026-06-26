@@ -56,11 +56,19 @@ function Invoke-EngineCommand {
         'report.inventory'   { Confirm-Connected; return (Get-SPSiteInventory @Params) }
         'report.matrix'      { Confirm-Connected; return (Get-SPPermissionsMatrix @Params) }
         'report.orphans'     { Confirm-Connected; return (Get-SPOrphanedUsers @Params) }
+        'explore.assess'     { Confirm-Connected; return (Invoke-SPExplore @Params) }
+        'report.checkedout'  { Confirm-Connected; return (Get-SPCheckedOutFiles @Params) }
+        'report.largefiles'  { Confirm-Connected; return (Get-SPLargeFiles @Params) }
+        'report.versions'    { Confirm-Connected; return (Get-SPVersionHistoryReport @Params) }
+        'report.content'     { Confirm-Connected; return (Get-SPContentInsights @Params) }
+        'report.workflows'   { Confirm-Connected; return (Get-SPWorkflowReport @Params) }
+        'report.inactive'    { Confirm-Connected; return (Get-SPInactiveSites @Params) }
         'site.lifecycle'     { Confirm-Connected; return (Set-SPSiteLifecycle @Params) }
         'migrate.files'      { Confirm-Connected; return (Start-SPFileMigration @Params) }
         'precheck.readiness' { return (Test-SPMigrationReadiness @Params) }  # local scan, no connection
         'copy.site'          { return (Copy-SPSite @Params) }                # manages its own source+dest connections
         'copy.list'          { return (Copy-SPList @Params) }                # granular single list/library copy
+        'compare.site'       { Confirm-Connected; return (Compare-SPSite @Params) }  # post-migration validation
         'copy.permissions'   { return (Copy-SPPermissions @Params) }         # role-assignment copy + principal remap
         'copy.site.crosstenant' {
             # Cross-tenant: open a connection per tenant here (objects can't cross the protocol),

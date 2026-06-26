@@ -1,6 +1,6 @@
 @{
     RootModule        = 'OpenGateSP.psm1'
-    ModuleVersion     = '0.6.0'
+    ModuleVersion     = '0.7.0'
     GUID              = 'a4d9b2e7-6c81-4f3a-9b5e-2f7c1d8e4a60'
     Author            = 'Sameer Zahir'
     CompanyName       = 'Sameer Zahir'
@@ -19,10 +19,18 @@
         'Get-SPPermissionsMatrix',
         'Get-SPOrphanedUsers',
         'Set-SPSiteLifecycle',
+        'Invoke-SPExplore',
+        'Get-SPCheckedOutFiles',
+        'Get-SPLargeFiles',
+        'Get-SPVersionHistoryReport',
+        'Get-SPInactiveSites',
+        'Get-SPWorkflowReport',
+        'Get-SPContentInsights',
         'Start-SPFileMigration',
         'Test-SPMigrationReadiness',
         'Copy-SPSite',
         'Copy-SPList',
+        'Compare-SPSite',
         'Copy-SPPermissions',
         'Copy-SPTermGroup',
         'Copy-SPM365Group',
@@ -41,7 +49,7 @@
             Tags         = @('SharePoint', 'SharePointOnline', 'Microsoft365', 'PnP', 'Migration', 'FileShare', 'Governance', 'Permissions', 'ShareGate-alternative', 'migration-tool')
             LicenseUri   = 'https://github.com/sameer-zahir/opengatesp/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/sameer-zahir/opengatesp'
-            ReleaseNotes = 'v0.6.0 - Phase 5 (governance): Get-SPPermissionsMatrix (who-can-touch-what), Get-SPOrphanedUsers (stale access), Set-SPSiteLifecycle (lock/archive). v0.5.0 - Phase 4: Copy-SPTeam/Copy-SPM365Group/Copy-SPPlannerPlan. v0.4.0 - Phase 3: tenant-to-tenant. v0.3.0 - Phase 2: permissions + incremental. v0.2.0 - same-tenant site/list copy, readiness check, scheduled reports, modernized GUI. v0.1.0 - initial engine.'
+            ReleaseNotes = 'v0.7.0 - Explore source assessment + discovery reports (checked-out/large/version-bloat/inactive/workflows) + Compare-SPSite validation. v0.6.0 - Phase 5 (governance): Get-SPPermissionsMatrix (who-can-touch-what), Get-SPOrphanedUsers (stale access), Set-SPSiteLifecycle (lock/archive). v0.5.0 - Phase 4: Copy-SPTeam/Copy-SPM365Group/Copy-SPPlannerPlan. v0.4.0 - Phase 3: tenant-to-tenant. v0.3.0 - Phase 2: permissions + incremental. v0.2.0 - same-tenant site/list copy, readiness check, scheduled reports, modernized GUI. v0.1.0 - initial engine.'
         }
     }
 }
