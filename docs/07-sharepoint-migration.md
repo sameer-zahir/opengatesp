@@ -12,16 +12,16 @@ same-tenant by default, with **tenant-to-tenant** via `-CrossTenant` (see below)
 | Area | How | Fidelity |
 |---|---|---|
 | Lists, libraries, fields, content types, views, navigation, pages | PnP provisioning template (`Get-/Invoke-PnPSiteTemplate`) | Good for standard structures |
-| List items | Batched `Add-PnPListItem` | Simple columns clean; lookup/user/managed-metadata values may not round-trip |
-| Library files + folders | Same-tenant: `Copy-PnPFolder` + `Copy-PnPFileMetadata` (restores Created/Modified/Author). Cross-tenant: download + re-upload | Latest version only |
+| List items | Batched `Add-PnPListItem`, values mapped by `Resolve-SPFieldValue` | Simple columns clean; **Person/User + managed-metadata now round-trip** (taxonomy needs the term group copied first); lookup values still may not |
+| Library files + folders | Same-tenant: `Copy-PnPFolder` + `Copy-PnPFileMetadata` (restores Created/Modified/Author). Cross-tenant: download + re-upload | Latest version by default; **`-IncludeVersions`** rebuilds version history (same-tenant, experimental/best-effort) |
 | Role assignments | `Copy-SPPermissions` with principal remapping | Site + unique-list grants |
 | Managed-metadata terms | `Copy-SPTermGroup` (export/import XML) | Whole term group |
 
 ## Honest limits (this release)
 
 - **Cross-tenant** works via `-CrossTenant` + two `New-SPMigrationConnection` connections (files copy by download/upload). Same-tenant uses the faster `Copy-PnPFolder`.
-- **No version history** — latest version of each file only.
-- **Managed-metadata item values, complex/3rd-party web parts** — lossy or skipped.
+- **Version history** — latest version by default; `-IncludeVersions` on `Copy-SPSite` / `Copy-SPList` rebuilds the version chain (same-tenant, **experimental / best-effort** — per-version author and timestamp are not preserved; exact fidelity needs the SharePoint Migration API).
+- **Person/User + managed-metadata item values** — now mapped to a portable form (`Resolve-SPFieldValue`) so they round-trip same-tenant; taxonomy needs `Copy-SPTermGroup` run first. **Lookup values and complex/3rd-party web parts** — still lossy or skipped.
 - **Permissions** — `Copy-SPPermissions` (or `Copy-SPSite -CopyPermissions`) copies site and unique-list role assignments and remaps users/groups via a mapping CSV or a domain swap. Deep per-file ACLs are still coarse.
 - **Incremental** — `-Since <date>` copies only items modified at/after a watermark (PnP has no native change-feed, so it's timestamp-based). Pair with `-ConflictMode IfNewer` for converging re-runs.
 - Out of scope entirely: Exchange/Gmail mailboxes, Google Drive, classic 2013 workflows.

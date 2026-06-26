@@ -5,7 +5,7 @@ import { EngineHost } from "./engine.js";
 
 const engine = new EngineHost();
 
-const server = new McpServer({ name: "opengatesp", version: "0.7.0" });
+const server = new McpServer({ name: "opengatesp", version: "0.8.0" });
 
 type ToolResult = {
   content: { type: "text"; text: string }[];
@@ -196,6 +196,74 @@ server.tool(
 );
 
 server.tool(
+  "sharepoint_check_in_files",
+  "Bulk check-in files left checked out in a site's document libraries (clears a migration blocker). Dry-run by default; execute=true to apply.",
+  {
+    siteUrl: z.string().url(),
+    library: z.string().optional().describe("Limit to one library (default: all document libraries)."),
+    execute: z.boolean().optional().describe("false = preview (default); true = check in."),
+  },
+  async ({ siteUrl, library, execute }) => {
+    const params: Record<string, unknown> = { SiteUrl: siteUrl };
+    if (library) params.Library = library;
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("remediate.checkin", params);
+  },
+);
+
+server.tool(
+  "sharepoint_clear_version_history",
+  "Trim a file's version history, keeping the newest N historical versions (the current version is never touched). Dry-run by default; execute=true to delete.",
+  {
+    siteUrl: z.string().url(),
+    fileUrl: z.string().describe("Server-relative file URL, e.g. /sites/Marketing/Shared Documents/big.pptx"),
+    keep: z.number().int().nonnegative().optional().describe("Newest historical versions to retain (default 10)."),
+    execute: z.boolean().optional(),
+  },
+  async ({ siteUrl, fileUrl, keep, execute }) => {
+    const params: Record<string, unknown> = { SiteUrl: siteUrl, FileUrl: fileUrl };
+    if (keep !== undefined) params.Keep = keep;
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("remediate.versions", params);
+  },
+);
+
+server.tool(
+  "sharepoint_restore_inheritance",
+  "Restore permission inheritance on a list/library (or a single item via itemId) that has broken inheritance. Dry-run by default; execute=true to apply.",
+  {
+    siteUrl: z.string().url(),
+    list: z.string(),
+    itemId: z.number().int().positive().optional().describe("Restore a single item's inheritance instead of the whole list."),
+    execute: z.boolean().optional(),
+  },
+  async ({ siteUrl, list, itemId, execute }) => {
+    const params: Record<string, unknown> = { SiteUrl: siteUrl, List: list };
+    if (itemId !== undefined) params.ItemId = itemId;
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("remediate.inheritance", params);
+  },
+);
+
+server.tool(
+  "sharepoint_remove_orphaned_users",
+  "Remove users with site access who no longer exist in the directory (stale-access cleanup). Needs Graph User.Read.All. Dry-run by default; execute=true to remove.",
+  {
+    siteUrl: z.string().url(),
+    execute: z.boolean().optional(),
+  },
+  async ({ siteUrl, execute }) => {
+    const params: Record<string, unknown> = { SiteUrl: siteUrl };
+    if (execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("remediate.orphans", params);
+  },
+);
+
+server.tool(
   "sharepoint_migrate_files",
   "Migrate a local folder into a SharePoint library. Previews (-WhatIf) by default; set execute=true to actually upload.",
   {
@@ -247,7 +315,7 @@ server.tool(
     destinationUrl: z.string().url(),
     lists: z.array(z.string()).optional().describe("Limit to these list/library display names."),
     includeContent: z.boolean().optional().describe("Also copy items and files (default: structure only)."),
-
+    includeVersions: z.boolean().optional().describe("EXPERIMENTAL: rebuild library files with version history (same-tenant, best-effort; per-version author/date not preserved)."),
     conflictMode: z.enum(["Replace", "Skip", "KeepBoth", "IfNewer"]).optional().describe("Conflict handling for existing objects (default: IfNewer)."),
     copyPermissions: z.boolean().optional().describe("Also copy role assignments (Phase 2), remapping principals via mappingCsv/domain swap."),
     mappingCsv: z.string().optional().describe("Path to a Source,Destination CSV for principal remapping (used with copyPermissions)."),
@@ -256,11 +324,11 @@ server.tool(
     since: z.string().optional().describe("ISO date/time watermark: only copy items modified at/after it (incremental)."),
     execute: z.boolean().optional().describe("false = dry-run plan (default); true = perform the copy."),
   },
-  async ({ sourceUrl, destinationUrl, lists, includeContent, conflictMode, copyPermissions, mappingCsv, domainFrom, domainTo, since, execute }) => {
+  async ({ sourceUrl, destinationUrl, lists, includeContent, includeVersions, conflictMode, copyPermissions, mappingCsv, domainFrom, domainTo, since, execute }) => {
     const params: Record<string, unknown> = { SourceUrl: sourceUrl, DestinationUrl: destinationUrl };
     if (lists) params.Lists = lists;
     if (includeContent === true) params.IncludeContent = true;
-
+    if (includeVersions === true) params.IncludeVersions = true;
     if (conflictMode) params.ConflictMode = conflictMode;
     if (copyPermissions === true) params.CopyPermissions = true;
     if (mappingCsv) params.MappingCsv = mappingCsv;
@@ -389,14 +457,14 @@ server.tool(
     destinationUrl: z.string().url(),
     list: z.string().describe("Display name of the list or library to copy."),
     includeContent: z.boolean().optional().describe("Also copy items/files (default: schema only)."),
-
+    includeVersions: z.boolean().optional().describe("EXPERIMENTAL: rebuild library files with version history (same-tenant, best-effort)."),
     conflictMode: z.enum(["Replace", "Skip", "KeepBoth", "IfNewer"]).optional().describe("Conflict handling if the list already exists (default: IfNewer)."),
     execute: z.boolean().optional().describe("false = dry-run plan (default); true = perform the copy."),
   },
-  async ({ sourceUrl, destinationUrl, list, includeContent, conflictMode, execute }) => {
+  async ({ sourceUrl, destinationUrl, list, includeContent, includeVersions, conflictMode, execute }) => {
     const params: Record<string, unknown> = { SourceUrl: sourceUrl, DestinationUrl: destinationUrl, List: list };
     if (includeContent === true) params.IncludeContent = true;
-
+    if (includeVersions === true) params.IncludeVersions = true;
     if (conflictMode) params.ConflictMode = conflictMode;
     if (execute === true) params.Force = true;
     else params.WhatIf = true;

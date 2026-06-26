@@ -19,6 +19,9 @@ function Copy-SPList {
         The display name of the list or library to copy.
     .PARAMETER IncludeContent
         Also copy items (lists) or files + folders (libraries). Default: schema only.
+    .PARAMETER IncludeVersions
+        EXPERIMENTAL: for libraries, rebuild each file with its version history (best-effort;
+        per-version author/date are not preserved). Same-tenant only; use with -IncludeContent.
     .PARAMETER ConflictMode
         What to do if the list already exists at the destination: Replace, Skip, KeepBoth,
         or IfNewer (default).
@@ -38,6 +41,7 @@ function Copy-SPList {
         [Parameter(Mandatory)][string]$DestinationUrl,
         [Parameter(Mandatory)][string]$List,
         [switch]$IncludeContent,
+        [switch]$IncludeVersions,
         [ValidateSet('Replace', 'Skip', 'KeepBoth', 'IfNewer')][string]$ConflictMode = 'IfNewer',
         [Nullable[datetime]]$Since,
         [switch]$Force,
@@ -96,8 +100,8 @@ function Copy-SPList {
     if ($IncludeContent) {
         try {
             if ($isLib) {
-                Copy-SPLibraryFiles -SourceConnection $src -ListTitle $List -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl -Overwrite:($ConflictMode -eq 'Replace')
-                $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $List -Action 'Overwrite' -Status 'Success' -Detail 'Files copied'))
+                Copy-SPLibraryFiles -SourceConnection $src -DestinationConnection $dst -IncludeVersions:$IncludeVersions -ListTitle $List -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl -Overwrite:($ConflictMode -eq 'Replace')
+                $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $List -Action 'Overwrite' -Status 'Success' -Detail $(if ($IncludeVersions) { 'Files copied (with version history)' } else { 'Files copied' })))
             }
             else {
                 $n = Copy-SPListItems -SourceConnection $src -DestinationConnection $dst -ListTitle $List -Since $Since

@@ -64,6 +64,10 @@ function Invoke-EngineCommand {
         'report.workflows'   { Confirm-Connected; return (Get-SPWorkflowReport @Params) }
         'report.inactive'    { Confirm-Connected; return (Get-SPInactiveSites @Params) }
         'site.lifecycle'     { Confirm-Connected; return (Set-SPSiteLifecycle @Params) }
+        'remediate.checkin'     { Confirm-Connected; return (Invoke-SPCheckIn @Params) }
+        'remediate.versions'    { Confirm-Connected; return (Clear-SPVersionHistory @Params) }
+        'remediate.inheritance' { Confirm-Connected; return (Restore-SPInheritance @Params) }
+        'remediate.orphans'     { Confirm-Connected; return (Remove-SPOrphanedUsers @Params) }
         'migrate.files'      { Confirm-Connected; return (Start-SPFileMigration @Params) }
         'precheck.readiness' { return (Test-SPMigrationReadiness @Params) }  # local scan, no connection
         'copy.site'          { return (Copy-SPSite @Params) }                # manages its own source+dest connections

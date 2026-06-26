@@ -54,6 +54,7 @@ function Copy-SPSite {
         [Parameter(Mandatory)][string]$DestinationUrl,
         [string[]]$Lists,
         [switch]$IncludeContent,
+        [switch]$IncludeVersions,
         [ValidateSet('Replace', 'Skip', 'KeepBoth', 'IfNewer')][string]$ConflictMode = 'IfNewer',
         [switch]$CopyPermissions,
         [string]$MappingCsv,
@@ -135,8 +136,8 @@ function Copy-SPSite {
                         $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail "$fn file(s) copied (cross-tenant)"))
                     }
                     else {
-                        Copy-SPLibraryFiles -SourceConnection $src -ListTitle $l.Title -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl -Overwrite:($ConflictMode -eq 'Replace')
-                        $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail 'Files copied'))
+                        Copy-SPLibraryFiles -SourceConnection $src -DestinationConnection $dst -IncludeVersions:$IncludeVersions -ListTitle $l.Title -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl -Overwrite:($ConflictMode -eq 'Replace')
+                        $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail $(if ($IncludeVersions) { 'Files copied (with version history)' } else { 'Files copied' })))
                     }
                 }
                 else {

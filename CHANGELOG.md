@@ -4,6 +4,30 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.8.0]
+
+Remediation quick-actions and migration fidelity.
+
+### Added
+- **Remediation** (dry-run by default, `ConfirmImpact='High'`): **`Invoke-SPCheckIn`** (bulk
+  check-in), **`Clear-SPVersionHistory`** (trim to the newest N versions), **`Restore-SPInheritance`**
+  (reset broken inheritance on a list/item), **`Remove-SPOrphanedUsers`** (stale-access cleanup).
+  MCP tools (preview unless `execute=true`) and a **Remediate** bar in the Explore GUI view. New
+  doc [docs/11](docs/11-remediation.md).
+- **`-IncludeVersions`** on `Copy-SPSite` / `Copy-SPList` — rebuild library file version history
+  (`Copy-SPFileVersions`; same-tenant, **experimental / best-effort** — per-version author/date are
+  not preserved; exact fidelity needs the SharePoint Migration API). Surfaced in the MCP copy tools
+  and the GUI Copy-site wizard.
+- **GUI Collaboration view** — clone Microsoft 365 Groups, Teams, and Planner plans (the Phase 4
+  cmdlets, previously CLI/MCP-only).
+
+### Changed
+- **Field fidelity** — `Copy-SPListItems` maps Person/User and Managed-Metadata values to a portable
+  form via the unit-tested **`Resolve-SPFieldValue`**, so they round-trip same-tenant (taxonomy needs
+  the term group copied first; lookup values and per-item authors are still not preserved).
+- Pure core grows: `Resolve-SPFieldValue` and `Select-SPVersionsToTrim` are unit-tested
+  (**97 Pester cases total**, no tenant needed).
+
 ## [0.7.0]
 
 Source **Explore** (pre-migration discovery) and post-migration validation.
