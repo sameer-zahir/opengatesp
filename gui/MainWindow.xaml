@@ -110,11 +110,33 @@
 
                 <!-- HOME -->
                 <StackPanel x:Name="ViewHome" Margin="28,26">
-                        <TextBlock Text="What do you want to do?" FontSize="22" FontWeight="Bold"
-                                   Foreground="{DynamicResource Fg}"/>
-                        <TextBlock Text="Free and open. Run it from this window, a PowerShell prompt, or an AI assistant over MCP — same engine behind all three."
-                                   Style="{DynamicResource Muted}" Margin="0,8,0,0" TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left"/>
-                        <WrapPanel Margin="0,22,0,0">
+                        <DockPanel>
+                            <Button x:Name="BtnDashRefresh" DockPanel.Dock="Right" Content="Refresh" Style="{DynamicResource GhostButton}" VerticalAlignment="Top"/>
+                            <StackPanel>
+                                <TextBlock Text="Your SharePoint at a glance" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+                                <TextBlock x:Name="DashSubtitle" Text="Connect to your tenant to see this overview." Style="{DynamicResource Muted}" Margin="0,6,0,0" TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <UniformGrid Rows="1" Columns="3" Margin="0,16,0,0" MaxWidth="640" HorizontalAlignment="Left">
+                            <Border Style="{DynamicResource KpiTile}">
+                                <StackPanel><TextBlock x:Name="KpiSites" Text="—" Style="{DynamicResource KpiNumber}"/><TextBlock Text="Site collections" Style="{DynamicResource KpiLabel}"/></StackPanel>
+                            </Border>
+                            <Border Style="{DynamicResource KpiTile}">
+                                <StackPanel><TextBlock x:Name="KpiStorage" Text="—" Style="{DynamicResource KpiNumber}"/><TextBlock Text="Storage (GB)" Style="{DynamicResource KpiLabel}"/></StackPanel>
+                            </Border>
+                            <Border Style="{DynamicResource KpiTile}">
+                                <StackPanel><TextBlock x:Name="KpiSharing" Text="—" Style="{DynamicResource KpiNumber}"/><TextBlock Text="External-sharing sites" Style="{DynamicResource KpiLabel}"/></StackPanel>
+                            </Border>
+                        </UniformGrid>
+                        <TextBlock Text="Recent activity" Style="{DynamicResource Section}" Margin="0,26,0,6"/>
+                        <Border CornerRadius="12" Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource Border}" BorderThickness="1" Padding="4" MaxWidth="640" HorizontalAlignment="Left">
+                            <Grid>
+                                <StackPanel x:Name="DashActivity"/>
+                                <TextBlock x:Name="DashActivityEmpty" Text="Your migrations and reports will show up here." Style="{DynamicResource Muted}" Margin="10,8"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock Text="Quick start" Style="{DynamicResource Section}" Margin="0,28,0,0"/>
+                        <WrapPanel Margin="0,12,0,0">
                             <Button x:Name="CardMigrate" Style="{DynamicResource Card}" Width="300">
                                 <StackPanel>
                                     <TextBlock Text="Migrate a file share" Style="{DynamicResource CardTitle}"/>

@@ -472,6 +472,29 @@ $script:XamlControls = @'
         <Setter Property="HorizontalContentAlignment" Value="Right"/>
         <Setter Property="Padding" Value="11,7,8,7"/>
     </Style>
+    <!-- Dashboard KPI tiles -->
+    <Style x:Key="KpiTile" TargetType="Border">
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="Background" Value="{DynamicResource BgElev}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="18,16"/>
+        <Setter Property="Margin" Value="0,0,12,0"/>
+        <Setter Property="Effect" Value="{DynamicResource ShadowSoft}"/>
+    </Style>
+    <Style x:Key="KpiNumber" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
+        <Setter Property="FontFamily" Value="Consolas"/>
+        <Setter Property="FontSize" Value="30"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
+    </Style>
+    <Style x:Key="KpiLabel" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource FgMute}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Margin" Value="0,4,0,0"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
 </ResourceDictionary>
 '@
 
@@ -949,6 +972,7 @@ $script:BtnConnect.Add_Click({
             $script:ConnStatus.Text = "Connected: $($r.Url)"
             $script:SetConnSummary.Text = "Connected to $($r.Url)"
             $script:ConnDot.Fill = $window.FindResource('Good')
+            $script:IsConnected = $true; $script:DashLoaded = $false
             Set-Status 'Connected.'
         }
     }
@@ -1326,6 +1350,53 @@ function Add-RecentCopy([string]$Result) {
     Show-Grid $script:GridRecent $script:RecentCopies $script:EmptyRecent | Out-Null
 }
 
+# --- dashboard (Home) -------------------------------------------------------------------
+$script:DashLoaded = $false
+function Update-DashboardActivity {
+    if (-not $script:DashActivity) { return }
+    $script:DashActivity.Children.Clear()
+    $rows = @($script:Tasks) | Select-Object -First 6
+    foreach ($t in $rows) {
+        $tb = New-Object System.Windows.Controls.TextBlock
+        $tb.Text = "$($t.Time)    $($t.Operation): $($t.Target) — $($t.Result)"
+        $tb.Foreground = $window.FindResource('Fg'); $tb.FontSize = 12.5; $tb.Margin = '10,5'; $tb.TextTrimming = 'CharacterEllipsis'
+        [void]$script:DashActivity.Children.Add($tb)
+    }
+    $script:DashActivityEmpty.Visibility = if ($rows.Count) { [System.Windows.Visibility]::Collapsed } else { [System.Windows.Visibility]::Visible }
+}
+function Update-DashboardKpis {
+    if (-not $script:IsConnected) {
+        $script:DashSubtitle.Text = 'Connect to your tenant to see this overview.'
+        $script:KpiSites.Text = '—'; $script:KpiStorage.Text = '—'; $script:KpiSharing.Text = '—'
+        return
+    }
+    if ($script:Busy) { Set-Status 'Busy — the overview will refresh after the current operation.'; return }
+    $script:DashSubtitle.Text = 'Loading your tenant overview...'
+    foreach ($k in $script:KpiSites, $script:KpiStorage, $script:KpiSharing) { $k.Text = '...' }
+    Invoke-Worker -Command 'Get-SPSiteInventory' -Parameters @{ IncludeStorage = $true } -OnDone {
+        param($result, $err)
+        if ($err) {
+            $script:DashSubtitle.Text = 'Tick "Admin centre" on Connect to see your tenant-wide overview.'
+            foreach ($k in $script:KpiSites, $script:KpiStorage, $script:KpiSharing) { $k.Text = '—' }
+            return
+        }
+        $sites = @($result)
+        $gb = if ($sites.Count) { [math]::Round((($sites | Measure-Object -Property StorageUsedMB -Sum).Sum) / 1024, 0) } else { 0 }
+        $ext = @($sites | Where-Object { "$($_.Sharing)" -match 'External' }).Count
+        $script:DashLoaded = $true
+        $script:DashSubtitle.Text = "$($sites.Count) site collection(s) · refreshed $((Get-Date).ToString('t'))."
+        Start-CountUp $script:KpiSites $sites.Count
+        Start-CountUp $script:KpiStorage $gb
+        Start-CountUp $script:KpiSharing $ext
+    }
+}
+function Show-Dashboard {
+    Update-DashboardActivity
+    if ($script:IsConnected) { if (-not $script:DashLoaded) { Update-DashboardKpis } }
+    else { $script:DashSubtitle.Text = 'Connect to your tenant to see this overview.' }
+}
+$script:BtnDashRefresh.Add_Click({ $script:DashLoaded = $false; Update-DashboardKpis })
+
 function Build-CopyParams([bool]$Preview) {
     $type = $script:CopyCtx.Type
     $conflict = @('IfNewer', 'Skip', 'KeepBoth', 'Replace')[$script:CbWizConflict.SelectedIndex]
@@ -1510,6 +1581,7 @@ function Show-View([string]$name) {
     }
     $script:Breadcrumb.Text = "$($script:GroupMap[$name])  ›  $($script:CrumbMap[$name])"
     Invoke-ViewIn $script:ViewMap[$name]
+    if ($name -eq 'Home') { Show-Dashboard }
 }
 
 $script:NavHome.Add_Checked({ Show-View 'Home' })
