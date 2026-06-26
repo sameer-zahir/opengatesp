@@ -30,9 +30,9 @@
                             <TextBlock x:Name="ConnStatus" Text="Not connected" Style="{DynamicResource Muted}"/>
                         </StackPanel>
                     </Border>
-                    <Button x:Name="BtnHelp" Style="{DynamicResource ThemeToggle}" ToolTip="Help &amp; tour"
+                    <Button x:Name="BtnHelp" Style="{DynamicResource ThemeToggle}" ToolTip="Help &amp; tour" AutomationProperties.Name="Help and tour"
                             FontFamily="Segoe MDL2 Assets" Content="&#xE897;"/>
-                    <Button x:Name="BtnSettings" Style="{DynamicResource ThemeToggle}" ToolTip="Settings"
+                    <Button x:Name="BtnSettings" Style="{DynamicResource ThemeToggle}" ToolTip="Settings" AutomationProperties.Name="Settings"
                             FontFamily="Segoe MDL2 Assets" Content="&#xE713;"/>
                 </StackPanel>
             </Grid>
@@ -207,11 +207,11 @@
 
                     <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Connect to SharePoint" Style="{DynamicResource Section}" Margin="0,0,0,12"/>
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbUrl"/>
+                    <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbUrl" AutomationProperties.Name="Site URL"/>
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Client ID" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TbClientId"/>
+                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TbClientId" AutomationProperties.Name="Application (client) ID"/>
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Tenant" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbTenant"/>
+                    <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbTenant" AutomationProperties.Name="Tenant"/>
 
                     <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
                         <CheckBox x:Name="CbAdmin"  Content="Admin centre (tenant-wide)"/>
@@ -878,14 +878,14 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Provider" VerticalAlignment="Center"/>
-                                <ComboBox  Grid.Row="0" Grid.Column="1" x:Name="AiProvider"/>
+                                <ComboBox  Grid.Row="0" Grid.Column="1" x:Name="AiProvider" AutomationProperties.Name="AI provider"/>
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Model" VerticalAlignment="Center"/>
-                                <TextBox   Grid.Row="1" Grid.Column="1" x:Name="AiModel"/>
+                                <TextBox   Grid.Row="1" Grid.Column="1" x:Name="AiModel" AutomationProperties.Name="AI model"/>
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="API key" VerticalAlignment="Center"/>
-                                <PasswordBox Grid.Row="2" Grid.Column="1" x:Name="AiKey" Padding="9,7" Margin="0,5" FontSize="13"
+                                <PasswordBox Grid.Row="2" Grid.Column="1" x:Name="AiKey" AutomationProperties.Name="API key" Padding="9,7" Margin="0,5" FontSize="13"
                                              Background="{DynamicResource BgElev}" Foreground="{DynamicResource Fg}" BorderBrush="{DynamicResource Border}" BorderThickness="1"/>
                                 <TextBlock x:Name="AiEndpointLabel" Grid.Row="3" Grid.Column="0" Text="Endpoint" VerticalAlignment="Center"/>
-                                <TextBox   x:Name="AiEndpoint" Grid.Row="3" Grid.Column="1"/>
+                                <TextBox   x:Name="AiEndpoint" Grid.Row="3" Grid.Column="1" AutomationProperties.Name="AI endpoint"/>
                             </Grid>
                             <CheckBox x:Name="AiAllowWrites" Content="Allow write actions (always previewed first). Off = read-only." Margin="0,10,0,0"/>
                             <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
@@ -914,7 +914,7 @@
 
                     <Grid Grid.Row="3" Margin="0,12,0,0">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBox x:Name="AiInput" Grid.Column="0"/>
+                        <TextBox x:Name="AiInput" Grid.Column="0" AutomationProperties.Name="Ask the assistant"/>
                         <Button x:Name="AiSend" Grid.Column="1" Content="Ask" Margin="8,5,0,5"/>
                     </Grid>
                 </Grid>
