@@ -1,8 +1,8 @@
 # Roadmap
 
-OpenGateSP v0.2.0 adds a pre-migration readiness check, scheduled governance reports, and a
-redesigned GUI (sidebar navigation + card home), on top of the engine (PowerShell module), the
-MCP server, and app-only certificate auth (headless/unattended). What's next, roughly in
+OpenGateSP today: the migration + governance engine (PowerShell module), a polished guided GUI
+with an installer, an MCP server, app-only certificate auth (headless/unattended), and a BYOK
+in-app AI assistant. The phases below track how it got here and what's next, roughly in
 priority order:
 
 ## SharePoint → SharePoint migration (the big build, phased)
@@ -15,11 +15,12 @@ The path toward ShareGate-style site migration, grounded in what PnP PowerShell 
 - **Phase 6 — Explore + validation (shipped, 0.7.0):** `Invoke-SPExplore` source assessment + discovery reports (checked-out, large files, version bloat, inactive sites, workflows, content insights); `Compare-SPSite` post-migration validation. See [docs/10](10-explore.md) and [docs/TESTING.md](TESTING.md).
 - **Phase 7 — remediation + fidelity (shipped, 0.8.0):** remediation quick-actions (`Invoke-SPCheckIn`, `Clear-SPVersionHistory`, `Restore-SPInheritance`, `Remove-SPOrphanedUsers`); Person/Managed-Metadata column round-tripping and best-effort `-IncludeVersions` version history. See [docs/11](11-remediation.md).
 - **Phase 8 — polished, human GUI + install (shipped, 0.10.0):** nav icons + app identity, a Settings cog, first-run onboarding, toasts, keyboard shortcuts, and a focus ring; installer PowerShell-7 offer, in-app update check, CI release automation, and winget/SignPath prep. See [docs/design-system.md](design-system.md).
+- **Phase 9 — AI assistant + Protect-style detection (shipped, 0.11.0):** the BYOK in-app **AI assistant** (Claude / OpenAI / Ollama / LM Studio; DPAPI-encrypted key; read-only reports plus preview-first write actions behind a toggle — see [docs/13](13-ai-assistant.md)); **governance detection** — `Find-SPEveryoneClaims` (Everyone/EEEU oversharing), `Get-SPOwnerlessGroups`, `Invoke-SPGovernanceReview` (consolidated review); a dashboard Home with live KPIs + persistent activity; the single guided Copy wizard; `Copy-SPTermGroup` over MCP.
 - Maybe later: **Box** import.
 
 ## Also planned
 - **Full per-version history fidelity** via the SharePoint Migration API (today's `-IncludeVersions` is best-effort — content/order preserved, per-version author/date are not).
-- **ShareGate-Protect-style governance automation** — EEEU / public-group detection, ownerless-group and inactive-workspace cleanup policies, access-review campaigns.
+- **Governance automation** — the detection shipped in 0.11.0; next are the *policies*: ownerless-group and inactive-workspace **auto-remediation**, and recurring **access-review campaigns** (owner attestation with tracked decisions).
 - **More provisioning templates**; **PowerShell Gallery** (`Install-Module OpenGateSP`).
 
 ## Out of scope

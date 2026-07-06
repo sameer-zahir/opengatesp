@@ -23,6 +23,7 @@ if (-not (Get-Module -ListAvailable -Name ps2exe)) {
 Import-Module ps2exe
 
 $exe = Join-Path $OutputDir 'OpenGateSP.exe'
+$version = & (Join-Path $PSScriptRoot 'Get-OpenGateSPVersion.ps1') -FourPart
 $params = @{
     InputFile   = Join-Path $PSScriptRoot 'ExeStub.ps1'
     OutputFile  = $exe
@@ -31,7 +32,7 @@ $params = @{
     Product     = 'OpenGateSP'
     Description = 'Free, open-source ShareGate alternative for SharePoint Online'
     Company     = 'Sameer Zahir'
-    Version     = '0.6.0.0'
+    Version     = $version
     Copyright   = '(c) 2026 Sameer Zahir. MIT License.'
 }
 $ico = Join-Path $PSScriptRoot 'opengatesp.ico'

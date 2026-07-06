@@ -4,6 +4,43 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.11.0]
+
+The BYOK in-app AI assistant, ShareGate-Protect-style governance detection, and a dashboard Home.
+
+### Added
+- **In-app AI assistant (bring your own model)** — chat with *your own* Claude / OpenAI key or a local
+  **Ollama / LM Studio** (no key; nothing leaves your machine). The assistant runs the same engine
+  tools the GUI uses, shows the exact PowerShell it ran (copyable), and streams progress as step
+  cards. Keys are encrypted **on-device with Windows DPAPI** — never plaintext, never bundled.
+  Guide: [docs/13-ai-assistant.md](docs/13-ai-assistant.md).
+- **AI write actions, preview-first** — the "Allow write actions" toggle now works: off (default)
+  keeps the assistant strictly read-only; on, it adds write tools (migrate files, provision, bulk
+  metadata, check-in, trim versions, restore inheritance, remove orphaned users, site lifecycle)
+  that **always run as a preview first** — `execute` only takes effect after an identical preview
+  ran and you confirmed in chat (the wizard's Run-locked-until-Preview rule, enforced in code).
+- **Protect-style governance detection** — `Find-SPEveryoneClaims` (where "Everyone"/"Everyone
+  except external users" has access — the biggest oversharing risk, graded Error/Warning),
+  `Get-SPOwnerlessGroups` (Microsoft 365 Groups with no owner), and `Invoke-SPGovernanceReview`
+  (broad-audience grants + external sharing + orphaned access in one severity-graded list). All
+  three ship in the GUI Reports view, the AI assistant, and as MCP tools
+  ([docs/09-governance.md](docs/09-governance.md)).
+- **Dashboard Home** — live KPI tiles and recent activity; activity now **persists across
+  restarts**.
+- **`sharepoint_copy_term_group` MCP tool** — cross-tenant managed-metadata term-group copy
+  (`Copy-SPTermGroup` was previously module-only), using the same per-tenant app-only connections
+  as the cross-tenant site copy.
+- Tests: AI write-gating/preview-first enforcement, MCP surface parity (every exported cmdlet
+  reachable over MCP; in-app AI tools ⊆ MCP tools), and version-copy sync guards.
+
+### Changed
+- The two Copy UIs converged into the **single guided Copy wizard**; the old separate Copy-site
+  view was removed (its actions live on in the wizard).
+- **Accessibility** — screen-reader names on icon-only buttons and key inputs.
+- Default AI models refreshed (`claude-sonnet-5`, `gpt-5.5`); assistant responses get more
+  output-token headroom.
+- CI lint now also covers `tools/` and `installer/`; `tsx` 4.22.4 → 4.23.0.
+
 ## [0.10.0]
 
 A polished, human GUI and the groundwork for a seamless install. No engine cmdlet changes.

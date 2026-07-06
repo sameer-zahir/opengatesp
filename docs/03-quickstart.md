@@ -4,6 +4,13 @@ End-to-end, from zero to a report and a dry-run migration.
 
 ## 0. Install
 
+**Just want the app?** Grab **`OpenGateSP-Setup.exe`** from the
+[latest release](https://github.com/sameer-zahir/opengatesp/releases/latest) (or the portable
+zip) — it offers to install PowerShell 7 if needed and walks you through first-run setup. You can
+skip the rest of this page; the app guides you.
+
+**For the CLI / scripting** (this guide):
+
 ```powershell
 Install-Module PnP.PowerShell -Scope CurrentUser
 git clone https://github.com/sameer-zahir/opengatesp.git

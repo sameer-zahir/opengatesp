@@ -34,6 +34,16 @@ function Confirm-Connected {
     $script:Connected = $true
 }
 
+# One side of a cross-tenant operation. Connection objects can't cross the JSON protocol, so both
+# ends are opened here; a certificate thumbprint per tenant keeps it headless (app-only).
+function New-EngineTenantConnection {
+    param($Url, $ClientId, $Tenant, $Thumbprint)
+    $cp = @{ Url = $Url; ClientId = $ClientId }
+    if ($Tenant) { $cp['Tenant'] = $Tenant }
+    if ($Thumbprint) { $cp['Thumbprint'] = $Thumbprint }
+    New-SPMigrationConnection @cp
+}
+
 function Invoke-EngineCommand {
     param([string]$Command, [hashtable]$Params)
     switch ($Command) {
@@ -56,6 +66,9 @@ function Invoke-EngineCommand {
         'report.inventory'   { Confirm-Connected; return (Get-SPSiteInventory @Params) }
         'report.matrix'      { Confirm-Connected; return (Get-SPPermissionsMatrix @Params) }
         'report.orphans'     { Confirm-Connected; return (Get-SPOrphanedUsers @Params) }
+        'governance.everyone' { Confirm-Connected; return (Find-SPEveryoneClaims @Params) }
+        'governance.ownerless' { Confirm-Connected; return (Get-SPOwnerlessGroups @Params) }
+        'governance.review'   { Confirm-Connected; return (Invoke-SPGovernanceReview @Params) }
         'explore.assess'     { Confirm-Connected; return (Invoke-SPExplore @Params) }
         'report.checkedout'  { Confirm-Connected; return (Get-SPCheckedOutFiles @Params) }
         'report.largefiles'  { Confirm-Connected; return (Get-SPLargeFiles @Params) }
@@ -75,17 +88,9 @@ function Invoke-EngineCommand {
         'compare.site'       { Confirm-Connected; return (Compare-SPSite @Params) }  # post-migration validation
         'copy.permissions'   { return (Copy-SPPermissions @Params) }         # role-assignment copy + principal remap
         'copy.site.crosstenant' {
-            # Cross-tenant: open a connection per tenant here (objects can't cross the protocol),
-            # then hand both to Copy-SPSite -CrossTenant. App-only (thumbprint) needed headlessly.
-            $mk = {
-                param($u, $cid, $tn, $thumb)
-                $cp = @{ Url = $u; ClientId = $cid }
-                if ($tn) { $cp['Tenant'] = $tn }
-                if ($thumb) { $cp['Thumbprint'] = $thumb }
-                New-SPMigrationConnection @cp
-            }
-            $s = & $mk $Params.SourceUrl $Params.SourceClientId $Params.SourceTenant $Params.SourceThumbprint
-            $d = & $mk $Params.DestinationUrl $Params.DestinationClientId $Params.DestinationTenant $Params.DestinationThumbprint
+            # Cross-tenant: a connection per tenant, then hand both to Copy-SPSite -CrossTenant.
+            $s = New-EngineTenantConnection $Params.SourceUrl $Params.SourceClientId $Params.SourceTenant $Params.SourceThumbprint
+            $d = New-EngineTenantConnection $Params.DestinationUrl $Params.DestinationClientId $Params.DestinationTenant $Params.DestinationThumbprint
             $cp = @{ SourceUrl = $Params.SourceUrl; DestinationUrl = $Params.DestinationUrl
                      SourceConnection = $s; DestinationConnection = $d; CrossTenant = $true }
             foreach ($k in 'IncludeContent', 'CopyPermissions', 'DomainFrom', 'DomainTo', 'MappingCsv', 'Force', 'WhatIf') {
@@ -93,7 +98,16 @@ function Invoke-EngineCommand {
             }
             return (Copy-SPSite @cp)
         }
-
+        'copy.termgroup' {
+            # Managed-metadata term group copy — same per-tenant connections as copy.site.crosstenant.
+            $s = New-EngineTenantConnection $Params.SourceUrl $Params.SourceClientId $Params.SourceTenant $Params.SourceThumbprint
+            $d = New-EngineTenantConnection $Params.DestinationUrl $Params.DestinationClientId $Params.DestinationTenant $Params.DestinationThumbprint
+            $cp = @{ SourceConnection = $s; DestinationConnection = $d; TermGroup = $Params.TermGroup }
+            foreach ($k in 'Force', 'WhatIf') {
+                if ($Params.ContainsKey($k)) { $cp[$k] = $Params[$k] }
+            }
+            return (Copy-SPTermGroup @cp)
+        }
 
         'copy.team'          { Confirm-Connected; return (Copy-SPTeam @Params) }
         'copy.m365group'     { Confirm-Connected; return (Copy-SPM365Group @Params) }

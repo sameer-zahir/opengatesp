@@ -5,7 +5,7 @@ import { EngineHost } from "./engine.js";
 
 const engine = new EngineHost();
 
-const server = new McpServer({ name: "opengatesp", version: "0.10.0" });
+const server = new McpServer({ name: "opengatesp", version: "0.11.0" });
 
 type ToolResult = {
   content: { type: "text"; text: string }[];
@@ -79,6 +79,35 @@ server.tool(
     siteUrl: z.string().url(),
   },
   async ({ siteUrl }) => run("report.orphans", { SiteUrl: siteUrl }),
+);
+
+server.tool(
+  "sharepoint_everyone_claims",
+  "Find where 'Everyone' or 'Everyone except external users' (EEEU) has access on a SharePoint site — the biggest oversharing risk. Read-only; each grant is graded Error (allows writing) or Warning (read-only).",
+  {
+    siteUrl: z.string().url(),
+    includeListPermissions: z.boolean().optional().describe("Also scan lists/libraries with unique permissions."),
+  },
+  async ({ siteUrl, includeListPermissions }) =>
+    run("governance.everyone", { SiteUrl: siteUrl, IncludeListPermissions: includeListPermissions === true }),
+);
+
+server.tool(
+  "sharepoint_ownerless_groups",
+  "Report Microsoft 365 Groups (and the Teams/sites behind them) that have no owner — a governance risk. Read-only; needs Graph Group.Read.All. Ownerless public groups are graded Error, private ones Warning.",
+  {},
+  async () => run("governance.ownerless", {}),
+);
+
+server.tool(
+  "sharepoint_governance_review",
+  "Consolidated read-only governance review of a site: broad-audience grants (Everyone/EEEU), external sharing, and orphaned/stale access in one severity-graded list. The 'Protect' companion to sharepoint_explore.",
+  {
+    siteUrl: z.string().url(),
+    includeListPermissions: z.boolean().optional().describe("Also scan lists/libraries with unique permissions."),
+  },
+  async ({ siteUrl, includeListPermissions }) =>
+    run("governance.review", { SiteUrl: siteUrl, IncludeListPermissions: includeListPermissions === true }),
 );
 
 server.tool(
@@ -395,6 +424,33 @@ server.tool(
     if (a.execute === true) params.Force = true;
     else params.WhatIf = true;
     return run("copy.site.crosstenant", params);
+  },
+);
+
+server.tool(
+  "sharepoint_copy_term_group",
+  "Copy a managed-metadata term group between tenants via XML export/import — run it before a cross-tenant content copy so managed-metadata columns have terms to bind to on the destination. Like sharepoint_copy_site_cross_tenant, the server opens an app-only connection per tenant (certificate thumbprint registered in each). Dry-run by default; execute=true to import.",
+  {
+    termGroup: z.string().describe("Term group name to copy, e.g. Corporate Taxonomy."),
+    sourceUrl: z.string().url(),
+    sourceClientId: z.string().describe("Entra app (client) id registered in the SOURCE tenant."),
+    sourceTenant: z.string().describe("Source tenant, e.g. contoso.onmicrosoft.com."),
+    sourceThumbprint: z.string().describe("App-only certificate thumbprint in the source tenant's store."),
+    destinationUrl: z.string().url(),
+    destinationClientId: z.string().describe("Entra app (client) id registered in the DESTINATION tenant."),
+    destinationTenant: z.string().describe("Destination tenant, e.g. fabrikam.onmicrosoft.com."),
+    destinationThumbprint: z.string().describe("App-only certificate thumbprint in the destination tenant's store."),
+    execute: z.boolean().optional().describe("false = dry-run (default); true = import."),
+  },
+  async (a) => {
+    const params: Record<string, unknown> = {
+      TermGroup: a.termGroup,
+      SourceUrl: a.sourceUrl, SourceClientId: a.sourceClientId, SourceTenant: a.sourceTenant, SourceThumbprint: a.sourceThumbprint,
+      DestinationUrl: a.destinationUrl, DestinationClientId: a.destinationClientId, DestinationTenant: a.destinationTenant, DestinationThumbprint: a.destinationThumbprint,
+    };
+    if (a.execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("copy.termgroup", params);
   },
 );
 

@@ -7,17 +7,71 @@ protocol — so there's no duplicated SharePoint logic.
 
 ## Tools
 
+Write tools default to a `-WhatIf` preview — an agent must pass `execute: true` to change anything.
+
+**Status & reports (read-only)**
+
 | Tool | What it does |
 |---|---|
 | `sharepoint_status` | Engine/connection status (no SharePoint call) |
 | `sharepoint_external_sharing_report` | External users + sharing links for a site |
 | `sharepoint_permission_report` | Who has access; broken inheritance |
+| `sharepoint_permissions_matrix` | Per-principal access matrix — who can touch what |
+| `sharepoint_orphaned_users` | Users with access who no longer exist in the directory |
 | `sharepoint_site_inventory` | Tenant-wide sites + storage (needs SharePoint admin) |
-| `sharepoint_migrate_files` | Local folder → library. **Preview by default**; `execute: true` to upload |
-| `sharepoint_provision_site` | Create a site. **Preview by default**; `execute: true` to create |
-| `sharepoint_bulk_metadata` | CSV-driven bulk edits. **Preview by default**; `execute: true` to apply |
 
-Write tools default to a `-WhatIf` preview — an agent must pass `execute: true` to change anything.
+**Governance (Protect-style)**
+
+| Tool | What it does |
+|---|---|
+| `sharepoint_everyone_claims` | Where "Everyone"/EEEU has access — oversharing, graded Error/Warning |
+| `sharepoint_ownerless_groups` | Microsoft 365 Groups with no owner (needs Graph `Group.Read.All`) |
+| `sharepoint_governance_review` | Consolidated severity-graded review: broad grants + sharing + stale access |
+| `sharepoint_set_site_lifecycle` | Lock / archive / unlock a site. Preview by default |
+
+**Explore & discovery (read-only)**
+
+| Tool | What it does |
+|---|---|
+| `sharepoint_explore` | Consolidated pre-migration source assessment, graded Error/Warning |
+| `sharepoint_checked_out_files` | Files left checked out (migration blocker) |
+| `sharepoint_large_files` | Largest files at/above a size threshold |
+| `sharepoint_version_report` | Files with heavy version history |
+| `sharepoint_content_insights` | Library contents by file type (count + MB) |
+| `sharepoint_workflow_report` | SharePoint 2013-platform workflows (don't migrate) |
+| `sharepoint_inactive_sites` | Sites with no changes for N days (needs admin) |
+
+**Remediation** — all preview by default
+
+| Tool | What it does |
+|---|---|
+| `sharepoint_check_in_files` | Bulk check-in of checked-out files |
+| `sharepoint_clear_version_history` | Trim a file's version history to the newest N |
+| `sharepoint_restore_inheritance` | Restore permission inheritance on a list or item |
+| `sharepoint_remove_orphaned_users` | Remove stale-access users (needs Graph `User.Read.All`) |
+
+**Migration & copy** — writes preview by default
+
+| Tool | What it does |
+|---|---|
+| `sharepoint_precheck_migration` | Pre-check a local folder for blockers (local, read-only) |
+| `sharepoint_migrate_files` | Local folder → library, preserving structure + timestamps |
+| `sharepoint_copy_site` | Same-tenant site copy (structure + optional content/permissions/versions) |
+| `sharepoint_copy_list` | Single list/library copy (schema + optional content) |
+| `sharepoint_copy_permissions` | Role-assignment copy with principal remapping |
+| `sharepoint_copy_site_cross_tenant` | Cross-tenant site copy (app-only cert per tenant) |
+| `sharepoint_copy_term_group` | Cross-tenant managed-metadata term-group copy (app-only cert per tenant) |
+| `sharepoint_compare_site` | Post-migration validation — diff destination vs source (read-only) |
+
+**Collaboration & provisioning** — writes preview by default
+
+| Tool | What it does |
+|---|---|
+| `sharepoint_copy_m365_group` | Clone a Microsoft 365 Group (description + roster) |
+| `sharepoint_copy_team` | Clone a Team (channels + membership) |
+| `sharepoint_copy_planner_plan` | Recreate a Planner plan (buckets + tasks) |
+| `sharepoint_provision_site` | Create a site |
+| `sharepoint_bulk_metadata` | CSV-driven bulk metadata edits |
 
 ## Prerequisites
 
