@@ -99,6 +99,10 @@ Get-SPSharingReport -SiteUrl https://contoso.sharepoint.com/sites/Marketing
 
 Full guide: [docs/03-quickstart.md](docs/03-quickstart.md) · setup: [docs/01](docs/01-prerequisites.md), [docs/02](docs/02-entra-app-registration.md), headless/scheduled: [docs/05](docs/05-app-only-auth.md).
 
+## Code signing
+
+Free code signing for the Windows installer is provided by [SignPath.io](https://about.signpath.io/), certificate by the [SignPath Foundation](https://signpath.org/). Download releases from the [releases page](https://github.com/sameer-zahir/opengatesp/releases).
+
 ## Safety
 
 - **Delegated auth** — the tool can never exceed your own SharePoint permissions. **App-only certificate** auth ([docs/05](docs/05-app-only-auth.md)) for headless / scheduled runs.
