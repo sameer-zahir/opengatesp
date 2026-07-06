@@ -14,7 +14,9 @@ function Invoke-SPAiHttp {
 # Run one user turn end-to-end. $Config = @{ Provider; Model; Endpoint; ApiKey }. $Messages is the
 # provider-native running history (mutated in place). $Emit { param($step) } streams step hashtables
 # (kind = assistant|toolcall|toolresult|toolerror). $InvokeTool { param($cmdlet,$paramHash) } executes a
-# tool and returns its data (the GUI runs this in its worker; tests pass canned data).
+# tool and returns its data (the GUI runs this in its worker; tests pass canned data). $PreviewedWrites
+# is the conversation's memory of which write calls have been previewed (owned by the caller so it
+# survives across turns): execute=true is downgraded to a preview until its exact call was previewed.
 function Invoke-SPAiConversation {
     param(
         [hashtable]$Config,
@@ -23,11 +25,14 @@ function Invoke-SPAiConversation {
         [scriptblock]$Emit,
         [scriptblock]$InvokeTool,
         [scriptblock]$CallModel,   # injectable for tests; defaults to the real HTTP call
+        [System.Collections.Generic.HashSet[string]]$PreviewedWrites,
         [int]$MaxIterations = 8
     )
+    if ($null -eq $PreviewedWrites) { $PreviewedWrites = [System.Collections.Generic.HashSet[string]]::new() }
     $provider = $Config.Provider
     $tools    = @(ConvertTo-SPProviderTools -Provider $provider -Catalog $Catalog)
-    $system   = Get-SPAiSystemPrompt
+    $writesOn = @($Catalog | Where-Object { -not $_.readOnly }).Count -gt 0
+    $system   = Get-SPAiSystemPrompt -WritesEnabled:$writesOn
     $endpoint = Get-SPAiEndpoint -Provider $provider -Endpoint $Config.Endpoint
     $headers  = Get-SPAiHeaders -Provider $provider -ApiKey $Config.ApiKey
 
@@ -48,14 +53,31 @@ function Invoke-SPAiConversation {
                 Add-SPAiToolResult -Provider $provider -Messages $Messages -ToolCallId $tc.id -ResultText "Error: unknown tool '$($tc.name)'"
                 continue
             }
-            $params  = ConvertTo-SPCmdletParams -Tool $tool -Arguments $tc.input
+            $params = ConvertTo-SPCmdletParams -Tool $tool -Arguments $tc.input
+            # Write tools: strict preview-first. execute=true only takes effect once this exact call
+            # (tool + args) has already run as a preview — otherwise it is downgraded to a preview.
+            $isWrite = -not $tool.readOnly
+            $apply = $false; $downgraded = $false; $writeKey = $null
+            if ($isWrite) {
+                $apply    = [bool]$params['Execute']
+                $writeKey = Get-SPWriteKey -Tool $tool -Params $params
+                if ($apply -and -not $PreviewedWrites.Contains($writeKey)) { $apply = $false; $downgraded = $true }
+                $params = Resolve-SPWriteParams -Tool $tool -Params $params -Apply $apply
+            }
             $cmdline = Get-SPCommandLine -Cmdlet $tool.cmdlet -Params $params
-            & $Emit @{ kind = 'toolcall'; name = $tc.name; cmdline = $cmdline }
+            & $Emit @{ kind = 'toolcall'; name = $tc.name; cmdline = $cmdline; write = $isWrite; applied = ($isWrite -and $apply) }
             try {
                 $data = & $InvokeTool $tool.cmdlet $params
                 $rows = @($data)
-                & $Emit @{ kind = 'toolresult'; name = $tc.name; rows = $rows; count = $rows.Count; cmdline = $cmdline }
+                if ($isWrite -and -not $apply) { [void]$PreviewedWrites.Add($writeKey) }
+                & $Emit @{ kind = 'toolresult'; name = $tc.name; rows = $rows; count = $rows.Count; cmdline = $cmdline; write = $isWrite; applied = ($isWrite -and $apply) }
                 $resultText = if ($rows.Count) { ($rows | ConvertTo-Json -Depth 6 -Compress) } else { '[] (no rows)' }
+                if ($isWrite) {
+                    $prefix = if ($apply) { 'APPLIED — the change was made.' }
+                    elseif ($downgraded) { 'PREVIEW ONLY — nothing was changed. Writes always preview first: show the user this plan, get their explicit OK in this chat, then call the same tool again with execute=true.' }
+                    else { 'PREVIEW ONLY — nothing was changed. If the user confirms, call the same tool again with execute=true to apply.' }
+                    $resultText = "$prefix`n$resultText"
+                }
             }
             catch {
                 $err = $_.Exception.Message

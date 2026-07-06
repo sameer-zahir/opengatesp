@@ -8,8 +8,8 @@
 # Display name -> provider kind + defaults. Anthropic = Claude; everything else speaks the OpenAI format.
 function Initialize-AiView {
     $script:AiProviders = [ordered]@{
-        'Claude (Anthropic)' = @{ kind = 'anthropic'; endpoint = ''; model = 'claude-sonnet-4-6'; needsEndpoint = $false }
-        'OpenAI'             = @{ kind = 'openai'; endpoint = ''; model = 'gpt-4o'; needsEndpoint = $false }
+        'Claude (Anthropic)' = @{ kind = 'anthropic'; endpoint = ''; model = 'claude-sonnet-5'; needsEndpoint = $false }
+        'OpenAI'             = @{ kind = 'openai'; endpoint = ''; model = 'gpt-5.5'; needsEndpoint = $false }
         'Ollama (local)'     = @{ kind = 'openai'; endpoint = 'http://localhost:11434/v1'; model = 'llama3.1'; needsEndpoint = $true }
         'LM Studio (local)'  = @{ kind = 'openai'; endpoint = 'http://localhost:1234/v1'; model = 'local-model'; needsEndpoint = $true }
     }
@@ -135,8 +135,8 @@ function Add-ClaudeDesktopEntry {
 # ---- chat loop --------------------------------------------------------------------------
 $script:AiLoopScript = {
     try {
-        $cat = Get-SPAiToolCatalog
-        Invoke-SPAiConversation -Config $AiCfg -Messages $AiMessages -Catalog $cat `
+        $cat = Get-SPAiToolCatalog -IncludeWrites:([bool]$AiCfg.AllowWrites)
+        Invoke-SPAiConversation -Config $AiCfg -Messages $AiMessages -Catalog $cat -PreviewedWrites $AiPreviewed `
             -Emit { param($s) $AiQueue.Enqueue($s) } `
             -InvokeTool { param($c, $p) & $c @p 3>$null 4>$null 5>$null 6>$null }
         $AiQueue.Enqueue(@{ kind = 'done' })
@@ -155,6 +155,7 @@ function Start-SPAiTurn([string]$UserText) {
     Add-AiBubble 'user' $UserText
     $script:AiInput.Text = ''
     if (-not $script:AiMessages) { $script:AiMessages = [System.Collections.Generic.List[object]]::new() }
+    if (-not $script:AiPreviewed) { $script:AiPreviewed = [System.Collections.Generic.HashSet[string]]::new() }
     $script:AiMessages.Add(@{ role = 'user'; content = $UserText })
 
     $script:Busy = $true
@@ -163,11 +164,13 @@ function Start-SPAiTurn([string]$UserText) {
     Set-Status 'Thinking...'
 
     $queue = [System.Collections.Concurrent.ConcurrentQueue[object]]::new()
-    $cfg = @{ Provider = $script:AiCfg.Provider; Model = $script:AiCfg.Model; Endpoint = $script:AiCfg.Endpoint; ApiKey = (Unprotect-SPSecret $script:AiCfg.KeyEnc) }
+    $cfg = @{ Provider = $script:AiCfg.Provider; Model = $script:AiCfg.Model; Endpoint = $script:AiCfg.Endpoint; ApiKey = (Unprotect-SPSecret $script:AiCfg.KeyEnc)
+              AllowWrites = [bool]$script:AiAllowWrites.IsChecked }
 
     $ps = [powershell]::Create(); $ps.Runspace = $script:Worker
     $ps.Runspace.SessionStateProxy.SetVariable('AiCfg', $cfg)
     $ps.Runspace.SessionStateProxy.SetVariable('AiMessages', $script:AiMessages)
+    $ps.Runspace.SessionStateProxy.SetVariable('AiPreviewed', $script:AiPreviewed)
     $ps.Runspace.SessionStateProxy.SetVariable('AiQueue', $queue)
     $null = $ps.AddScript($script:AiLoopScript)
     $handle = $ps.BeginInvoke()
@@ -221,7 +224,16 @@ function Show-AiStep($step) {
     switch ([string]$step.kind) {
         'assistant' { if ($step.text) { Add-AiBubble 'assistant' $step.text } }
         'toolcall' { Add-AiToolCard $step }
-        'toolresult' { Add-AiNote ("Ran {0} — {1} result(s)" -f (Get-FriendlyToolName $step.name), $step.count) 'Good' }
+        'toolresult' {
+            if ($step.write -and $step.applied) {
+                Add-AiNote ("Applied {0} — {1} result(s)." -f (Get-FriendlyToolName $step.name), $step.count) 'Good'
+                Show-Toast 'success' 'Change applied' ("{0} ran for real — see the chat for details." -f (Get-FriendlyToolName $step.name))
+            }
+            elseif ($step.write) {
+                Add-AiNote ("Previewed {0} — {1} result(s). Nothing changed yet." -f (Get-FriendlyToolName $step.name), $step.count) 'Warn'
+            }
+            else { Add-AiNote ("Ran {0} — {1} result(s)" -f (Get-FriendlyToolName $step.name), $step.count) 'Good' }
+        }
         'toolerror' { Add-AiNote ("{0} couldn't run: {1}" -f (Get-FriendlyToolName $step.name), $step.error) 'Danger' }
         'fatal' { Add-AiNote ("Assistant error: {0}" -f $step.error) 'Danger' }
         default { }
@@ -252,7 +264,8 @@ function Add-AiToolCard($step) {
 </Border>
 '@
     $n = [Windows.Markup.XamlReader]::Parse($xaml)
-    $n.FindName('Title').Text = "Running: $(Get-FriendlyToolName $step.name)"
+    $verb = if ($step.write) { if ($step.applied) { 'Applying' } else { 'Previewing' } } else { 'Running' }
+    $n.FindName('Title').Text = "${verb}: $(Get-FriendlyToolName $step.name)"
     $n.FindName('Cmd').Text = $step.cmdline
     $cmd = $step.cmdline
     $n.FindName('Copy').Add_Click({ try { [System.Windows.Clipboard]::SetText($cmd) } catch { } }.GetNewClosure())

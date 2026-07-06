@@ -1,11 +1,14 @@
 #Requires -Version 7.4
 # The catalog of OpenGateSP tools exposed to the in-app AI assistant (BYOK). Mirrors the MCP server's
-# tool surface (mcp-server/src/index.ts) so the in-app and external-AI experiences match. MVP = the
-# read-only reports (safe — no preview/confirm flow needed); write tools come later behind preview-
-# gating. Pure data + helpers — unit-tested in tests/AI.Tests.ps1.
+# tool surface (mcp-server/src/index.ts) so the in-app and external-AI experiences match. The default
+# catalog is the read-only reports; -IncludeWrites (the "Allow write actions" toggle) adds the write
+# tools, which always run as a preview (-WhatIf) until the model re-calls them with execute=true after
+# an identical preview — see Resolve-SPWriteParams / Get-SPWriteKey and the loop in AiClient.ps1.
+# Pure data + helpers — unit-tested in tests/AI.Tests.ps1.
 
 function Get-SPAiToolCatalog {
-    @(
+    param([switch]$IncludeWrites)
+    $tools = @(
         @{
             name = 'sharepoint_external_sharing_report'
             description = 'List external/guest users (and optionally sharing links) on a SharePoint site.'
@@ -102,6 +105,124 @@ function Get-SPAiToolCatalog {
             schema = @{ type = 'object'; required = @(); properties = [ordered]@{} }
         }
     )
+    if (-not $IncludeWrites) { return $tools }
+
+    # Write tools (the "Allow write actions" toggle). Same names/args as the MCP server. Every one
+    # previews by default; execute=true applies — but only after an identical preview ran (enforced
+    # in AiClient.ps1, not left to the model's good manners).
+    $execProp = @{ type = 'boolean'; description = 'false/omitted = preview only (default, changes nothing); true = apply. Only set true after the user confirmed a preview of this exact call.' }
+    $tools + @(
+        @{
+            name = 'sharepoint_migrate_files'
+            description = 'Migrate a local folder into a SharePoint library, preserving structure and timestamps. Previews by default; execute=true uploads.'
+            cmdlet = 'Start-SPFileMigration'; readOnly = $false
+            fixedParams = @{ PreserveTimestamps = $true; Library = 'Documents' }
+            schema = @{ type = 'object'; required = @('source', 'siteUrl'); properties = [ordered]@{
+                siteUrl      = @{ type = 'string'; description = 'Destination site URL' }
+                source       = @{ type = 'string'; description = 'Local folder path, e.g. C:\Shares\Marketing' }
+                library      = @{ type = 'string'; description = 'Target library display name (default: Documents).' }
+                targetFolder = @{ type = 'string'; description = 'Sub-folder within the library.' }
+                execute      = $execProp
+            } }
+        }
+        @{
+            name = 'sharepoint_provision_site'
+            description = 'Create a SharePoint site (TeamSite needs an alias; CommunicationSite needs a url). Previews by default; execute=true creates.'
+            cmdlet = 'New-SPSiteFromTemplate'; readOnly = $false; noForce = $true
+            schema = @{ type = 'object'; required = @('title', 'type'); properties = [ordered]@{
+                title   = @{ type = 'string'; description = 'Title for the new site' }
+                type    = @{ type = 'string'; enum = @('TeamSite', 'CommunicationSite'); description = 'Site type' }
+                alias   = @{ type = 'string'; description = 'Required for TeamSite.' }
+                url     = @{ type = 'string'; description = 'Required for CommunicationSite.' }
+                execute = $execProp
+            } }
+        }
+        @{
+            name = 'sharepoint_bulk_metadata'
+            description = 'Bulk-update list/library metadata from a CSV (header row = field internal names; one column is the item id). Previews by default; execute=true applies.'
+            cmdlet = 'Set-SPBulkMetadata'; readOnly = $false
+            schema = @{ type = 'object'; required = @('siteUrl', 'list', 'csvPath'); properties = [ordered]@{
+                siteUrl = @{ type = 'string'; description = 'Site URL' }
+                list    = @{ type = 'string'; description = 'List or library display name' }
+                csvPath = @{ type = 'string'; description = 'Path to the CSV of updates' }
+                execute = $execProp
+            } }
+        }
+        @{
+            name = 'sharepoint_check_in_files'
+            description = "Bulk check-in files left checked out in a site's document libraries (clears a migration blocker). Previews by default; execute=true checks in."
+            cmdlet = 'Invoke-SPCheckIn'; readOnly = $false
+            schema = @{ type = 'object'; required = @('siteUrl'); properties = [ordered]@{
+                siteUrl = @{ type = 'string'; description = 'Site URL' }
+                library = @{ type = 'string'; description = 'Limit to one library (default: all document libraries).' }
+                execute = $execProp
+            } }
+        }
+        @{
+            name = 'sharepoint_clear_version_history'
+            description = "Trim a file's version history, keeping the newest N historical versions (the current version is never touched). Previews by default; execute=true deletes."
+            cmdlet = 'Clear-SPVersionHistory'; readOnly = $false
+            schema = @{ type = 'object'; required = @('siteUrl', 'fileUrl'); properties = [ordered]@{
+                siteUrl = @{ type = 'string'; description = 'Site URL' }
+                fileUrl = @{ type = 'string'; description = 'Server-relative file URL, e.g. /sites/Marketing/Shared Documents/big.pptx' }
+                keep    = @{ type = 'integer'; description = 'Newest historical versions to retain (default 10).' }
+                execute = $execProp
+            } }
+        }
+        @{
+            name = 'sharepoint_restore_inheritance'
+            description = 'Restore permission inheritance on a list/library (or a single item via itemId) that has broken inheritance. Previews by default; execute=true applies.'
+            cmdlet = 'Restore-SPInheritance'; readOnly = $false
+            schema = @{ type = 'object'; required = @('siteUrl', 'list'); properties = [ordered]@{
+                siteUrl = @{ type = 'string'; description = 'Site URL' }
+                list    = @{ type = 'string'; description = 'List or library display name' }
+                itemId  = @{ type = 'integer'; description = "Restore a single item's inheritance instead of the whole list." }
+                execute = $execProp
+            } }
+        }
+        @{
+            name = 'sharepoint_remove_orphaned_users'
+            description = 'Remove users who still have site access but no longer exist in the directory (stale-access cleanup). Needs Graph User.Read.All. Previews by default; execute=true removes.'
+            cmdlet = 'Remove-SPOrphanedUsers'; readOnly = $false
+            schema = @{ type = 'object'; required = @('siteUrl'); properties = [ordered]@{
+                siteUrl = @{ type = 'string'; description = 'Site URL' }
+                execute = $execProp
+            } }
+        }
+        @{
+            name = 'sharepoint_set_site_lifecycle'
+            description = 'Lock, make read-only (archive), or unlock a site. Requires SharePoint admin. Previews by default; execute=true applies.'
+            cmdlet = 'Set-SPSiteLifecycle'; readOnly = $false
+            schema = @{ type = 'object'; required = @('siteUrl', 'lockState'); properties = [ordered]@{
+                siteUrl   = @{ type = 'string'; description = 'Site URL' }
+                lockState = @{ type = 'string'; enum = @('Unlock', 'ReadOnly', 'NoAccess'); description = 'ReadOnly archives; NoAccess fully locks; Unlock restores.' }
+                execute   = $execProp
+            } }
+        }
+    )
+}
+
+# Canonical identity of a write call — the tool plus its args minus the safety flags. This is the key
+# the preview-first contract tracks: execute=true only takes effect when this exact key has already
+# been previewed. Order-insensitive so a re-call with reordered args still matches.
+function Get-SPWriteKey {
+    param([hashtable]$Tool, [hashtable]$Params)
+    $parts = foreach ($k in ($Params.Keys | Where-Object { $_ -notin 'Execute', 'WhatIf', 'Force' } | Sort-Object)) {
+        '{0}={1}' -f $k, $Params[$k]
+    }
+    '{0}|{1}' -f $Tool.name, ($parts -join ';')
+}
+
+# Turn a write tool's params into what actually runs: preview (-WhatIf) or apply (-Force to skip the
+# console confirm, except cmdlets without -Force — e.g. New-SPSiteFromTemplate, marked noForce).
+# Always strips the model-facing Execute arg so it never reaches the cmdlet.
+function Resolve-SPWriteParams {
+    param([hashtable]$Tool, [hashtable]$Params, [bool]$Apply)
+    $p = @{} + $Params
+    [void]$p.Remove('Execute')
+    if ($Apply) { if (-not $Tool.noForce) { $p['Force'] = $true } }
+    else { $p['WhatIf'] = $true }
+    $p
 }
 
 # Map the model's camelCase tool arguments to the PascalCase cmdlet parameters (the MCP server uses

@@ -20,7 +20,7 @@ function ConvertTo-SPProviderTools {
 function New-SPAiRequestBody {
     param(
         [ValidateSet('anthropic', 'openai')][string]$Provider,
-        [string]$Model, [string]$System, [object[]]$Messages, [object[]]$Tools, [int]$MaxTokens = 2048
+        [string]$Model, [string]$System, [object[]]$Messages, [object[]]$Tools, [int]$MaxTokens = 8192
     )
     if ($Provider -eq 'anthropic') {
         $body = @{ model = $Model; max_tokens = $MaxTokens; messages = @($Messages) }
@@ -102,14 +102,35 @@ function Get-SPAiHeaders {
 }
 
 # System prompt that frames the assistant for SharePoint admins (non-technical GUI audience).
+# -WritesEnabled reflects the "Allow write actions" toggle: it swaps the closing contract between
+# read-only framing and the strict preview-then-execute rules for write tools.
 function Get-SPAiSystemPrompt {
-    @'
+    param([switch]$WritesEnabled)
+    $base = @'
 You are the OpenGateSP assistant, embedded in a Windows app that helps SharePoint Online admins
 migrate and govern their tenant. Use the provided tools to answer questions about the user's
 SharePoint (external sharing, permissions, orphaned users, migration readiness, inventory, etc.).
 Prefer calling a tool over guessing. When a site URL is needed and the user gave a site name, ask
 for or construct the full URL (https://<tenant>.sharepoint.com/sites/<name>). Keep answers short and
 plain-language; the audience is not technical. After a tool runs, summarize the key findings in 1-3
-sentences. Never claim to have changed anything — these tools are read-only.
+sentences.
 '@
+    if ($WritesEnabled) {
+        $base + @'
+
+Some tools can change SharePoint (their descriptions say so). They follow a strict two-step
+contract: every write runs as a PREVIEW first — nothing changes. Show the user what the preview
+found, ask them to confirm in this chat, and only then call the same tool again with execute=true.
+Never pass execute=true on the first call, and never apply a change the user has not explicitly
+confirmed. Read-only reports need no confirmation.
+'@
+    }
+    else {
+        $base + @'
+
+All available tools are read-only — never claim to have changed anything. If the user asks you to
+change or fix something, explain that write actions are switched off and that they can turn on
+"Allow write actions" on this AI page, then ask again.
+'@
+    }
 }
