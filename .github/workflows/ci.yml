@@ -24,7 +24,7 @@ jobs:
         shell: pwsh
         run: |
           $all = @()
-          foreach ($p in 'module', 'gui', 'scripts', 'mcp-server') {
+          foreach ($p in 'module', 'gui', 'scripts', 'mcp-server', 'tools', 'installer') {
             $all += Invoke-ScriptAnalyzer -Path "./$p" -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
           }
           if ($all) {

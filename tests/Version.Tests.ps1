@@ -34,3 +34,24 @@ Describe 'Build scripts use the single version source (no hard-coded drift)' {
         $content | Should -Match '/DMyAppVersion='
     }
 }
+
+Describe 'Version copies stay in sync with the manifest' {
+    # These literals cannot read the psd1 at runtime (npm metadata, ISCC fallback, GUI catch
+    # fallback), so each release bump must update them — this guard catches the drift.
+    It 'mcp-server/package.json matches' {
+        $pkg = Get-Content -Raw (Join-Path $root 'mcp-server\package.json') | ConvertFrom-Json
+        $pkg.version | Should -Be $manifestVersion
+    }
+    It 'the MCP server version literal (index.ts) matches' {
+        $content = Get-Content -Raw (Join-Path $root 'mcp-server\src\index.ts')
+        $content | Should -Match ('version:\s*"{0}"' -f [regex]::Escape($manifestVersion))
+    }
+    It 'the installer .iss fallback define matches' {
+        $content = Get-Content -Raw (Join-Path $root 'installer\OpenGateSP.iss')
+        $content | Should -Match ('#define MyAppVersion "{0}"' -f [regex]::Escape($manifestVersion))
+    }
+    It 'the GUI fallback version matches' {
+        $content = Get-Content -Raw (Join-Path $root 'gui\Start-OpenGateSPGui.ps1')
+        $content | Should -Match ("catch \{{ '{0}' \}}" -f [regex]::Escape($manifestVersion))
+    }
+}
