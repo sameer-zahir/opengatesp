@@ -46,13 +46,20 @@ Write actions follow a strict, code-enforced **preview-first contract** — the 
 Copy wizard's *Run is locked until you Preview*:
 
 1. Every write runs as a **preview** first. Nothing changes; you see exactly what *would* happen.
-2. The assistant shows you the preview and asks you to confirm **in the chat**.
-3. Only then does the same action run for real — and only if it matches the previewed one. If the
-   assistant changes any detail (a different site, a different folder), it is forced back to a
-   preview.
+2. The assistant shows you the preview and stops — the apply is **locked until you reply**.
+3. Only in a later message can the same action run for real — and only if it matches the previewed
+   one exactly. A changed detail (different site, different folder), or an attempt to apply in the
+   same breath as the preview, is forced back to a preview. This is enforced in code, not left to
+   the model's manners.
 
 With the toggle **off**, the model never even sees the write tools — the assistant is strictly
 read-only.
+
+**Why so strict?** Everything the assistant reads from your tenant — file names, group names,
+sharing labels — is treated as **untrusted input**: a maliciously named item could try to talk the
+model into something you didn't ask for (prompt injection). The off-by-default toggle, the
+schema-filtered tool arguments, and the reply-gated preview contract mean that even a fully misled
+model cannot change anything without you seeing the plan and answering it.
 
 ## Prefer your own AI app?
 

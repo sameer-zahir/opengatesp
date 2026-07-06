@@ -4,6 +4,19 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased — 0.11.1]
+
+### Security
+- **AI write actions: the apply step is now reply-gated.** A write's `execute` call is only
+  honored in a turn *after* its preview — the model can no longer preview and apply within one
+  message, so a prompt-injected assistant cannot change anything without you seeing the preview
+  and replying. (Previously the confirm step was prompt guidance only.)
+- **AI tool arguments are schema-filtered.** Only arguments a tool's schema declares reach the
+  cmdlet; a model-supplied `force` / `confirm` / `whatIf` can no longer slip past the dry-run
+  guard and turn a preview into a real write. The MCP server was already safe — zod strips
+  undeclared keys.
+- New [SECURITY.md](SECURITY.md) (private vulnerability reporting via the repo's Security tab).
+
 ## [0.11.0]
 
 The BYOK in-app AI assistant, ShareGate-Protect-style governance detection, and a dashboard Home.

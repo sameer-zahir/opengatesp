@@ -101,7 +101,7 @@ Full guide: [docs/03-quickstart.md](docs/03-quickstart.md) · setup: [docs/01](d
 
 ## Code signing
 
-Free code signing for the Windows installer is provided by [SignPath.io](https://about.signpath.io/), certificate by the [SignPath Foundation](https://signpath.org/). Download releases from the [releases page](https://github.com/sameer-zahir/opengatesp/releases).
+OpenGateSP has applied to the [SignPath Foundation](https://signpath.org/) OSS program — once approved, release installers will be code-signed for free by [SignPath.io](https://about.signpath.io/), certificate by the SignPath Foundation. Download releases from the [releases page](https://github.com/sameer-zahir/opengatesp/releases); security policy in [SECURITY.md](SECURITY.md).
 
 ## Safety
 
