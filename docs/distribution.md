@@ -79,6 +79,13 @@ After a release is published:
 3. Submit a PR to **microsoft/winget-pkgs** (easiest with `wingetcreate`):
    ```powershell
    winget install Microsoft.WingetCreate
+
+   # First-ever publish — the package doesn't exist in winget-pkgs yet, so `update` would
+   # fail; submit these manifests directly (prompts for GitHub sign-in, forks, opens the PR):
+   wingetcreate submit installer\winget
+
+   # Every later release — bump an existing package (this is what CI automates when the
+   # WINGET_TOKEN secret is set; manual fallback):
    wingetcreate update SameerZahir.OpenGateSP --version 0.11.0 `
      --urls https://github.com/sameer-zahir/opengatesp/releases/download/v0.11.0/OpenGateSP-Setup.exe `
      --submit
