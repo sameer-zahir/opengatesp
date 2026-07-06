@@ -203,37 +203,45 @@ function Get-SPAiToolCatalog {
 }
 
 # Canonical identity of a write call — the tool plus its args minus the safety flags. This is the key
-# the preview-first contract tracks: execute=true only takes effect when this exact key has already
-# been previewed. Order-insensitive so a re-call with reordered args still matches.
+# the preview-first contract tracks: execute=true only takes effect when this exact key was previewed
+# in an earlier turn. Order-insensitive, and values are JSON-serialized so distinct arg sets can't
+# collide through string coercion.
 function Get-SPWriteKey {
     param([hashtable]$Tool, [hashtable]$Params)
-    $parts = foreach ($k in ($Params.Keys | Where-Object { $_ -notin 'Execute', 'WhatIf', 'Force' } | Sort-Object)) {
-        '{0}={1}' -f $k, $Params[$k]
+    $parts = foreach ($k in ($Params.Keys | Where-Object { $_ -notin 'Execute', 'WhatIf', 'Force', 'Confirm' } | Sort-Object)) {
+        '{0}={1}' -f $k, ($Params[$k] | ConvertTo-Json -Compress -Depth 5)
     }
     '{0}|{1}' -f $Tool.name, ($parts -join ';')
 }
 
 # Turn a write tool's params into what actually runs: preview (-WhatIf) or apply (-Force to skip the
 # console confirm, except cmdlets without -Force — e.g. New-SPSiteFromTemplate, marked noForce).
-# Always strips the model-facing Execute arg so it never reaches the cmdlet.
+# Strips every safety flag first (Execute is model-facing; WhatIf/Force/Confirm must only ever come
+# from this function, never from the model) so the result carries exactly one safety switch.
 function Resolve-SPWriteParams {
     param([hashtable]$Tool, [hashtable]$Params, [bool]$Apply)
     $p = @{} + $Params
-    [void]$p.Remove('Execute')
+    foreach ($k in 'Execute', 'WhatIf', 'Force', 'Confirm') { [void]$p.Remove($k) }
     if ($Apply) { if (-not $Tool.noForce) { $p['Force'] = $true } }
     else { $p['WhatIf'] = $true }
     $p
 }
 
 # Map the model's camelCase tool arguments to the PascalCase cmdlet parameters (the MCP server uses
-# the same convention), plus any fixed params. Returns a hashtable ready for splatting.
+# the same convention), plus any fixed params. Only arguments declared in the tool's schema are
+# forwarded — anything else the model invents (force, confirm, whatIf, connection, ...) is dropped,
+# so it can never smuggle a safety switch through to the cmdlet. A tool with no schema forwards
+# nothing. Returns a hashtable ready for splatting.
 function ConvertTo-SPCmdletParams {
     param([hashtable]$Tool, $Arguments)
     $p = @{}
     if ($Tool.fixedParams) { foreach ($k in $Tool.fixedParams.Keys) { $p[$k] = $Tool.fixedParams[$k] } }
+    $allowed = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    if ($Tool.schema -and $Tool.schema.properties) { foreach ($k in $Tool.schema.properties.Keys) { [void]$allowed.Add($k) } }
     if ($Arguments) {
         $pairs = if ($Arguments -is [System.Collections.IDictionary]) { $Arguments.GetEnumerator() } else { $Arguments.PSObject.Properties }
         foreach ($kv in $pairs) {
+            if (-not $allowed.Contains($kv.Name)) { continue }
             $val = $kv.Value
             if ($null -eq $val -or "$val" -eq '') { continue }
             $pascal = $kv.Name.Substring(0, 1).ToUpper() + $kv.Name.Substring(1)

@@ -39,20 +39,34 @@ Describe 'Tool catalog' {
 
 Describe 'ConvertTo-SPCmdletParams' {
     It 'maps camelCase args to PascalCase cmdlet params' {
-        $tool = @{ cmdlet = 'Get-SPSharingReport' }
+        $tool = @{ cmdlet = 'Get-SPSharingReport'; schema = @{ properties = [ordered]@{ siteUrl = @{}; includeLinks = @{} } } }
         $p = ConvertTo-SPCmdletParams -Tool $tool -Arguments @{ siteUrl = 'https://x'; includeLinks = $true }
         $p['SiteUrl']      | Should -Be 'https://x'
         $p['IncludeLinks'] | Should -BeTrue
     }
     It 'applies fixed params and skips empty values' {
-        $tool = @{ fixedParams = @{ IncludeStorage = $true } }
+        $tool = @{ fixedParams = @{ IncludeStorage = $true }; schema = @{ properties = [ordered]@{ siteUrl = @{} } } }
         $p = ConvertTo-SPCmdletParams -Tool $tool -Arguments @{ siteUrl = '' }
         $p['IncludeStorage'] | Should -BeTrue
         $p.ContainsKey('SiteUrl') | Should -BeFalse
     }
     It 'reads args from a PSCustomObject too' {
-        $p = ConvertTo-SPCmdletParams -Tool @{} -Arguments ([pscustomobject]@{ minSizeMB = 200 })
+        $tool = @{ schema = @{ properties = [ordered]@{ minSizeMB = @{} } } }
+        $p = ConvertTo-SPCmdletParams -Tool $tool -Arguments ([pscustomobject]@{ minSizeMB = 200 })
         $p['MinSizeMB'] | Should -Be 200
+    }
+    It 'drops arguments the schema does not declare (no smuggled safety switches)' {
+        $tool = @{ schema = @{ properties = [ordered]@{ siteUrl = @{} } } }
+        $p = ConvertTo-SPCmdletParams -Tool $tool -Arguments @{ siteUrl = 'https://x'; force = $true; confirm = $false; whatIf = $false; connection = 'evil' }
+        @($p.Keys) | Should -Be @('SiteUrl')
+    }
+    It 'forwards nothing when the tool has no schema (secure default)' {
+        (ConvertTo-SPCmdletParams -Tool @{} -Arguments @{ force = $true }).Count | Should -Be 0
+    }
+    It 'keeps undeclared fixed params non-overridable' {
+        $tool = (Get-SPAiToolCatalog -IncludeWrites) | Where-Object name -eq 'sharepoint_migrate_files'
+        $p = ConvertTo-SPCmdletParams -Tool $tool -Arguments @{ source = 'C:\s'; siteUrl = 'https://x'; preserveTimestamps = $false }
+        $p['PreserveTimestamps'] | Should -BeTrue   # fixed param wins; arg not in schema is dropped
     }
 }
 
@@ -68,6 +82,15 @@ Describe 'Write helpers (preview-first contract)' {
         $p = Resolve-SPWriteParams -Tool @{ name = 't' } -Params @{ SiteUrl = 'https://x'; Execute = $true } -Apply $true
         $p['Force'] | Should -BeTrue
         $p.ContainsKey('WhatIf') | Should -BeFalse
+    }
+    It 'strips smuggled safety switches in both modes' {
+        $dirty = @{ SiteUrl = 'https://x'; Execute = $true; Force = $true; WhatIf = $false; Confirm = $false }
+        $preview = Resolve-SPWriteParams -Tool @{ name = 't' } -Params $dirty -Apply $false
+        @($preview.Keys | Sort-Object) | Should -Be @('SiteUrl', 'WhatIf')
+        $preview['WhatIf'] | Should -BeTrue
+        $apply = Resolve-SPWriteParams -Tool @{ name = 't' } -Params $dirty -Apply $true
+        @($apply.Keys | Sort-Object) | Should -Be @('Force', 'SiteUrl')
+        $apply['Force'] | Should -BeTrue
     }
     It 'omits -Force for noForce cmdlets (New-SPSiteFromTemplate)' {
         $tool = (Get-SPAiToolCatalog -IncludeWrites) | Where-Object name -eq 'sharepoint_provision_site'
@@ -272,46 +295,55 @@ Describe 'Invoke-SPAiConversation (agent loop)' {
         (@($steps | Where-Object { $_.kind -eq 'assistant' })[-1]).text | Should -Match 'could not'
     }
 
-    It 'downgrades an unpreviewed execute=true to a preview, then honors it after the preview' {
-        # The model tries to apply immediately (twice with identical args); the loop must run a
-        # -WhatIf preview first and only apply on the second, matching call.
-        $state = @{ n = 0 }
-        $callModel = {
-            param($body, $endpoint, $headers)
-            $state.n++
-            if ($state.n -ge 3) {
-                [pscustomobject]@{ stop_reason = 'end_turn'; content = @([pscustomobject]@{ type = 'text'; text = 'Removed them.' }) }
-            }
-            else {
-                [pscustomobject]@{ stop_reason = 'tool_use'; content = @(
-                        [pscustomobject]@{ type = 'tool_use'; id = "toolu_$($state.n)"; name = 'sharepoint_remove_orphaned_users'; input = [pscustomobject]@{ siteUrl = 'https://x'; execute = $true } }
-                    ) }
-            }
+    It 'never applies in the preview turn — execute=true only works in a later turn' {
+        # Turn 1: the model tries to apply immediately, twice with identical args. Both calls must
+        # run as -WhatIf previews — a preview arms only when the turn ends, so a prompt-injected
+        # model cannot preview + apply within one user message.
+        $mkModel = {
+            param($tries)
+            $state = @{ n = 0 }
+            {
+                param($body, $endpoint, $headers)
+                $state.n++
+                if ($state.n -gt $tries) {
+                    [pscustomobject]@{ stop_reason = 'end_turn'; content = @([pscustomobject]@{ type = 'text'; text = 'Done.' }) }
+                }
+                else {
+                    [pscustomobject]@{ stop_reason = 'tool_use'; content = @(
+                            [pscustomobject]@{ type = 'tool_use'; id = "toolu_$($state.n)"; name = 'sharepoint_remove_orphaned_users'; input = [pscustomobject]@{ siteUrl = 'https://x'; execute = $true } }
+                        ) }
+                }
+            }.GetNewClosure()
         }
         $steps = [System.Collections.Generic.List[object]]::new()
         $msgs = [System.Collections.Generic.List[object]]::new()
         $msgs.Add(@{ role = 'user'; content = 'remove the orphaned users on /sites/x' })
         $calls = [System.Collections.Generic.List[hashtable]]::new()
         $previewed = [System.Collections.Generic.HashSet[string]]::new()
+        $cfg = @{ Provider = 'anthropic'; Model = 'claude'; ApiKey = 'k' }
+        $invoke = { param($c, $p) [void]$calls.Add($p); @([pscustomobject]@{ Principal = 'ghost@x.com'; Status = 'WouldRemove' }) }
 
-        Invoke-SPAiConversation -Config @{ Provider = 'anthropic'; Model = 'claude'; ApiKey = 'k' } -Messages $msgs `
-            -Catalog (Get-SPAiToolCatalog -IncludeWrites) -PreviewedWrites $previewed `
-            -CallModel $callModel `
-            -Emit { param($s) [void]$steps.Add($s) } `
-            -InvokeTool { param($c, $p) [void]$calls.Add($p); @([pscustomobject]@{ Principal = 'ghost@x.com'; Status = 'WouldRemove' }) }
+        Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog (Get-SPAiToolCatalog -IncludeWrites) `
+            -PreviewedWrites $previewed -CallModel (& $mkModel 2) -Emit { param($s) [void]$steps.Add($s) } -InvokeTool $invoke
 
         $calls.Count | Should -Be 2
-        $calls[0]['WhatIf'] | Should -BeTrue          # first call forced down to a preview
-        $calls[0].ContainsKey('Force') | Should -BeFalse
-        $calls[1]['Force'] | Should -BeTrue           # identical re-call applies
-        $calls[1].ContainsKey('WhatIf') | Should -BeFalse
-        foreach ($c in $calls) { $c.ContainsKey('Execute') | Should -BeFalse }
-
-        $results = @($steps | Where-Object { $_.kind -eq 'toolresult' })
-        $results[0].applied | Should -BeFalse
-        $results[1].applied | Should -BeTrue
-        # The model was told the first run was only a preview.
+        foreach ($c in $calls) {                       # BOTH same-turn calls stay previews
+            $c['WhatIf'] | Should -BeTrue
+            $c.ContainsKey('Force')   | Should -BeFalse
+            $c.ContainsKey('Execute') | Should -BeFalse
+        }
+        @($steps | Where-Object { $_.kind -eq 'toolresult' -and $_.applied }).Count | Should -Be 0
         ($msgs | ConvertTo-Json -Depth 8) | Should -Match 'PREVIEW ONLY'
+
+        # Turn 2: the user replied; the previewed call is now armed, so execute=true applies.
+        $msgs.Add(@{ role = 'user'; content = 'yes, go ahead' })
+        Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog (Get-SPAiToolCatalog -IncludeWrites) `
+            -PreviewedWrites $previewed -CallModel (& $mkModel 1) -Emit { param($s) [void]$steps.Add($s) } -InvokeTool $invoke
+
+        $calls.Count | Should -Be 3
+        $calls[2]['Force'] | Should -BeTrue
+        $calls[2].ContainsKey('WhatIf') | Should -BeFalse
+        (@($steps | Where-Object { $_.kind -eq 'toolresult' })[-1]).applied | Should -BeTrue
     }
 
     It 'previews again when the arguments change after a preview' {

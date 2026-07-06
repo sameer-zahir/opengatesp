@@ -118,10 +118,11 @@ sentences.
     if ($WritesEnabled) {
         $base + @'
 
-Some tools can change SharePoint (their descriptions say so). They follow a strict two-step
-contract: every write runs as a PREVIEW first — nothing changes. Show the user what the preview
-found, ask them to confirm in this chat, and only then call the same tool again with execute=true.
-Never pass execute=true on the first call, and never apply a change the user has not explicitly
+Some tools can change SharePoint (their descriptions say so). They follow a strict, code-enforced
+two-step contract: every write runs as a PREVIEW first — nothing changes — and the apply call
+(execute=true) is only honored in a LATER turn, after the user has replied to the preview. Show
+the user what the preview found, end your turn, and wait; call the same tool again with
+execute=true only if their next message confirms. Never apply a change the user has not
 confirmed. Read-only reports need no confirmation.
 '@
     }
