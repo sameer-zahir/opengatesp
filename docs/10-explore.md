@@ -57,7 +57,7 @@ copy landed. Same-tenant; reuses your saved connection for each side.
 ## GUI
 
 The **Explore** view runs the full assessment or any single report, with CSV/HTML export and a
-*Remediate* bar (see [docs/11](11-remediation.md)). The Copy-site view has a **Validate copy**
+*Remediate* bar (see [docs/11](11-remediation.md)). The Copy wizard has a **Validate copy**
 action (`Compare-SPSite`).
 
 ## Manual test plan (run against a tenant)

@@ -8,14 +8,19 @@ tenant** — never production.
 ## 1. Unit tests (no tenant)
 
 ```powershell
-Invoke-Pester ./tests            # all pure Private/ helpers
-Invoke-ScriptAnalyzer ./module,./gui,./scripts -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+Invoke-Pester ./tests            # 18 suites, 160 cases — pure logic, no tenant
+Invoke-ScriptAnalyzer ./module,./gui,./scripts,./mcp-server,./tools,./installer -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
 npm --prefix mcp-server run build  # MCP TypeScript compiles
 ```
 
 These cover the decision logic (conflict modes, principal mapping, incremental selection, explore
 grading, inactive-site selection, version-bloat, structure diff, version-trim, field-value
-resolution). They do **not** touch PnP.PowerShell.
+resolution), the **governance detectors** (Everyone/EEEU claim matching, ownerless-group grading,
+review consolidation), the **AI assistant core** (provider wire formats, the agent loop, DPAPI
+round-trip, write-tool gating and the preview-before-execute contract), **surface parity** (every
+exported cmdlet reachable over MCP; in-app AI tools a subset of MCP tools), and **version-copy
+sync** (package.json / index.ts / installer / GUI fallbacks match the manifest). They do **not**
+touch PnP.PowerShell.
 
 ## 2. Seed a dev tenant
 
@@ -41,6 +46,7 @@ exists.
 | **Validate** | `Compare-SPSite` | After a copy, reports Match / CountMismatch / Missing |
 | Permissions | `Copy-SPPermissions`, `Get-SPPermissionReport`, `Get-SPPermissionsMatrix` | Role assignments copy + remap; matrix pivots access |
 | Governance | `Get-SPSharingReport`, `Get-SPOrphanedUsers`, `Set-SPSiteLifecycle` | External users / stale access; lock / archive / unlock |
+| **Protect detection** | `Find-SPEveryoneClaims`, `Get-SPOwnerlessGroups`, `Invoke-SPGovernanceReview` | Grant "Everyone except external users" read on a seeded list → flagged Warning (Error if writable); remove a group's owners → flagged; the review consolidates both plus sharing/orphans, severity-sorted |
 | **Remediation** | `Invoke-SPCheckIn`, `Clear-SPVersionHistory`, `Restore-SPInheritance`, `Remove-SPOrphanedUsers` | `-WhatIf` then `-Force`; re-run the matching report to confirm it cleared |
 | Cross-tenant | `New-SPMigrationConnection`, `Copy-SPSite -CrossTenant`, `Copy-SPTermGroup` | App-only cert per tenant; structure + files + principals |
 | Collaboration | `Copy-SPM365Group`, `Copy-SPTeam`, `Copy-SPPlannerPlan` | Group/Team/Plan cloned (dry-run first; needs Graph scopes) |
@@ -86,3 +92,18 @@ Static introspection confirmed every PnP cmdlet/parameter OpenGateSP uses exists
   shows a focus ring; **Check for updates** in Settings reports latest/newer.
 - **Install:** `installer\Build-Installer.ps1` → run `OpenGateSP-Setup.exe` on a clean VM → PS7
   *offer* if missing → app launches → onboarding. `winget validate installer\winget\`.
+
+## 7. v0.11.0 AI assistant smoke checks
+
+- **Connect:** AI view → pick **Ollama (local)** (or paste a real key) → **Test** reports
+  reachable → **Save** shows "Connected". Restart the app → still connected (key survives via
+  DPAPI; check `%APPDATA%\OpenGateSP\aiconfig.json` contains no plaintext key).
+- **Read-only turn:** ask *"show external sharing on <seeded site>"* → a **Running:** tool card
+  appears with the exact PowerShell, then a result note and a plain-language summary.
+- **Writes off (default):** ask it to *remove the orphaned users* → the assistant explains write
+  actions are off and points at the toggle; no write tool runs.
+- **Preview-first:** enable **Allow write actions**, ask again → first run is **Previewing:**
+  (result note says nothing changed), the assistant asks for confirmation; say yes → **Applying:**
+  card + a "Change applied" toast; re-run the matching report to confirm.
+- **Dead-link check:** **Where do I get a key?** opens [docs/13-ai-assistant.md](13-ai-assistant.md)
+  on GitHub; **Add to Claude Desktop** writes the `mcpServers` entry.

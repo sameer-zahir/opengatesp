@@ -43,7 +43,7 @@ OpenGateSP covers the bulk of **ShareGate Migrate** — source **Explore**, same
 
 ## Built to feel like a product
 
-Four themes — **pick yours on first run** (the warm **Gruvbox**, a confident **Tokyo Night Moon**, or clean Fluent **light / dark** from [Squintless](https://github.com/sameer-zahir/squintless)), change it any time. The UI has real **depth** — layered surfaces, soft shadows, smooth motion, and right-aligned tabular numbers — navigation grouped by the migration runbook (**Migration · Activity · Governance**), and a foolproof, **preview-first** Copy wizard a first-timer can't get lost in. A **first-run tour** and an always-on **?** help button keep non-technical users oriented (power users reach for the MCP). The visual system is documented in [docs/design-system.md](docs/design-system.md).
+Four themes — **pick yours on first run** (the warm **Gruvbox**, a confident **Tokyo Night Moon**, or clean Fluent **light / dark** from [Squintless](https://github.com/sameer-zahir/squintless)), change it any time. The UI has real **depth** — layered surfaces, soft shadows, smooth motion, and right-aligned tabular numbers — a **dashboard Home** with live KPI tiles and recent activity that survives restarts, navigation grouped by the migration runbook (**Migration · Activity · Governance**), and a foolproof, **preview-first** Copy wizard a first-timer can't get lost in. A **first-run tour** and an always-on **?** help button keep non-technical users oriented (power users reach for the MCP). The visual system is documented in [docs/design-system.md](docs/design-system.md).
 
 ![OpenGateSP — the in-app AI assistant (bring your own model)](docs/screenshot-ai.png)
 
@@ -53,7 +53,7 @@ Four themes — **pick yours on first run** (the warm **Gruvbox**, a confident *
 
 | Area | Function | What it does |
 |---|---|---|
-| **Assistant** | In-app AI (bring your own model) | Ask in plain English — your own model (Claude / OpenAI / Ollama / LM Studio) runs the reports for you, summarizes them, and shows the exact PowerShell it ran. Read-only by default; key encrypted on-device. |
+| **Assistant** | In-app AI (bring your own model) | Ask in plain English — your own model (Claude / OpenAI / Ollama / LM Studio) runs the reports for you, summarizes them, and shows the exact PowerShell it ran. Read-only by default; optional write actions are **preview-first** behind a toggle. Key encrypted on-device ([docs/13](docs/13-ai-assistant.md)). |
 | **Migration** | `Test-SPMigrationReadiness` | Pre-flight a local folder for SharePoint blockers (illegal names, over-long paths, oversized/empty files). Local, read-only. |
 | | `Start-SPFileMigration` | Local file share / folder → SharePoint library, preserving structure + timestamps. Dry-run by default. |
 | | `Copy-SPSite` | Copy a site's structure (lists, libraries, columns, views) and optionally its content to another site in the **same tenant**. Dry-run by default ([docs/07](docs/07-sharepoint-migration.md)). |
@@ -71,6 +71,9 @@ Four themes — **pick yours on first run** (the warm **Gruvbox**, a confident *
 | | `Get-SPSharingReport` | External users and sharing links |
 | | `Get-SPPermissionsMatrix` | Per-principal access matrix — who can touch what |
 | | `Get-SPOrphanedUsers` | Users with access no longer in the directory (stale access) |
+| | `Find-SPEveryoneClaims` | Where "Everyone" / "Everyone except external users" has access — the biggest oversharing risk, graded Error/Warning |
+| | `Get-SPOwnerlessGroups` | Microsoft 365 Groups (and their Teams/sites) with no owner |
+| | `Invoke-SPGovernanceReview` | Consolidated governance review — broad-audience grants + external sharing + stale access in one severity-graded list ([docs/09](docs/09-governance.md)) |
 | | `Set-SPSiteLifecycle` | Lock / archive (read-only) / unlock a site |
 | **Provisioning** | `New-SPSiteFromTemplate` | Create a site or library from a template |
 | | `Set-SPBulkMetadata` | CSV-driven bulk column updates |
@@ -104,7 +107,7 @@ Full guide: [docs/03-quickstart.md](docs/03-quickstart.md) · setup: [docs/01](d
 
 ## Roadmap
 
-Phases 1–5 (same-tenant copy, permissions/identity mapping, tenant-to-tenant, Teams/Groups/Planner, governance) plus **Explore** + post-migration validation (0.7.0) and **remediation** + migration fidelity (0.8.0) have shipped. Next: full per-version history fidelity (Migration API), ShareGate-Protect-style governance automation, PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md) and [docs/TESTING.md](docs/TESTING.md).
+The migration engine (Phases 1–7: same-tenant copy, permissions/identity mapping, tenant-to-tenant, Teams/Groups/Planner, governance, Explore + validation, remediation + fidelity), the polished GUI + installer (0.10.0), and the **AI assistant + Protect-style governance detection** (0.11.0) have shipped. Next: governance **auto-remediation policies** and access-review campaigns, full per-version history fidelity (Migration API), PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md) and [docs/TESTING.md](docs/TESTING.md).
 
 ## License
 
