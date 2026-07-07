@@ -42,7 +42,8 @@ function Copy-SPPlannerPlan {
 
     $results = [System.Collections.Generic.List[object]]::new()
 
-    if (-not $Force -and -not $PSCmdlet.ShouldProcess($Title, "Create plan with $($buckets.Count) bucket(s) and $($tasks.Count) task(s)")) {
+    if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+    if (-not $PSCmdlet.ShouldProcess($Title, "Create plan with $($buckets.Count) bucket(s) and $($tasks.Count) task(s)")) {
         $results.Add((New-SPCopyResult -ObjectType 'PlannerPlan' -Name $Title -Action 'Create' -Status 'WouldCopy' -Detail "$($buckets.Count) bucket(s), $($tasks.Count) task(s)"))
         return ($results | ConvertTo-SPOutput -AsJson:$AsJson)
     }

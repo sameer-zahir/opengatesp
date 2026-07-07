@@ -16,9 +16,11 @@ function Invoke-SPAiHttp {
 # (kind = assistant|toolcall|toolresult|toolerror). $InvokeTool { param($cmdlet,$paramHash) } executes a
 # tool and returns its data (the GUI runs this in its worker; tests pass canned data). $PreviewedWrites
 # is the set of ARMED write calls (owned by the caller so it survives across turns): execute=true is
-# downgraded to a preview unless its exact call was previewed in an EARLIER turn. Previews from this
-# turn arm only when the function returns — so a write can never preview and apply within one turn,
-# which forces a user reply between plan and change (prompt injection in tool results can't skip it).
+# downgraded to a preview unless its exact call was previewed in the IMMEDIATELY PRECEDING turn. Keys
+# are single-use (consumed on apply) and expire after one turn (the set is replaced, not unioned, at
+# turn end). Previews from this turn arm only when the function returns — so a write can never preview
+# and apply within one turn, which forces a user reply between plan and change (prompt injection in
+# tool results can't skip or replay it).
 function Invoke-SPAiConversation {
     param(
         [hashtable]$Config,
@@ -62,7 +64,7 @@ function Invoke-SPAiConversation {
             $isWrite = -not $tool.readOnly
             $apply = $false; $downgraded = $false; $writeKey = $null
             if ($isWrite) {
-                $apply    = [bool]$params['Execute']
+                $apply    = ($params['Execute'] -is [bool]) -and $params['Execute']   # strict: [bool]'false' is $true
                 $writeKey = Get-SPWriteKey -Tool $tool -Params $params
                 if ($apply -and -not $PreviewedWrites.Contains($writeKey)) { $apply = $false; $downgraded = $true }
                 $params = Resolve-SPWriteParams -Tool $tool -Params $params -Apply $apply
@@ -72,7 +74,10 @@ function Invoke-SPAiConversation {
             try {
                 $data = & $InvokeTool $tool.cmdlet $params
                 $rows = @($data)
-                if ($isWrite -and -not $apply) { $newPreviews.Add($writeKey) }
+                if ($isWrite) {
+                    if ($apply) { [void]$PreviewedWrites.Remove($writeKey) }   # consume: an applied key can't fire again
+                    else        { $newPreviews.Add($writeKey) }
+                }
                 & $Emit @{ kind = 'toolresult'; name = $tc.name; rows = $rows; count = $rows.Count; cmdline = $cmdline; write = $isWrite; applied = ($isWrite -and $apply) }
                 $resultText = if ($rows.Count) { ($rows | ConvertTo-Json -Depth 6 -Compress) } else { '[] (no rows)' }
                 if ($isWrite) {
@@ -91,5 +96,7 @@ function Invoke-SPAiConversation {
         }
     }
     # Arm this turn's previews only now — the next user turn may execute them, this one never could.
+    # Replace rather than union: a key is honored for exactly one following turn, then expires.
+    $PreviewedWrites.Clear()
     foreach ($k in $newPreviews) { [void]$PreviewedWrites.Add($k) }
 }

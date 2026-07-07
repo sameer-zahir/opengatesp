@@ -372,6 +372,100 @@ Describe 'Invoke-SPAiConversation (agent loop)' {
         $calls[1].ContainsKey('Force') | Should -BeFalse
     }
 
+    It 'consumes the armed key on apply — an identical replay previews again' {
+        $mkModel = {
+            $state = @{ n = 0 }
+            {
+                param($body, $endpoint, $headers)
+                $state.n++
+                if ($state.n -gt 1) { [pscustomobject]@{ stop_reason = 'end_turn'; content = @([pscustomobject]@{ type = 'text'; text = 'Done.' }) } }
+                else {
+                    [pscustomobject]@{ stop_reason = 'tool_use'; content = @(
+                            [pscustomobject]@{ type = 'tool_use'; id = 't1'; name = 'sharepoint_remove_orphaned_users'; input = [pscustomobject]@{ siteUrl = 'https://x'; execute = $true } }
+                        ) }
+                }
+            }.GetNewClosure()
+        }
+        $calls = [System.Collections.Generic.List[hashtable]]::new()
+        $previewed = [System.Collections.Generic.HashSet[string]]::new()
+        $msgs = [System.Collections.Generic.List[object]]::new()
+        $cfg = @{ Provider = 'anthropic'; Model = 'claude'; ApiKey = 'k' }
+        $cat = Get-SPAiToolCatalog -IncludeWrites
+        $invoke = { param($c, $p) [void]$calls.Add($p); @() }
+
+        # Turn 1 previews (arms), turn 2 applies (consumes), turn 3 replays the exact same call.
+        foreach ($m in 'remove them', 'yes, go ahead', 'and again') {
+            $msgs.Add(@{ role = 'user'; content = $m })
+            Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog $cat -PreviewedWrites $previewed `
+                -CallModel (& $mkModel) -Emit { param($s) } -InvokeTool $invoke
+        }
+
+        $calls.Count | Should -Be 3
+        $calls[0]['WhatIf'] | Should -BeTrue     # turn 1: downgraded to preview (arms)
+        $calls[1]['Force']  | Should -BeTrue     # turn 2: armed ⇒ applies (and consumes the key)
+        $calls[2]['WhatIf'] | Should -BeTrue     # turn 3: key consumed ⇒ back to preview, no silent re-apply
+        $calls[2].ContainsKey('Force') | Should -BeFalse
+    }
+
+    It 'expires an armed key after one turn — a stale preview cannot fire later' {
+        $mkToolTurn = {
+            param($in)
+            $state = @{ n = 0 }
+            {
+                param($body, $endpoint, $headers)
+                $state.n++
+                if ($state.n -gt 1) { [pscustomobject]@{ stop_reason = 'end_turn'; content = @([pscustomobject]@{ type = 'text'; text = 'Done.' }) } }
+                else { [pscustomobject]@{ stop_reason = 'tool_use'; content = @([pscustomobject]@{ type = 'tool_use'; id = 't1'; name = 'sharepoint_check_in_files'; input = $in }) } }
+            }.GetNewClosure()
+        }
+        $chatTurn = { param($body, $endpoint, $headers) [pscustomobject]@{ stop_reason = 'end_turn'; content = @([pscustomobject]@{ type = 'text'; text = 'Anything else?' }) } }
+        $calls = [System.Collections.Generic.List[hashtable]]::new()
+        $previewed = [System.Collections.Generic.HashSet[string]]::new()
+        $msgs = [System.Collections.Generic.List[object]]::new()
+        $cfg = @{ Provider = 'anthropic'; Model = 'claude'; ApiKey = 'k' }
+        $cat = Get-SPAiToolCatalog -IncludeWrites
+        $invoke = { param($c, $p) [void]$calls.Add($p); @() }
+        $run = { param($model, $text) $msgs.Add(@{ role = 'user'; content = $text }); Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog $cat -PreviewedWrites $previewed -CallModel $model -Emit { param($s) } -InvokeTool $invoke }
+
+        & $run (& $mkToolTurn ([pscustomobject]@{ siteUrl = 'https://x' })) 'check in files'                    # turn 1: preview arms
+        & $run $chatTurn 'thanks'                                                                                # turn 2: no tool call — key expires
+        & $run (& $mkToolTurn ([pscustomobject]@{ siteUrl = 'https://x'; execute = $true })) 'now apply it'      # turn 3: stale key
+
+        $calls.Count | Should -Be 2
+        $calls[1]['WhatIf'] | Should -BeTrue     # armed 2 turns ago ⇒ no longer honored
+        $calls[1].ContainsKey('Force') | Should -BeFalse
+    }
+
+    It 'only a real boolean execute applies — string "false"/"true" stay previews' {
+        $mkToolTurn = {
+            param($in)
+            $state = @{ n = 0 }
+            {
+                param($body, $endpoint, $headers)
+                $state.n++
+                if ($state.n -gt 1) { [pscustomobject]@{ stop_reason = 'end_turn'; content = @([pscustomobject]@{ type = 'text'; text = 'Done.' }) } }
+                else { [pscustomobject]@{ stop_reason = 'tool_use'; content = @([pscustomobject]@{ type = 'tool_use'; id = 't1'; name = 'sharepoint_check_in_files'; input = $in }) } }
+            }.GetNewClosure()
+        }
+        $calls = [System.Collections.Generic.List[hashtable]]::new()
+        $previewed = [System.Collections.Generic.HashSet[string]]::new()
+        $msgs = [System.Collections.Generic.List[object]]::new()
+        $cfg = @{ Provider = 'anthropic'; Model = 'claude'; ApiKey = 'k' }
+        $cat = Get-SPAiToolCatalog -IncludeWrites
+        $invoke = { param($c, $p) [void]$calls.Add($p); @() }
+        $run = { param($in, $text) $msgs.Add(@{ role = 'user'; content = $text }); Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog $cat -PreviewedWrites $previewed -CallModel (& $mkToolTurn $in) -Emit { param($s) } -InvokeTool $invoke }
+
+        & $run ([pscustomobject]@{ siteUrl = 'https://x' }) 'check in files'                      # turn 1: preview arms
+        & $run ([pscustomobject]@{ siteUrl = 'https://x'; execute = 'false' }) 'ok'               # turn 2: [bool]'false' is $true — must NOT apply
+        & $run ([pscustomobject]@{ siteUrl = 'https://x'; execute = 'true' }) 'ok'                # turn 3: string 'true' must not apply either
+
+        $calls.Count | Should -Be 3
+        foreach ($c in $calls) {
+            $c['WhatIf'] | Should -BeTrue
+            $c.ContainsKey('Force') | Should -BeFalse
+        }
+    }
+
     It 'write tools are unknown to the loop when the catalog is read-only' {
         $state = @{ n = 0 }
         $callModel = {

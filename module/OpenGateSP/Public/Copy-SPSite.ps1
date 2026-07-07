@@ -104,7 +104,8 @@ function Copy-SPSite {
     $plan = @(Get-SPCopyPlan -SourceObjects $srcObjs -DestObjects $dstObjs -Mode $ConflictMode)
 
     # Dry-run: return the plan, write nothing.
-    if (-not $Force -and -not $PSCmdlet.ShouldProcess($DestinationUrl, "Copy $($srcLists.Count) list(s) from $SourceUrl")) {
+    if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+    if (-not $PSCmdlet.ShouldProcess($DestinationUrl, "Copy $($srcLists.Count) list(s) from $SourceUrl")) {
         Write-SPLog "Dry-run: $($plan.Count) object(s) planned ($(@($plan | Where-Object Status -eq 'Skipped').Count) skipped)." -Level Success
         return ($plan | ConvertTo-SPOutput -AsJson:$AsJson)
     }

@@ -51,4 +51,24 @@ Describe 'Get-SPOrphanedPrincipals' {
         $site = @([pscustomobject]@{ LoginName = 'Jane@Contoso.com'; Title = 'Jane' })
         @(Get-SPOrphanedPrincipals -SitePrincipal $site -DirectoryLogin @('jane@contoso.com')) | Should -BeNullOrEmpty
     }
+    It 'never flags app / ACS / system principals — they are not directory users' {
+        # These all contain '@' but are by design absent from the user directory; flagging them
+        # would have Remove-SPOrphanedUsers strip valid app grants (Flow, add-ins, system).
+        $site = @(
+            [pscustomobject]@{ LoginName = 'app@sharepoint'; Title = 'App principal' }
+            [pscustomobject]@{ LoginName = 'i:0i.t|ms.sp.ext|11112222-3333-4444-5555-666677778888@9999aaaa-bbbb-cccc-dddd-eeeeffff0000'; Title = 'ACS add-in' }
+            [pscustomobject]@{ LoginName = 'c:0t.c|tenant|app-id'; Title = 'Trusted-issuer claim' }
+            [pscustomobject]@{ LoginName = 'i:0#.w|contoso\svc-account'; Title = 'Windows claim' }
+        )
+        @(Get-SPOrphanedPrincipals -SitePrincipal $site -DirectoryLogin @('someone@contoso.com')) | Should -BeNullOrEmpty
+    }
+    It 'still flags a missing membership user when app principals are present' {
+        $site = @(
+            [pscustomobject]@{ LoginName = 'i:0#.f|membership|gone@contoso.com'; Title = 'Gone User' }
+            [pscustomobject]@{ LoginName = 'app@sharepoint'; Title = 'App principal' }
+        )
+        $orphans = @(Get-SPOrphanedPrincipals -SitePrincipal $site -DirectoryLogin @('here@contoso.com'))
+        $orphans.Count | Should -Be 1
+        $orphans[0].Title | Should -Be 'Gone User'
+    }
 }

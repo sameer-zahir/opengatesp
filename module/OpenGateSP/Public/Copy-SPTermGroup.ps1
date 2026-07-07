@@ -42,7 +42,8 @@ function Copy-SPTermGroup {
         Export-PnPTermGroupToXml -Identity $TermGroup -Out $xmlPath -Connection $SourceConnection -ErrorAction Stop
     } | Out-Null
 
-    if (-not $Force -and -not $PSCmdlet.ShouldProcess('destination term store', "Import term group '$TermGroup'")) {
+    if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+    if (-not $PSCmdlet.ShouldProcess('destination term store', "Import term group '$TermGroup'")) {
         $row = New-SPCopyResult -ObjectType 'TermGroup' -Name $TermGroup -Action 'Create' -Status 'WouldCopy' -Detail "Exported to $xmlPath"
         return ($row | ConvertTo-SPOutput -AsJson:$AsJson)
     }

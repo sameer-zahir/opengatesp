@@ -96,7 +96,8 @@ function Copy-SPPermissions {
             continue
         }
 
-        if (-not $Force -and -not $PSCmdlet.ShouldProcess($DestinationUrl, "Grant '$rolesText' to $dest")) {
+        if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+        if (-not $PSCmdlet.ShouldProcess($DestinationUrl, "Grant '$rolesText' to $dest")) {
             $results.Add((New-SPCopyResult -ObjectType "Permission ($($a.Scope))" -Name $name -Action 'Create' -Status 'WouldCopy' -Detail $detail))
             continue
         }

@@ -39,7 +39,8 @@ function Invoke-SPCheckIn {
     $rows = [System.Collections.Generic.List[object]]::new()
     foreach ($f in $files) {
         $ref = $f.FileRef
-        if (-not $Force -and -not $PSCmdlet.ShouldProcess($ref, 'Check in file')) {
+        if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+        if (-not $PSCmdlet.ShouldProcess($ref, 'Check in file')) {
             $rows.Add((New-SPCopyResult -ObjectType 'File' -Name $ref -Action 'Overwrite' -Status 'WouldCopy' -Detail "Would check in (was: $($f.CheckedOutTo))"))
             continue
         }

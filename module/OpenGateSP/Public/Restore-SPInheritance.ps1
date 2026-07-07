@@ -35,7 +35,8 @@ function Restore-SPInheritance {
     $target = if ($ItemId) { "$List item $ItemId" } else { $List }
     Write-SPLog "Restore-SPInheritance: $target on $SiteUrl"
 
-    if (-not $Force -and -not $PSCmdlet.ShouldProcess($target, 'Restore permission inheritance')) {
+    if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+    if (-not $PSCmdlet.ShouldProcess($target, 'Restore permission inheritance')) {
         $row = New-SPCopyResult -ObjectType $(if ($ItemId) { 'Item' } else { 'List' }) -Name $target -Action 'Overwrite' -Status 'WouldCopy' -Detail 'Would restore inheritance'
         return ($row | ConvertTo-SPOutput -AsJson:$AsJson)
     }

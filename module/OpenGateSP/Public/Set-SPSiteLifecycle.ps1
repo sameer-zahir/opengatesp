@@ -30,7 +30,8 @@ function Set-SPSiteLifecycle {
 
     Write-SPLog "Set-SPSiteLifecycle: $SiteUrl -> $LockState (WhatIf=$($WhatIfPreference))"
 
-    if (-not $Force -and -not $PSCmdlet.ShouldProcess($SiteUrl, "Set lock state to $LockState")) {
+    if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+    if (-not $PSCmdlet.ShouldProcess($SiteUrl, "Set lock state to $LockState")) {
         $row = New-SPCopyResult -ObjectType 'SiteLifecycle' -Name $SiteUrl -Action 'Overwrite' -Status 'WouldCopy' -Detail "Would set LockState=$LockState"
         return ($row | ConvertTo-SPOutput -AsJson:$AsJson)
     }

@@ -39,7 +39,8 @@ function Clear-SPVersionHistory {
     $rows = [System.Collections.Generic.List[object]]::new()
     foreach ($v in $toRemove) {
         $label = "$FileUrl (v$($v.VersionLabel))"
-        if (-not $Force -and -not $PSCmdlet.ShouldProcess($label, 'Delete version')) {
+        if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+        if (-not $PSCmdlet.ShouldProcess($label, 'Delete version')) {
             $rows.Add((New-SPCopyResult -ObjectType 'File' -Name $label -Action 'Skip' -Status 'WouldCopy' -Detail 'Would delete version'))
             continue
         }

@@ -26,8 +26,11 @@ function Get-SPOrphanedUsers {
     Write-SPLog "Scanning $SiteUrl for orphaned users ..."
 
     $siteUsers = @(Get-PnPUser -ErrorAction Stop)
-    $dir = @(Get-PnPEntraIDUser -ErrorAction SilentlyContinue | ForEach-Object { $_.UserPrincipalName } | Where-Object { $_ })
-    if (-not $dir.Count) { Write-SPLog 'Directory snapshot was empty — check Graph User.Read.All on the app.' -Level Warn }
+    # Fail closed: the connecting admin is always a directory user, so an empty snapshot means the
+    # query failed (usually missing Graph User.Read.All), never a real empty tenant. Proceeding
+    # would flag EVERY site user as orphaned — and downstream Remove-SPOrphanedUsers would delete them.
+    $dir = @(Get-PnPEntraIDUser -ErrorAction Stop | ForEach-Object { $_.UserPrincipalName } | Where-Object { $_ })
+    if (-not $dir.Count) { throw "Directory snapshot returned no users — refusing to flag site users as orphaned (that would mark everyone orphaned). This almost always means the app registration is missing Microsoft Graph User.Read.All. Grant it (docs/02) and retry." }
 
     $orphans = @(Get-SPOrphanedPrincipals -SitePrincipal $siteUsers -DirectoryLogin $dir)
     $rows = $orphans | ForEach-Object {

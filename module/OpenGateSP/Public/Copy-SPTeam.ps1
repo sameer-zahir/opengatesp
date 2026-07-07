@@ -44,7 +44,8 @@ function Copy-SPTeam {
 
     $results = [System.Collections.Generic.List[object]]::new()
 
-    if (-not $Force -and -not $PSCmdlet.ShouldProcess($DisplayName, "Create team from '$SourceTeam'")) {
+    if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+    if (-not $PSCmdlet.ShouldProcess($DisplayName, "Create team from '$SourceTeam'")) {
         $results.Add((New-SPCopyResult -ObjectType 'Team' -Name $DisplayName -Action 'Create' -Status 'WouldCopy' -Detail "$($extraChannels.Count) channel(s), $($owners.Count) owner(s), $($members.Count) member(s)"))
         foreach ($ch in $extraChannels) {
             $results.Add((New-SPCopyResult -ObjectType 'Channel' -Name $ch.DisplayName -Action 'Create' -Status 'WouldCopy' -Detail 'channel'))

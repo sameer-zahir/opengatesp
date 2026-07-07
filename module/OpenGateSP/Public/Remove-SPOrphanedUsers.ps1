@@ -31,7 +31,8 @@ function Remove-SPOrphanedUsers {
     $rows = [System.Collections.Generic.List[object]]::new()
     foreach ($o in $orphans) {
         $login = $o.LoginName
-        if (-not $Force -and -not $PSCmdlet.ShouldProcess($login, 'Remove user from site')) {
+        if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+        if (-not $PSCmdlet.ShouldProcess($login, 'Remove user from site')) {
             $rows.Add((New-SPCopyResult -ObjectType 'Item' -Name $login -Action 'Skip' -Status 'WouldCopy' -Detail "Would remove ($($o.Title))"))
             continue
         }

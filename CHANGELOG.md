@@ -4,6 +4,29 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased — 0.11.2]
+
+### Security
+- **`-Force` no longer bypasses `-WhatIf`.** In all 12 write cmdlets the `-Force` fast-path
+  skipped `ShouldProcess` entirely, so `-Force -WhatIf` (or a session-wide
+  `$WhatIfPreference = $true`) performed the real write while claiming a dry run. `-Force` now
+  only suppresses the confirmation prompt; `-WhatIf` always wins.
+- **Orphaned-user detection fails closed.** If the Entra directory snapshot came back empty
+  (most commonly a missing Microsoft Graph `User.Read.All` grant), every site user was flagged
+  as orphaned — and `Remove-SPOrphanedUsers -Force` would have deleted them all.
+  `Get-SPOrphanedUsers` now throws instead of proceeding with an empty directory.
+- **App / ACS / system principals are never flagged as orphaned.** Only Entra membership claims
+  and bare UPNs/emails are orphan candidates; `app@sharepoint`, ACS add-in and other
+  non-directory principals are skipped, so cleanup can no longer strip valid app grants
+  (Flow connections, add-ins).
+- **AI reply-gate hardened.** An armed write approval is now single-use (consumed on apply — no
+  replay) and expires after one turn (a key previewed in turn N is honored only in turn N+1),
+  and only a real boolean `execute` applies — the string `"false"` no longer counts as true.
+
+### Fixed
+- Regression tests for all of the above (`tests/Guardrails.Tests.ps1` plus new governance and
+  AI-gate cases).
+
 ## [0.11.1]
 
 ### Fixed

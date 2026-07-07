@@ -43,7 +43,8 @@ function Copy-SPM365Group {
     $results = [System.Collections.Generic.List[object]]::new()
     $detail  = "$($owners.Count) owner(s), $($members.Count) member(s)"
 
-    if (-not $Force -and -not $PSCmdlet.ShouldProcess($DisplayName, "Create M365 group from '$($srcGroup.DisplayName)'")) {
+    if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+    if (-not $PSCmdlet.ShouldProcess($DisplayName, "Create M365 group from '$($srcGroup.DisplayName)'")) {
         $results.Add((New-SPCopyResult -ObjectType 'M365Group' -Name $DisplayName -Action 'Create' -Status 'WouldCopy' -Detail $detail))
         return ($results | ConvertTo-SPOutput -AsJson:$AsJson)
     }

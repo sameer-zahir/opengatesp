@@ -72,7 +72,8 @@ function Copy-SPList {
     $plan = @(Get-SPCopyPlan -SourceObjects @($srcObj) -DestObjects $dstObjs -Mode $ConflictMode)
 
     # Dry-run: return the plan, write nothing.
-    if (-not $Force -and -not $PSCmdlet.ShouldProcess($DestinationUrl, "Copy $objType '$List' from $SourceUrl")) {
+    if ($Force) { $ConfirmPreference = 'None' }   # -Force skips the prompt; -WhatIf must still override
+    if (-not $PSCmdlet.ShouldProcess($DestinationUrl, "Copy $objType '$List' from $SourceUrl")) {
         Write-SPLog "Dry-run: $objType '$List' -> $($plan[0].Action)." -Level Success
         return ($plan | ConvertTo-SPOutput -AsJson:$AsJson)
     }
