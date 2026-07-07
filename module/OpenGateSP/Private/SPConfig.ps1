@@ -31,13 +31,25 @@ function Get-SPConfig {
     }
 }
 
+# Persist a whole config object (schema v2 aware) — the single writer for the file.
+function Save-SPConfigObject {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [object]$Config
+    )
+    $path = Get-SPConfigPath
+    $Config | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $path -Encoding utf8
+    Write-SPLog "Saved connection config to $path" -Level Debug
+    $path
+}
+
 function Set-SPConfig {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
         [hashtable]$Settings
     )
-    $path    = Get-SPConfigPath
     $current = Get-SPConfig
 
     $merged = @{}
@@ -46,7 +58,18 @@ function Set-SPConfig {
         if ($null -ne $Settings[$k] -and "$($Settings[$k])" -ne '') { $merged[$k] = $Settings[$k] }
     }
 
-    $merged | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $path -Encoding utf8
-    Write-SPLog "Saved connection defaults to $path" -Level Debug
-    $path
+    # Write-through to schema v2: the flat keys stay the active environment's projection
+    # (see SPEnvironments.ps1), so a legacy-style flat save must also land in
+    # Environments[ActiveEnvironment] or the two views would drift apart.
+    $obj = ConvertTo-SPEnvironmentsConfig -Config ([pscustomobject]$merged)
+    if ("$($obj.ActiveEnvironment)") {
+        $conn = @{}
+        foreach ($k in (Get-SPConnectionKey)) {
+            if ($merged.ContainsKey($k)) { $conn[$k] = $merged[$k] }
+        }
+        if ($conn.Count) {
+            $obj = Set-SPEnvironmentInConfig -Config $obj -Name $obj.ActiveEnvironment -Settings $conn
+        }
+    }
+    Save-SPConfigObject -Config $obj
 }
