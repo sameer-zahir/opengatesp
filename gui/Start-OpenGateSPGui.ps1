@@ -46,7 +46,7 @@ $boot.Dispose()
 $script:Busy       = $false
 $script:LastReport = @()
 $script:LastExplore = @()
-$script:AppVersion = try { [string](Import-PowerShellDataFile -LiteralPath $ModulePath).ModuleVersion } catch { '0.11.1' }
+$script:AppVersion = try { [string](Import-PowerShellDataFile -LiteralPath $ModulePath).ModuleVersion } catch { '0.12.0' }
 
 # --- load the window --------------------------------------------------------------------
 [xml]$xamlDoc = Get-Content -LiteralPath (Join-Path $here 'MainWindow.xaml') -Raw

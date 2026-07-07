@@ -4,7 +4,7 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased — 0.11.2]
+## [0.12.0]
 
 ### Security
 - **`-Force` no longer bypasses `-WhatIf`.** In all 12 write cmdlets the `-Force` fast-path
