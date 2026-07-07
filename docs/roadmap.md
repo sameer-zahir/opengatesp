@@ -19,6 +19,12 @@ The path toward ShareGate-style site migration, grounded in what PnP PowerShell 
 - Maybe later: **Box** import.
 
 ## Also planned
+- **Identity copy (Entra tenant-to-tenant)** — create user accounts, security groups, Microsoft 365
+  groups, and their memberships in a destination tenant, with a reviewable mapping CSV before
+  anything is created. OpenGateSP's answer to ShareGate's *Copy identities* (their Entra ID
+  Migration, launched June 2026). Today OpenGateSP **remaps** identities during copies (mapping
+  CSV / domain swap) and clones group/Team rosters; it does not yet **create** identities — this
+  needs Graph write scopes and live-tenant validation, so it ships as its own release.
 - **Full per-version history fidelity** via the SharePoint Migration API (today's `-IncludeVersions` is best-effort — content/order preserved, per-version author/date are not).
 - **Governance automation** — the detection shipped in 0.11.0; next are the *policies*: ownerless-group and inactive-workspace **auto-remediation**, and recurring **access-review campaigns** (owner attestation with tracked decisions).
 - **More provisioning templates**; **PowerShell Gallery** (`Install-Module OpenGateSP`).

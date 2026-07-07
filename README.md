@@ -5,89 +5,108 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![PowerShell 7.4+](https://img.shields.io/badge/PowerShell-7.4%2B-5391FE?logo=powershell&logoColor=white)
 
-> **The free, open-source [ShareGate](https://sharegate.com) alternative** for SharePoint Online and Microsoft 365 — **migrate** file shares into SharePoint, **pre-check** sources before you move them, **audit** permissions and external sharing, **provision** sites, and **schedule** governance reports. A polished Windows app with a **built-in AI assistant that runs on your own model** (bring your own Claude / OpenAI key, or a local Ollama / LM Studio), a PowerShell engine, and an MCP server. MIT-licensed.
+> **The free, open-source alternative to [ShareGate](https://sharegate.com)** for SharePoint Online
+> and Microsoft 365. Migrate file shares, copy sites and Teams, see who has access to what, clean
+> up the mess, and schedule the reports — with a built-in AI assistant that runs on **your own**
+> model. No tiers, no trials, no sales call.
 
-![OpenGateSP — themed SharePoint admin GUI](docs/screenshot-dark.png)
+![OpenGateSP — the home dashboard](docs/screenshot-dark.png)
 
-## Install
+## Download & install
 
-**Easiest — the installer.** [Download **`OpenGateSP-Setup.exe`**](https://github.com/sameer-zahir/opengatesp/releases/latest) and double-click it. It installs per-user (no admin), drops a **Start Menu + desktop shortcut**, and registers an uninstaller — like any normal app. First launch lets you **pick your theme**, signs you in with a **one-click guided setup** (it registers a free Entra app for you — no copy-pasting commands), and gives you a **quick tour**. Then you're in.
+1. **[Download `OpenGateSP-Setup.exe`](https://github.com/sameer-zahir/opengatesp/releases/latest)** and double-click it.
+2. If Windows shows a SmartScreen warning, click **More info → Run anyway**. (The app isn't
+   code-signed yet — free open-source signing via [SignPath](https://signpath.org/) is in
+   progress, and `winget install` is on the way.)
+3. That's it. It installs just for you (no admin rights needed). First launch lets you pick a
+   theme, signs you in to Microsoft 365 with a **one-click guided setup** — no copy-pasting
+   commands — and gives you a quick tour.
 
-**Portable — no install.** Prefer to keep it in a folder? Download the `.zip`, unzip, and run **`OpenGateSP.exe`** (or `Start-OpenGateSP.cmd`).
+Prefer no installer? Grab the `.zip` from the same page, unzip, and run `OpenGateSP.exe`.
+You'll need **Windows** and **PowerShell 7.4+** — the installer points you to it if it's missing.
 
-> Needs **Windows + PowerShell 7.4+** (the installer points you to it if it's missing). The build is currently *unsigned*, so Windows SmartScreen shows a one-time **"More info → Run anyway"** — free open-source signing (SignPath) is in progress to remove that, and `winget install` is on the way.
+## What can it do?
 
-## OpenGateSP vs ShareGate
+**Migrate a file share into SharePoint.** Point it at a folder, pick a library, preview exactly
+what will happen, then run it — folder structure and timestamps preserved. A pre-check catches
+what SharePoint would reject (too-long paths, illegal names, oversized files) *before* you move
+anything.
 
-ShareGate is a polished, expensive tool for work that ultimately comes down to SharePoint API calls anyone can script. OpenGateSP does that work with open PowerShell you can read and run yourself, for free. It's an independent project, built from scratch on [PnP PowerShell](https://pnp.github.io/powershell/) — not affiliated with ShareGate.
+**Copy sites, Teams & Groups.** Copy a site's lists, libraries, and content to another site — in
+your tenant or a different one. Clone a Team with its channels and members, a Microsoft 365
+Group, or a Planner plan. Bring permissions along, remapping people with a simple CSV.
+
+**See who has access to what.** External sharing, full permission reports, a who-can-touch-what
+matrix, "Everyone" oversharing, ownerless Groups, and people who left the company but still have
+access. Each is one click, and everything exports.
+
+**Clean up.** Check in files people left checked out, trim bloated version history, fix broken
+permission inheritance, remove stale users, archive dead sites. Everything previews first.
+
+**Schedule the reports.** Governance reports as CSVs on a daily or weekly schedule, no sign-in
+needed once set up.
+
+Every button in the app is also a PowerShell command you can read and script — the guides in
+[docs/](docs/) cover each area, start with the [quickstart](docs/03-quickstart.md).
+
+## The AI assistant
+
+![OpenGateSP — the AI assistant, with a change waiting for your Apply click](docs/screenshot-ai.png)
+
+Ask in plain English — *"who outside the company can see the Marketing site?"* — and the built-in
+assistant runs the right report and explains what it found. It uses **your own AI**: paste a
+Claude or OpenAI key you already have, or run a free local model (Ollama / LM Studio) so nothing
+ever leaves your machine.
+
+It can look, but it can't touch. The assistant is read-only until you flip a switch — and even
+then, every change shows a **preview card first**, and nothing happens until *you* click
+**Apply** on it. Your key is encrypted on this PC; nothing is bundled, so it all stays free.
+Details: [docs/13-ai-assistant.md](docs/13-ai-assistant.md).
+
+## How it compares to ShareGate
+
+ShareGate is a polished, expensive tool for work that comes down to SharePoint API calls anyone
+can script. OpenGateSP does that work in the open, for free. (It's an independent project built
+on [PnP PowerShell](https://pnp.github.io/powershell/) — not affiliated with ShareGate.)
 
 | | ShareGate | OpenGateSP |
 |---|---|---|
 | **Price** | thousands / year | **Free (MIT)** |
-| File share / folder → SharePoint migration | ✅ | ✅ |
-| Pre-migration readiness check | ✅ | ✅ |
+| File share → SharePoint migration | ✅ | ✅ |
+| Pre-migration check & source assessment | ✅ | ✅ |
 | Permissions & external-sharing audit | ✅ | ✅ |
-| Site provisioning + CSV bulk metadata | ✅ | ✅ |
-| Scheduled governance reports | ✅ | ✅ |
-| Source **Explore** / pre-migration assessment | ✅ | ✅ |
-| Post-migration validation (compare) | ✅ | ✅ |
 | Tenant-to-tenant, Teams, Groups & Planner | ✅ | ✅ |
-| Remediation (check-in, trim versions, fix inheritance) | ✅ | ✅ |
-| **In-app AI assistant** — ask in English, bring your own model | — | **✅** |
-| Drive it from your own AI app over MCP | — | **✅** |
+| Post-migration validation | ✅ | ✅ |
+| Cleanup: check-in, versions, inheritance | ✅ | ✅ |
+| Scheduled governance reports | ✅ | ✅ |
+| Site provisioning + CSV bulk metadata | ✅ | ✅ |
+| **Built-in AI assistant — your own model** | — | **✅** |
+| Drive it from your own AI app (MCP) | — | **✅** |
 | Open source you can read, fork, and own | — | **✅** |
+| Copy identities (Entra tenant-to-tenant) | ✅ | planned |
 | Full per-version history fidelity | ✅ | best-effort |
-| ShareGate Protect-style automated governance policies | ✅ | partial |
+| Automated governance policies | ✅ | partial |
 
-OpenGateSP covers the bulk of **ShareGate Migrate** — source **Explore**, same- and cross-tenant copy, post-migration validation, governance reporting, and remediation — plus an **in-app AI assistant no closed tool can match**. The honest gaps are real: full per-version history fidelity (best-effort here; it needs the SharePoint Migration API), and most of **ShareGate Protect**'s *automated* governance (always-on policies, access-review campaigns). OpenGateSP does the reporting and the manual remediation today, not yet the policy engine.
+The gaps are real and we say so: full version-history fidelity needs the SharePoint Migration
+API (best-effort here today), ShareGate Protect's *automated* policy engine is only partially
+covered (OpenGateSP does the reporting and the cleanup, not yet always-on policies), and
+ShareGate's new **Copy identities** (creating users and groups in a destination tenant) is on the
+[roadmap](docs/roadmap.md) — OpenGateSP currently remaps identities during a copy rather than
+creating them.
 
-## Built to feel like a product
+## Is it safe?
 
-Four themes — **pick yours on first run** (the warm **Gruvbox**, a confident **Tokyo Night Moon**, or clean Fluent **light / dark** from [Squintless](https://github.com/sameer-zahir/squintless)), change it any time. The UI has real **depth** — layered surfaces, soft shadows, smooth motion, and right-aligned tabular numbers — a **dashboard Home** with live KPI tiles and recent activity that survives restarts, navigation grouped by the migration runbook (**Migration · Activity · Governance**), and a foolproof, **preview-first** Copy wizard a first-timer can't get lost in. A **first-run tour** and an always-on **?** help button keep non-technical users oriented (power users reach for the MCP). The visual system is documented in [docs/design-system.md](docs/design-system.md).
+- **It can only do what you can do.** You sign in as yourself, and the tool can never exceed your
+  own SharePoint permissions.
+- **Nothing changes without a preview.** Writes are dry-run by default everywhere — the app, the
+  AI (locked until you click Apply), PowerShell (`-WhatIf`), and the MCP server. Still, test
+  against a throwaway site before production.
+- **Nothing to leak.** Sign-in uses your Microsoft account with no client secret, and AI keys are
+  encrypted on-device. Report vulnerabilities privately via [SECURITY.md](SECURITY.md).
 
-![OpenGateSP — the in-app AI assistant (bring your own model)](docs/screenshot-ai.png)
+## For power users
 
-![OpenGateSP light theme](docs/screenshot-light.png)
-
-## What it does
-
-| Area | Function | What it does |
-|---|---|---|
-| **Assistant** | In-app AI (bring your own model) | Ask in plain English — your own model (Claude / OpenAI / Ollama / LM Studio) runs the reports for you, summarizes them, and shows the exact PowerShell it ran. Read-only by default; optional write actions are **preview-first** behind a toggle. Key encrypted on-device ([docs/13](docs/13-ai-assistant.md)). |
-| **Migration** | `Test-SPMigrationReadiness` | Pre-flight a local folder for SharePoint blockers (illegal names, over-long paths, oversized/empty files). Local, read-only. |
-| | `Start-SPFileMigration` | Local file share / folder → SharePoint library, preserving structure + timestamps. Dry-run by default. |
-| | `Copy-SPSite` | Copy a site's structure (lists, libraries, columns, views) and optionally its content to another site in the **same tenant**. Dry-run by default ([docs/07](docs/07-sharepoint-migration.md)). |
-| | `Copy-SPPermissions` | Copy role assignments to another site, remapping users/groups via a mapping CSV or domain swap. Dry-run by default. |
-| | `Copy-SPSite -CrossTenant` | Copy a site to a **different tenant** (files by download/upload, principals remapped). With `New-SPMigrationConnection` + `Copy-SPTermGroup`. |
-| | `Compare-SPSite` | Post-migration validation — diff destination vs source (lists, item/file counts). |
-| **Explore** | `Invoke-SPExplore` | Read-only **source assessment**: checked-out files, large files, external sharing, orphaned users, workflows — graded Error/Warning. |
-| | `Get-SPCheckedOutFiles` · `Get-SPLargeFiles` · `Get-SPVersionHistoryReport` · `Get-SPInactiveSites` · `Get-SPContentInsights` · `Get-SPWorkflowReport` | The individual discovery reports behind Explore. |
-| **Remediation** | `Invoke-SPCheckIn` · `Clear-SPVersionHistory` · `Restore-SPInheritance` · `Remove-SPOrphanedUsers` | Fix what Explore finds. Dry-run by default ([docs/11](docs/11-remediation.md)). |
-| **Collaboration** | `Copy-SPM365Group` | Clone a Microsoft 365 Group (description + owner/member roster) |
-| | `Copy-SPTeam` | Clone a Team (channels + membership) |
-| | `Copy-SPPlannerPlan` | Recreate a Planner plan (buckets + tasks) on a group |
-| **Reporting** | `Get-SPSiteInventory` | Tenant-wide sites + storage + last activity |
-| | `Get-SPPermissionReport` | Who has access; where inheritance is broken |
-| | `Get-SPSharingReport` | External users and sharing links |
-| | `Get-SPPermissionsMatrix` | Per-principal access matrix — who can touch what |
-| | `Get-SPOrphanedUsers` | Users with access no longer in the directory (stale access) |
-| | `Find-SPEveryoneClaims` | Where "Everyone" / "Everyone except external users" has access — the biggest oversharing risk, graded Error/Warning |
-| | `Get-SPOwnerlessGroups` | Microsoft 365 Groups (and their Teams/sites) with no owner |
-| | `Invoke-SPGovernanceReview` | Consolidated governance review — broad-audience grants + external sharing + stale access in one severity-graded list ([docs/09](docs/09-governance.md)) |
-| | `Set-SPSiteLifecycle` | Lock / archive (read-only) / unlock a site |
-| **Provisioning** | `New-SPSiteFromTemplate` | Create a site or library from a template |
-| | `Set-SPBulkMetadata` | CSV-driven bulk column updates |
-| **Scheduled** | `Run-GovernanceReport.ps1` | Unattended sharing/permission CSVs on a daily/weekly task ([docs/06](docs/06-scheduled-reports.md)). |
-
-Same engine, three ways to use it: the **GUI**, the **PowerShell** module, or the **MCP server**.
-
-## AI-driven, two ways
-
-**In the app.** The **Assistant** tab runs on *your own* model — paste a Claude or OpenAI key, or point it at a local **Ollama / LM Studio** (no key, nothing leaves your machine). Ask *"show external sharing on /sites/Marketing"* and it runs the report, summarizes it, and shows the exact PowerShell it used — which you can copy. Your key is encrypted on-device, and nothing is bundled, so it stays free.
-
-**From your own AI app.** The [MCP server](mcp-server/) lets Claude / Codex / Gemini drive the same tools conversationally — *"preview migrating C:\Shares\HR into the HR site."* Write tools preview by default. Setup: [mcp-server/README.md](mcp-server/README.md).
-
-## Prefer the CLI?
+The same engine is a PowerShell module and an MCP server:
 
 ```powershell
 Install-Module PnP.PowerShell -Scope CurrentUser
@@ -97,21 +116,20 @@ Connect-SPTool -Url https://contoso.sharepoint.com -ClientId <id> -Tenant contos
 Get-SPSharingReport -SiteUrl https://contoso.sharepoint.com/sites/Marketing
 ```
 
-Full guide: [docs/03-quickstart.md](docs/03-quickstart.md) · setup: [docs/01](docs/01-prerequisites.md), [docs/02](docs/02-entra-app-registration.md), headless/scheduled: [docs/05](docs/05-app-only-auth.md).
+Setup guides: [prerequisites](docs/01-prerequisites.md), [app registration](docs/02-entra-app-registration.md),
+[headless/scheduled auth](docs/05-app-only-auth.md). To drive it from Claude, Codex, or Cursor,
+hook up the [MCP server](mcp-server/README.md) — write tools are preview-gated there too.
 
-## Code signing
+![OpenGateSP light theme](docs/screenshot-light.png)
 
-OpenGateSP has applied to the [SignPath Foundation](https://signpath.org/) OSS program — once approved, release installers will be code-signed for free by [SignPath.io](https://about.signpath.io/), certificate by the SignPath Foundation. Download releases from the [releases page](https://github.com/sameer-zahir/opengatesp/releases); security policy in [SECURITY.md](SECURITY.md).
-
-## Safety
-
-- **Delegated auth** — the tool can never exceed your own SharePoint permissions. **App-only certificate** auth ([docs/05](docs/05-app-only-auth.md)) for headless / scheduled runs.
-- **Write operations are cautious** — migration, bulk metadata, and provisioning support `-WhatIf`/`-Confirm` and the MCP tools preview by default. **Test against a throwaway site before production.**
-- No client secret in the default setup, so there's nothing secret to leak.
+Four themes, picked on first run, changeable any time.
 
 ## Roadmap
 
-The migration engine (Phases 1–7: same-tenant copy, permissions/identity mapping, tenant-to-tenant, Teams/Groups/Planner, governance, Explore + validation, remediation + fidelity), the polished GUI + installer (0.10.0), and the **AI assistant + Protect-style governance detection** (0.11.0) have shipped. Next: governance **auto-remediation policies** and access-review campaigns, full per-version history fidelity (Migration API), PowerShell Gallery publish. See [docs/roadmap.md](docs/roadmap.md) and [docs/TESTING.md](docs/TESTING.md).
+Next up: governance auto-remediation policies and access-review campaigns, **identity copy**
+(Entra tenant-to-tenant users/groups — ShareGate's "Copy identities"), full version-history
+fidelity via the Migration API, and PowerShell Gallery publishing. The full list, including what
+already shipped: [docs/roadmap.md](docs/roadmap.md).
 
 ## License
 
