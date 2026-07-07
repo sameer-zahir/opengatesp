@@ -51,7 +51,10 @@
         'Get-SPIdentityInventory',
         'New-SPIdentityMap',
         'Test-SPIdentityMap',
-        'Copy-SPIdentity'
+        'Copy-SPIdentity',
+        'Get-SPEnvironment',
+        'Remove-SPEnvironment',
+        'Disconnect-SPTool'
     )
     CmdletsToExport   = @()
     VariablesToExport = @()

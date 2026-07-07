@@ -18,6 +18,13 @@ function Connect-SPTool {
         Application (client) ID of your registered Entra ID app.
     .PARAMETER Tenant
         Tenant name, e.g. contoso.onmicrosoft.com.
+    .PARAMETER Environment
+        Connect to (or create) a NAMED ENVIRONMENT — a saved tenant connection profile.
+        An existing name loads its saved Url/ClientId/Tenant/auth mode (explicit parameters
+        override); a new name plus -ClientId creates it. Connecting to an environment always
+        saves/updates it and makes it the active one, so later plain Connect-SPTool calls
+        and silent reconnects follow the switch. List with Get-SPEnvironment; remove with
+        Remove-SPEnvironment. See docs/03.
     .PARAMETER Admin
         Connect to the SharePoint admin centre (needed for tenant-wide reports).
     .PARAMETER DeviceLogin
@@ -50,6 +57,12 @@ function Connect-SPTool {
     .EXAMPLE
         Connect-SPTool -Admin
         Reconnect to the admin centre using saved defaults.
+    .EXAMPLE
+        Connect-SPTool -Environment Contoso -Url https://contoso.sharepoint.com -ClientId 1111 -Tenant contoso.onmicrosoft.com
+        Save the connection as the named environment "Contoso" and make it active.
+    .EXAMPLE
+        Connect-SPTool -Environment Fabrikam
+        Switch to the saved "Fabrikam" environment (browser SSO signs you in).
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '',
         Justification = 'Certificate password is supplied at runtime via env var for headless auth; never persisted.')]
@@ -62,6 +75,8 @@ function Connect-SPTool {
         [string]$ClientId,
 
         [string]$Tenant,
+
+        [string]$Environment,
 
         [switch]$Admin,
 
@@ -81,6 +96,24 @@ function Connect-SPTool {
     )
 
     $cfg = Get-SPConfig
+    $envKey = $null
+    if ($Environment) {
+        $problems = @(Test-SPEnvironmentName -Name $Environment)
+        if ($problems.Count) { throw ($problems -join ' ') }
+        $v2 = ConvertTo-SPEnvironmentsConfig -Config $cfg
+        $envKey = Resolve-SPEnvironmentKey $v2.Environments $Environment
+        if ($envKey) {
+            $cfg = $v2.Environments.$envKey       # defaults come from the named environment
+        }
+        elseif ($ClientId) {
+            $envKey = $Environment.Trim()          # a new environment from explicit parameters
+            $cfg = [pscustomobject]@{}
+        }
+        else {
+            $known = @($v2.Environments.PSObject.Properties.Name)
+            throw "Unknown environment '$Environment' and no -ClientId to create it. Known environment(s): $(if ($known) { $known -join ', ' } else { '(none)' })."
+        }
+    }
     if (-not $ClientId) { $ClientId = $cfg.ClientId }
     if (-not $Tenant)   { $Tenant   = $cfg.Tenant }
     if (-not $Url)      { $Url      = $cfg.Url }
@@ -160,7 +193,7 @@ function Connect-SPTool {
     }
     $flow = if ($mode -ne 'Delegated') { $null } elseif ($fellBack) { 'Interactive' } else { $choice.Flow }
 
-    if ($SaveConfig) {
+    if ($SaveConfig -or $Environment) {
         $save = @{ Url = $baseUrl; ClientId = $ClientId; Tenant = $Tenant; AuthMode = $mode }
         if ($mode -eq 'AppOnly') {
             if ($Thumbprint)      { $save['Thumbprint']      = $Thumbprint }
@@ -173,7 +206,16 @@ function Connect-SPTool {
             $save['DelegatedFlow'] = $flow
             if ($PSBoundParameters.ContainsKey('PersistLogin')) { $save['PersistLogin'] = [bool]$PersistLogin }
         }
-        Set-SPConfig -Settings $save | Out-Null
+        if ($Environment) {
+            # Connecting to a named environment saves/updates it and makes it ACTIVE —
+            # the flat projection is rebuilt so every silent reconnect follows the switch.
+            $v2 = Set-SPEnvironmentInConfig -Config (Get-SPConfig) -Name $envKey -Settings $save -MakeActive
+            Save-SPConfigObject -Config $v2 | Out-Null
+            Write-SPLog "Environment '$envKey' saved and active." -Level Debug
+        }
+        else {
+            Set-SPConfig -Settings $save | Out-Null
+        }
     }
 
     $web = $null
@@ -182,14 +224,15 @@ function Connect-SPTool {
     Write-SPLog "Connected to $connectUrl" -Level Success
 
     [pscustomobject]@{
-        Url       = $connectUrl
-        Title     = $web.Title
-        ClientId  = $ClientId
-        Tenant    = $Tenant
-        Mode      = $mode
-        Flow      = $flow
-        FellBack  = $fellBack
-        Admin     = [bool]$Admin
-        Connected = $true
+        Url         = $connectUrl
+        Title       = $web.Title
+        ClientId    = $ClientId
+        Tenant      = $Tenant
+        Environment = $envKey
+        Mode        = $mode
+        Flow        = $flow
+        FellBack    = $fellBack
+        Admin       = [bool]$Admin
+        Connected   = $true
     }
 }

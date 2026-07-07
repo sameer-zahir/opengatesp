@@ -7,8 +7,12 @@
 BeforeAll {
     $priv = Join-Path $PSScriptRoot '..\module\OpenGateSP\Private'
     . (Join-Path $priv 'Write-SPLog.ps1')
+    . (Join-Path $priv 'ConvertTo-SPOutput.ps1')
     . (Join-Path $priv 'SPEnvironments.ps1')
     . (Join-Path $priv 'SPConfig.ps1')
+    $pub = Join-Path $PSScriptRoot '..\module\OpenGateSP\Public'
+    . (Join-Path $pub 'Get-SPEnvironment.ps1')
+    . (Join-Path $pub 'Remove-SPEnvironment.ps1')
 
     function New-V1Config {
         [pscustomobject]@{
@@ -200,5 +204,43 @@ Describe 'Set-SPConfig write-through (file I/O)' {
         $saved = Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw | ConvertFrom-Json
         $saved.Url | Should -Be 'https://contoso.sharepoint.com/sites/new'
         $saved.Environments.contoso.Url | Should -Be 'https://contoso.sharepoint.com/sites/new'
+    }
+}
+
+Describe 'Get-SPEnvironment / Remove-SPEnvironment (cmdlets)' {
+    BeforeEach {
+        Mock Get-SPConfigPath { Join-Path $TestDrive 'spconfig.json' }
+        New-V1Config | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $TestDrive 'spconfig.json') -Encoding utf8
+    }
+
+    It 'Get-SPEnvironment lists a v1 file as one active environment' {
+        $rows = @(Get-SPEnvironment)
+        $rows.Count | Should -Be 1
+        $rows[0].Name | Should -Be 'contoso'
+        $rows[0].Active | Should -BeTrue
+    }
+    It 'Get-SPEnvironment -Name filters case-insensitively' {
+        @(Get-SPEnvironment -Name 'CONTOSO').Count | Should -Be 1
+        @(Get-SPEnvironment -Name 'nope').Count | Should -Be 0
+    }
+    It 'Remove-SPEnvironment -WhatIf reports WouldRemove and writes nothing' {
+        $before = Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw
+        $r = Remove-SPEnvironment -Name 'contoso' -WhatIf
+        $r.Status | Should -Be 'WouldRemove'
+        Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw | Should -Be $before
+    }
+    It 'Remove-SPEnvironment -Force -WhatIf still does not write (-WhatIf always wins)' {
+        $before = Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw
+        (Remove-SPEnvironment -Name 'contoso' -Force -WhatIf).Status | Should -Be 'WouldRemove'
+        Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw | Should -Be $before
+    }
+    It 'Remove-SPEnvironment -Force removes the environment and persists v2' {
+        (Remove-SPEnvironment -Name 'contoso' -Force).Status | Should -Be 'Removed'
+        $saved = Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw | ConvertFrom-Json
+        @($saved.Environments.PSObject.Properties).Count | Should -Be 0
+        $saved.PSObject.Properties['ClientId'] | Should -BeNullOrEmpty   # was active -> projection cleared
+    }
+    It 'Remove-SPEnvironment throws on an unknown name even under -WhatIf' {
+        { Remove-SPEnvironment -Name 'nope' -WhatIf } | Should -Throw '*Unknown environment*'
     }
 }

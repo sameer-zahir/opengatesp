@@ -76,6 +76,14 @@ function Invoke-EngineCommand {
             $script:Connected = $true
             return $r
         }
+        'disconnect' {
+            $r = Disconnect-SPTool @Params
+            $script:Connected = $false
+            return $r
+        }
+        # Named environments — local config only, no tenant call, so no Confirm-Connected.
+        'environment.list'   { return (Get-SPEnvironment @Params) }
+        'environment.remove' { return (Remove-SPEnvironment @Params -Confirm:$false) }
         'report.sharing'     { Confirm-Connected; return (Get-SPSharingReport @Params) }
         'report.permissions' { Confirm-Connected; return (Get-SPPermissionReport @Params) }
         'report.inventory'   { Confirm-Connected; return (Get-SPSiteInventory @Params) }

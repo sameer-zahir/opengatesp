@@ -6,6 +6,7 @@
 BeforeAll {
     $mod = Join-Path $PSScriptRoot '..\module\OpenGateSP'
     . (Join-Path $mod 'Private\Write-SPLog.ps1')
+    . (Join-Path $mod 'Private\ConvertTo-SPOutput.ps1')
     . (Join-Path $mod 'Private\Get-SPHttpStatusCode.ps1')
     . (Join-Path $mod 'Private\Get-SPRetryDelay.ps1')
     . (Join-Path $mod 'Private\Invoke-SPRetry.ps1')
@@ -13,6 +14,7 @@ BeforeAll {
     . (Join-Path $mod 'Private\SPConfig.ps1')
     . (Join-Path $mod 'Private\Resolve-SPAuthChoice.ps1')
     . (Join-Path $mod 'Public\Connect-SPTool.ps1')
+    . (Join-Path $mod 'Public\Disconnect-SPTool.ps1')
 
     # PnP stand-ins: record every call; OSLogin fails when the test arms $script:BrokerFails.
     function Connect-PnPOnline {
@@ -34,6 +36,16 @@ BeforeAll {
         if ($ReturnConnection) { [pscustomobject]@{ Url = $Url } }
     }
     function Get-PnPWeb { [CmdletBinding()] param() [pscustomobject]@{ Title = 'Stub Web' } }
+    function Get-PnPConnection {
+        [CmdletBinding()] param()
+        if (-not $script:PnPConnected) { throw 'No connection.' }
+        [pscustomobject]@{ Url = 'https://stub' }
+    }
+    function Disconnect-PnPOnline {
+        [CmdletBinding()] param([switch]$ClearPersistedLogin)
+        $script:DisconnectCalls.Add([pscustomobject]@{ ClearPersistedLogin = [bool]$ClearPersistedLogin })
+        $script:PnPConnected = $false
+    }
 }
 
 Describe 'Connect-SPTool auth flavors' {
@@ -123,5 +135,78 @@ Describe 'Connect-SPTool auth flavors' {
         $script:ConnectCalls[0].Thumbprint | Should -Be 'ABC'
         $script:ConnectCalls[0].Interactive | Should -BeFalse
         $script:ConnectCalls[0].PersistLogin | Should -BeFalse
+    }
+}
+
+Describe 'Connect-SPTool -Environment (named profiles)' {
+    BeforeEach {
+        $script:ConnectCalls = [System.Collections.Generic.List[object]]::new()
+        $script:BrokerFails = $false
+        $script:ConnectFailsWith = $null
+        Mock Get-SPConfigPath { Join-Path $TestDrive 'spconfig.json' }
+    }
+
+    It 'creates, saves, and activates a named environment on connect (no -SaveConfig needed)' {
+        $r = Connect-SPTool -Environment 'Contoso' -Url 'https://contoso.sharepoint.com' -ClientId 'cid' -Tenant 'contoso.onmicrosoft.com'
+        $r.Environment | Should -Be 'Contoso'
+        $saved = Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw | ConvertFrom-Json
+        $saved.ActiveEnvironment | Should -Be 'Contoso'
+        $saved.Environments.Contoso.ClientId | Should -Be 'cid'
+        $saved.ClientId | Should -Be 'cid'   # flat projection follows
+    }
+
+    It 'switching environments reconnects with the target auth and rebuilds the projection (no stale Thumbprint)' {
+        Connect-SPTool -Environment 'Contoso' -Url 'https://contoso.sharepoint.com' -ClientId 'cid' -Tenant 'contoso.onmicrosoft.com' | Out-Null
+        Connect-SPTool -Environment 'Fabrikam' -Url 'https://fabrikam.sharepoint.com' -ClientId 'fid' -Tenant 'fabrikam.onmicrosoft.com' -Thumbprint 'FAB1' | Out-Null
+        $script:ConnectCalls.Clear()
+
+        $r = Connect-SPTool -Environment 'contoso'   # case-insensitive switch back
+        $r.Environment | Should -BeExactly 'Contoso'
+        $script:ConnectCalls[0].ClientId | Should -Be 'cid'
+        $script:ConnectCalls[0].Interactive | Should -BeTrue
+        $script:ConnectCalls[0].Thumbprint | Should -BeNullOrEmpty
+
+        $saved = Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw | ConvertFrom-Json
+        $saved.ActiveEnvironment | Should -Be 'Contoso'
+        $saved.PSObject.Properties['Thumbprint'] | Should -BeNullOrEmpty   # projection rebuilt wholesale
+        $saved.Environments.Fabrikam.Thumbprint | Should -Be 'FAB1'        # the other env keeps its cert
+    }
+
+    It 'throws on an unknown environment without -ClientId, listing the known ones' {
+        Connect-SPTool -Environment 'Contoso' -Url 'https://contoso.sharepoint.com' -ClientId 'cid' -Tenant 'contoso.onmicrosoft.com' | Out-Null
+        { Connect-SPTool -Environment 'nope' } | Should -Throw '*Contoso*'
+    }
+
+    It 'explicit parameters override the environment defaults and are saved back' {
+        Connect-SPTool -Environment 'Contoso' -Url 'https://contoso.sharepoint.com' -ClientId 'cid' -Tenant 'contoso.onmicrosoft.com' | Out-Null
+        $script:ConnectCalls.Clear()
+        Connect-SPTool -Environment 'Contoso' -Url 'https://contoso.sharepoint.com/sites/hub' | Out-Null
+        $script:ConnectCalls[0].Url | Should -Be 'https://contoso.sharepoint.com/sites/hub'
+        (Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw | ConvertFrom-Json).Environments.Contoso.Url |
+            Should -Be 'https://contoso.sharepoint.com/sites/hub'
+    }
+}
+
+Describe 'Disconnect-SPTool' {
+    BeforeEach {
+        $script:DisconnectCalls = [System.Collections.Generic.List[object]]::new()
+        $script:PnPConnected = $true
+    }
+
+    It 'disconnects and forwards -ClearPersistedLogin' {
+        $r = Disconnect-SPTool -ClearPersistedLogin
+        $r.Disconnected | Should -BeTrue
+        $r.ClearedPersistedLogin | Should -BeTrue
+        $script:DisconnectCalls[0].ClearPersistedLogin | Should -BeTrue
+    }
+    It 'keeps the persisted cache unless asked' {
+        (Disconnect-SPTool).ClearedPersistedLogin | Should -BeFalse
+        $script:DisconnectCalls[0].ClearPersistedLogin | Should -BeFalse
+    }
+    It 'is a friendly no-op when not connected' {
+        $script:PnPConnected = $false
+        $r = Disconnect-SPTool -ClearPersistedLogin
+        $r.Disconnected | Should -BeFalse
+        $script:DisconnectCalls.Count | Should -Be 0
     }
 }

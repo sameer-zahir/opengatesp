@@ -40,6 +40,13 @@ server.tool(
 );
 
 server.tool(
+  "sharepoint_environments",
+  "List the saved OpenGateSP environments (named tenant connection profiles) and which one is active. Local config only; does not call SharePoint. Switch or add environments with Connect-SPTool -Environment (CLI) or the GUI's Environments page.",
+  {},
+  async () => run("environment.list", {}),
+);
+
+server.tool(
   "sharepoint_external_sharing_report",
   "List external/guest users (and optionally sharing links) on a SharePoint site.",
   {
