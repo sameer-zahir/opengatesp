@@ -9,7 +9,9 @@
     PowerShellVersion = '7.4'
 
     # PnP.PowerShell is the SharePoint engine. Installed separately (see docs/01).
-    RequiredModules   = @('PnP.PowerShell')
+    # 2.12.0 floor: -PersistLogin / Disconnect-PnPOnline -ClearPersistedLogin shipped there
+    # (the same 2024-09-09 release that made your own ClientId mandatory).
+    RequiredModules   = @(@{ ModuleName = 'PnP.PowerShell'; ModuleVersion = '2.12.0' })
 
     FunctionsToExport = @(
         'Connect-SPTool',

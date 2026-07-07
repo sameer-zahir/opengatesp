@@ -22,6 +22,16 @@ function Connect-SPTool {
         Connect to the SharePoint admin centre (needed for tenant-wide reports).
     .PARAMETER DeviceLogin
         Delegated device-code flow instead of an interactive browser window.
+    .PARAMETER OSLogin
+        Delegated Windows-native sign-in via the OS broker (WAM): Windows Hello, FIDO keys,
+        conditional-access device auth — no browser. Requires the Entra app to have the
+        broker redirect URI (see docs/02); falls back to the browser automatically if the
+        broker sign-in fails. Windows only.
+    .PARAMETER PersistLogin
+        Keep the sign-in across PowerShell sessions and reboots (PnP token cache) — sign in
+        once, reconnect silently afterwards. Opt-in; clear it with
+        Disconnect-SPTool -ClearPersistedLogin. Saved with -SaveConfig
+        (-PersistLogin:$false turns a saved opt-in off).
     .PARAMETER Thumbprint
         App-only auth using a certificate (by thumbprint) from the certificate store.
     .PARAMETER CertificatePath
@@ -57,6 +67,10 @@ function Connect-SPTool {
 
         [switch]$DeviceLogin,
 
+        [switch]$OSLogin,
+
+        [switch]$PersistLogin,
+
         [string]$Thumbprint,
 
         [string]$CertificatePath,
@@ -87,13 +101,15 @@ function Connect-SPTool {
     $baseUrl    = $Url -replace '-admin\.sharepoint\.com', '.sharepoint.com'
     $connectUrl = if ($Admin) { $baseUrl -replace '\.sharepoint\.com', '-admin.sharepoint.com' } else { $Url }
 
-    # App-only if cert args are given, or if no delegated flag is set and saved mode is AppOnly.
-    $useAppOnly = [bool]($Thumbprint -or $CertificatePath -or (-not $DeviceLogin -and $cfg.AuthMode -eq 'AppOnly'))
+    # Auth mode + delegated flavor: explicit switches beat saved config; any delegated
+    # switch overrides a saved AuthMode=AppOnly. Pure helper, unit-tested.
+    $choice = Resolve-SPAuthChoice -Cfg $cfg -Thumbprint $Thumbprint -CertificatePath $CertificatePath `
+        -DeviceLogin:$DeviceLogin -OSLogin:$OSLogin
 
     $p = @{ Url = $connectUrl; ClientId = $ClientId }
     if ($Tenant) { $p['Tenant'] = $Tenant }
 
-    if ($useAppOnly) {
+    if ($choice.Mode -eq 'AppOnly') {
         $tp = if ($Thumbprint)      { $Thumbprint }      else { $cfg.Thumbprint }
         $cp = if ($CertificatePath) { $CertificatePath } else { $cfg.CertificatePath }
         if ($tp) {
@@ -114,18 +130,48 @@ function Connect-SPTool {
         $mode = 'AppOnly'
     }
     else {
-        if ($DeviceLogin) { $p['DeviceLogin'] = $true } else { $p['Interactive'] = $true }
+        switch ($choice.Flow) {
+            'DeviceLogin' { $p['DeviceLogin'] = $true }
+            'OSLogin'     { $p['OSLogin'] = $true }
+            default       { $p['Interactive'] = $true }
+        }
+        # Opt-in "stay signed in": an explicit switch wins; otherwise the saved opt-in. PnP
+        # only needs it once, but re-passing is harmless and restores the choice on a new machine.
+        $persist = if ($PSBoundParameters.ContainsKey('PersistLogin')) { [bool]$PersistLogin } else { [bool]$cfg.PersistLogin }
+        if ($persist) { $p['PersistLogin'] = $true }
         $mode = 'Delegated'
     }
 
-    Write-SPLog "Connecting to $connectUrl ($mode) ..."
-    Invoke-SPRetry -Operation 'connect' { Connect-PnPOnline @p }
+    Write-SPLog "Connecting to $connectUrl ($mode$(if ($choice.Flow) { "/$($choice.Flow)" })) ..."
+    $fellBack = $false
+    try {
+        Invoke-SPRetry -Operation 'connect' { Connect-PnPOnline @p }
+    }
+    catch {
+        # Windows-broker sign-in can fail when the app registration lacks the broker
+        # redirect URI (or the user cancels the native prompt) — fall back to the browser
+        # rather than dead-ending; the browser flow needs no extra app setup.
+        if (-not $p.ContainsKey('OSLogin')) { throw }
+        Write-SPLog "Windows sign-in (broker) failed: $($_.Exception.Message). Falling back to browser sign-in - to enable Windows sign-in, add the broker redirect URI to your app (docs/02)." -Level Warn
+        $p.Remove('OSLogin')
+        $p['Interactive'] = $true
+        $fellBack = $true
+        Invoke-SPRetry -Operation 'connect (browser fallback)' { Connect-PnPOnline @p }
+    }
+    $flow = if ($mode -ne 'Delegated') { $null } elseif ($fellBack) { 'Interactive' } else { $choice.Flow }
 
     if ($SaveConfig) {
         $save = @{ Url = $baseUrl; ClientId = $ClientId; Tenant = $Tenant; AuthMode = $mode }
         if ($mode -eq 'AppOnly') {
             if ($Thumbprint)      { $save['Thumbprint']      = $Thumbprint }
             if ($CertificatePath) { $save['CertificatePath'] = $CertificatePath }
+        }
+        else {
+            # Persist the flavor so plain Connect-SPTool (and every silent reconnect via
+            # Get-SPConnectParams) reuses it. After a broker fallback, save the flow that
+            # actually worked. PersistLogin is only written when explicitly chosen.
+            $save['DelegatedFlow'] = $flow
+            if ($PSBoundParameters.ContainsKey('PersistLogin')) { $save['PersistLogin'] = [bool]$PersistLogin }
         }
         Set-SPConfig -Settings $save | Out-Null
     }
@@ -141,6 +187,8 @@ function Connect-SPTool {
         ClientId  = $ClientId
         Tenant    = $Tenant
         Mode      = $mode
+        Flow      = $flow
+        FellBack  = $fellBack
         Admin     = [bool]$Admin
         Connected = $true
     }

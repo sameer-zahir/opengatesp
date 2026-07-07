@@ -39,7 +39,15 @@ function Get-SPConnectParams {
         }
     }
     else {
-        $p['Interactive'] = $true
+        # Honor the saved delegated flavor — previously device-code users were silently
+        # switched to Interactive on every reconnect. PersistLogin is never re-passed here:
+        # PnP needs it once; silent reconnects just reuse the cache. A saved OSLogin flavor
+        # downgrades to the browser off-Windows (config copied from a Windows box).
+        switch ("$($cfg.DelegatedFlow)") {
+            'DeviceLogin' { $p['DeviceLogin'] = $true }
+            'OSLogin'     { if ($IsWindows) { $p['OSLogin'] = $true } else { $p['Interactive'] = $true } }
+            default       { $p['Interactive'] = $true }
+        }
     }
 
     return $p
