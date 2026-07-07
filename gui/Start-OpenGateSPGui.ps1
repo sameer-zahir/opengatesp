@@ -30,6 +30,12 @@ if (Test-Path -LiteralPath $schedHelper) { . $schedHelper }
 . (Join-Path $here 'Common.ps1')
 # Motion primitives (reduced-motion aware). See ~/.claude/design-playbook.md.
 . (Join-Path $here 'Motion.ps1')
+# Module config helpers on the UI thread for local reads (environment list, prefill) and the
+# onboarding save. Connects and everything that talks to SharePoint still run in the worker.
+$modPriv = Join-Path (Split-Path $ModulePath -Parent) 'Private'
+. (Join-Path $modPriv 'Write-SPLog.ps1')
+. (Join-Path $modPriv 'SPEnvironments.ps1')
+. (Join-Path $modPriv 'SPConfig.ps1')
 
 # --- background worker runspace: holds the module + PnP connection ----------------------
 $script:Worker = [runspacefactory]::CreateRunspace()
@@ -684,6 +690,119 @@ function Show-Toast([string]$Type, [string]$Title, [string]$Message) {
     catch { }
 }
 
+# --- Environments manager (ShareGate-style saved tenant connections) ---------------------
+function Get-GuiEnvironment {
+    try { @(Get-SPEnvironmentsFromConfig -Config (Get-SPConfig)) } catch { @() }
+}
+
+# Prefill the add/edit form from one environment row.
+function Set-EnvForm($Row) {
+    if (-not $Row) { return }
+    $script:TbEnvName.Text = "$($Row.Name)"
+    $script:TbUrl.Text = "$($Row.Url)"
+    $script:TbClientId.Text = "$($Row.ClientId)"
+    $script:TbTenant.Text = "$($Row.Tenant)"
+    $script:CbDevice.IsChecked = ("$($Row.DelegatedFlow)" -eq 'DeviceLogin')
+    $script:CbOSLogin.IsChecked = ("$($Row.DelegatedFlow)" -eq 'OSLogin')
+    $script:CbKeepSignedIn.IsChecked = [bool]$Row.PersistLogin
+}
+
+# Shared connect completion: pill, settings summary, toasts, list refresh.
+function Complete-GuiConnect($result, $err) {
+    if ($err) {
+        $script:ConnStatus.Text = 'Not connected'
+        $script:ConnDot.Fill = $window.FindResource('Danger')
+        Set-Status "Connect failed: $err"
+        Show-Toast 'error' 'Connect failed' $err
+        return
+    }
+    $r = @($result)[0]
+    $label = if ("$($r.Environment)") { $r.Environment } else { $r.Url }
+    $script:ConnStatus.Text = "Connected: $label"
+    $script:SetConnSummary.Text = "Connected to $($r.Url)"
+    $script:ConnDot.Fill = $window.FindResource('Good')
+    $script:IsConnected = $true; $script:DashLoaded = $false
+    if ($r.FellBack) {
+        Show-Toast 'warn' 'Signed in with the browser instead' 'Windows sign-in needs a one-time app change - see the app registration guide (docs/02, Windows-native sign-in).'
+    }
+    Set-Status 'Connected.'
+    Update-EnvList
+}
+
+# Rebuild the saved-environments list. Rows carry their environment row object on .Tag,
+# so handlers need no captured loop variables (same pattern as Invoke-Worker's timer).
+function Update-EnvList {
+    if (-not $script:EnvList) { return }
+    $script:EnvList.Children.Clear()
+    $rows = @(Get-GuiEnvironment)
+    $script:EnvListEmpty.Visibility = if ($rows.Count) { [System.Windows.Visibility]::Collapsed } else { [System.Windows.Visibility]::Visible }
+    foreach ($row in $rows) {
+        $chip = if ("$($row.AuthMode)" -eq 'AppOnly') { 'App-only' }
+                elseif ("$($row.DelegatedFlow)" -eq 'DeviceLogin') { 'Device code' }
+                elseif ("$($row.DelegatedFlow)" -eq 'OSLogin') { 'Windows' }
+                else { 'Browser' }
+        if ($row.PersistLogin) { $chip += ' · stays signed in' }
+        $x = @"
+<Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        CornerRadius="8" Margin="2" Padding="10,8" Background="Transparent" Cursor="Hand">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+      <Border x:Name="EnvActivePill" CornerRadius="8" Background="{DynamicResource Good}" Padding="7,2" Margin="0,0,6,0" VerticalAlignment="Center">
+        <TextBlock Text="Active" FontSize="11" Foreground="White"/>
+      </Border>
+      <Button x:Name="EnvRowConnect" Content="Connect" Style="{DynamicResource GhostButton}"/>
+      <Button x:Name="EnvRowRemove" Content="Remove" Style="{DynamicResource GhostButton}" Margin="6,0,0,0"/>
+    </StackPanel>
+    <StackPanel VerticalAlignment="Center">
+      <TextBlock x:Name="EnvRowName" FontWeight="SemiBold" Foreground="{DynamicResource Fg}"/>
+      <TextBlock x:Name="EnvRowDetail" FontSize="12" Foreground="{DynamicResource FgMute}"/>
+    </StackPanel>
+  </DockPanel>
+</Border>
+"@
+        try {
+            $b = [Windows.Markup.XamlReader]::Parse($x)
+            $b.FindName('EnvRowName').Text = "$($row.Name)"
+            $b.FindName('EnvRowDetail').Text = "$(if ("$($row.Tenant)") { "$($row.Tenant) · " })$chip"
+            if ($row.Active) {
+                $b.FindName('EnvRowConnect').Visibility = [System.Windows.Visibility]::Collapsed
+            }
+            else {
+                $b.FindName('EnvActivePill').Visibility = [System.Windows.Visibility]::Collapsed
+            }
+            $b.Tag = $row
+            $b.Add_MouseLeftButtonUp({ Set-EnvForm $args[0].Tag })   # click a row -> edit it
+
+            $connectBtn = $b.FindName('EnvRowConnect')
+            $connectBtn.Tag = "$($row.Name)"
+            $connectBtn.Add_Click({
+                $name = $args[0].Tag
+                $script:ConnStatus.Text = 'Connecting...'
+                Invoke-Worker -Command 'Connect-SPTool' -Parameters @{ Environment = $name } -OnDone {
+                    param($result, $err)
+                    Complete-GuiConnect $result $err
+                }
+            })
+
+            $removeBtn = $b.FindName('EnvRowRemove')
+            $removeBtn.Tag = "$($row.Name)"
+            $removeBtn.Add_Click({
+                $name = $args[0].Tag
+                if (-not (Confirm-Action "Remove the saved environment '$name'? This only deletes the saved profile - nothing in the tenant changes.")) { return }
+                Invoke-Worker -Command 'Remove-SPEnvironment' -Parameters @{ Name = $name; Force = $true } -OnDone {
+                    param($result, $err)
+                    if ($err) { Show-Toast 'error' 'Remove failed' $err }
+                    else { Show-Toast 'ok' "Environment '$(@($result)[0].Name)' removed" }
+                    Update-EnvList
+                }
+            })
+
+            $script:EnvList.Children.Add($b) | Out-Null
+        }
+        catch { }
+    }
+}
+
 function Show-Onboarding {
     # First run: one-click, in-app Entra app registration. "Sign in to your tenant" runs
     # Register-PnPEntraIDAppForInteractiveLogin in the worker runspace (interactive browser consent),
@@ -787,11 +906,18 @@ function Show-Onboarding {
 
         $script:OnbSave = {
             param($cid, $tenant)
-            $dir = Join-Path $env:APPDATA 'OpenGateSP'
-            if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-            @{ ClientId = $cid; Tenant = $tenant } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $dir 'spconfig.json') -Encoding utf8
+            # Merge through the module's config helpers — the old raw overwrite clobbered an
+            # existing config (dropping AuthMode/Url/Thumbprint) instead of updating it.
+            try {
+                $envName = if ($tenant) { ($tenant -split '\.')[0] } else { 'Default' }
+                $cfg = Set-SPEnvironmentInConfig -Config (Get-SPConfig) -Name $envName `
+                    -Settings @{ ClientId = $cid; Tenant = $tenant } -MakeActive
+                Save-SPConfigObject -Config $cfg | Out-Null
+                if (-not $script:TbEnvName.Text.Trim()) { $script:TbEnvName.Text = $envName }
+            } catch { }
             $script:TbClientId.Text = $cid
             if ($tenant) { $script:TbTenant.Text = $tenant }
+            Update-EnvList
         }
 
         $cmdText = "Register-PnPEntraIDAppForInteractiveLogin -ApplicationName 'OpenGateSP' -Tenant <you>.onmicrosoft.com"
@@ -935,24 +1061,31 @@ function Invoke-Worker {
     $timer.Start()
 }
 
-# --- prefill connection fields from saved config ----------------------------------------
-$cfgPath = Join-Path $env:APPDATA 'OpenGateSP\spconfig.json'
-if (Test-Path -LiteralPath $cfgPath) {
-    try {
-        $cfg = Get-Content -LiteralPath $cfgPath -Raw | ConvertFrom-Json
-        if ($cfg.Url)      { $script:TbUrl.Text      = $cfg.Url }
-        if ($cfg.ClientId) { $script:TbClientId.Text = $cfg.ClientId }
-        if ($cfg.Tenant)   { $script:TbTenant.Text   = $cfg.Tenant }
-    } catch { }
-}
+# --- prefill the environment form from the active environment ----------------------------
+try {
+    Set-EnvForm (@(Get-GuiEnvironment) | Where-Object Active | Select-Object -First 1)
+} catch { }
+Update-EnvList
 
-# --- Connect ----------------------------------------------------------------------------
+# Device-code and Windows sign-in are mutually exclusive flavors of delegated auth.
+$script:CbDevice.Add_Checked({ $script:CbOSLogin.IsChecked = $false })
+$script:CbOSLogin.Add_Checked({ $script:CbDevice.IsChecked = $false })
+
+# --- Connect & save (creates/updates the named environment and makes it active) ----------
 $script:BtnConnect.Add_Click({
     $p = @{ ClientId = $script:TbClientId.Text.Trim(); SaveConfig = $true }
     if ($script:TbTenant.Text.Trim()) { $p.Tenant = $script:TbTenant.Text.Trim() }
     if ($script:TbUrl.Text.Trim())    { $p.Url    = $script:TbUrl.Text.Trim() }
     if ($script:CbAdmin.IsChecked)    { $p.Admin       = $true }
     if ($script:CbDevice.IsChecked)   { $p.DeviceLogin = $true }
+    if ($script:CbOSLogin.IsChecked)  { $p.OSLogin     = $true }
+    # The checkbox is authoritative on connect & save: checked opts in, unchecked turns a
+    # previously saved opt-in off.
+    $p.PersistLogin = [bool]$script:CbKeepSignedIn.IsChecked
+    $envName = $script:TbEnvName.Text.Trim()
+    if (-not $envName -and $script:TbTenant.Text.Trim()) { $envName = ($script:TbTenant.Text.Trim() -split '\.')[0] }
+    if ($envName) { $p.Environment = $envName }
+
     $problems = Test-SPConnectInput -ClientId $script:TbClientId.Text -Tenant $script:TbTenant.Text -Url $script:TbUrl.Text
     if ($problems.Count) {
         Set-Status $problems[0]
@@ -963,18 +1096,27 @@ $script:BtnConnect.Add_Click({
     $script:ConnStatus.Text = 'Connecting...'
     Invoke-Worker -Command 'Connect-SPTool' -Parameters $p -OnDone {
         param($result, $err)
-        if ($err) {
-            $script:ConnStatus.Text = 'Not connected'
-            $script:ConnDot.Fill = $window.FindResource('Danger')
-            Set-Status "Connect failed: $err"
-        } else {
-            $r = @($result)[0]
-            $script:ConnStatus.Text = "Connected: $($r.Url)"
-            $script:SetConnSummary.Text = "Connected to $($r.Url)"
-            $script:ConnDot.Fill = $window.FindResource('Good')
-            $script:IsConnected = $true; $script:DashLoaded = $false
-            Set-Status 'Connected.'
-        }
+        Complete-GuiConnect $result $err
+    }
+})
+
+# --- Sign out (clears persistence only when this environment opted into it) --------------
+$script:BtnEnvSignOut.Add_Click({
+    $active = @(Get-GuiEnvironment) | Where-Object Active | Select-Object -First 1
+    $clear = [bool]($active -and $active.PersistLogin)
+    $msg = if ($clear) { 'Sign out and clear the saved sign-in on this device? The next connect will prompt again.' }
+           else { 'Sign out of the current session?' }
+    if (-not (Confirm-Action $msg)) { return }
+    Invoke-Worker -Command 'Disconnect-SPTool' -Parameters @{ ClearPersistedLogin = $clear } -OnDone {
+        param($result, $err)
+        if ($err) { Show-Toast 'error' 'Sign out failed' $err; return }
+        $script:IsConnected = $false
+        $script:ConnStatus.Text = 'Not connected'
+        $script:ConnDot.Fill = $window.FindResource('Warn')
+        $script:SetConnSummary.Text = 'Not connected'
+        Set-Status 'Signed out.'
+        $cleared = [bool](@($result)[0].ClearedPersistedLogin)
+        Show-Toast 'ok' 'Signed out' $(if ($cleared) { 'Saved sign-in cleared - the next connect will prompt.' } else { 'Session closed.' })
     }
 })
 
@@ -1545,7 +1687,7 @@ $script:ViewMap = [ordered]@{
     PreCheck = $script:ViewPreCheck; Provision = $script:ViewProvision; Reports = $script:ViewReports
     Tasks = $script:ViewTasks; Scheduled = $script:ViewScheduled; Settings = $script:ViewSettings
 }
-$script:CrumbMap = @{ Home = 'Home'; AI = 'Assistant'; Connect = 'Connect'; Explore = 'Explore'; CopyLanding = 'Copy'; CopyWizard = 'Copy'; Migrate = 'Import file share'; Collab = 'Teams & Groups'; PreCheck = 'Pre-check'; Provision = 'Provisioning'; Reports = 'Security'; Tasks = 'Tasks'; Scheduled = 'Scheduled'; Settings = 'Settings' }
+$script:CrumbMap = @{ Home = 'Home'; AI = 'Assistant'; Connect = 'Environments'; Explore = 'Explore'; CopyLanding = 'Copy'; CopyWizard = 'Copy'; Migrate = 'Import file share'; Collab = 'Teams & Groups'; PreCheck = 'Pre-check'; Provision = 'Provisioning'; Reports = 'Security'; Tasks = 'Tasks'; Scheduled = 'Scheduled'; Settings = 'Settings' }
 $script:GroupMap = @{ Home = 'Migration'; AI = 'Assistant'; Connect = 'Setup'; Explore = 'Migration'; CopyLanding = 'Migration'; CopyWizard = 'Migration'; Migrate = 'Migration'; Collab = 'Migration'; PreCheck = 'Migration'; Provision = 'Governance'; Reports = 'Migration'; Tasks = 'Activity'; Scheduled = 'Activity'; Settings = 'Setup' }
 
 function Show-View([string]$name) {

@@ -62,7 +62,7 @@
                 <DockPanel Margin="12,16">
                     <StackPanel DockPanel.Dock="Bottom">
                         <RadioButton x:Name="NavConnect" GroupName="Nav" Style="{DynamicResource NavButton}">
-                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE774;"/><TextBlock Text="Connect" VerticalAlignment="Center"/></StackPanel>
+                            <StackPanel Orientation="Horizontal"><TextBlock Style="{DynamicResource NavIcon}" Text="&#xE774;"/><TextBlock Text="Environments" VerticalAlignment="Center"/></StackPanel>
                         </RadioButton>
                         <TextBlock Text="PowerShell · MCP · GUI" FontFamily="Consolas" FontSize="11"
                                    Foreground="{DynamicResource FgMute}" Margin="14,12,0,2"/>
@@ -189,41 +189,77 @@
                         </WrapPanel>
                 </StackPanel>
 
-                <!-- CONNECT -->
-                <Grid x:Name="ViewConnect" Margin="28,26" Visibility="Collapsed">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="150"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <!-- ENVIRONMENTS (saved tenant connections; view keeps its historical x:Name) -->
+                <DockPanel x:Name="ViewConnect" Margin="28,26" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Text="Connect to your environments" Style="{DynamicResource Section}" Margin="0,0,0,4"/>
+                    <TextBlock DockPanel.Dock="Top" Style="{DynamicResource Muted}" Margin="0,0,0,16" TextWrapping="Wrap"
+                               Text="An environment is a saved tenant connection. Connect to one to make it active — reports, copies and the dashboard all run against the active environment."/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="360"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Connect to SharePoint" Style="{DynamicResource Section}" Margin="0,0,0,12"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbUrl" AutomationProperties.Name="Site URL"/>
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Client ID" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TbClientId" AutomationProperties.Name="Application (client) ID"/>
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Tenant" VerticalAlignment="Center"/>
-                    <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbTenant" AutomationProperties.Name="Tenant"/>
+                        <!-- Saved environments -->
+                        <DockPanel Grid.Column="0">
+                            <TextBlock DockPanel.Dock="Top" Text="Saved environments" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <Border CornerRadius="12" Background="{DynamicResource BgElev}" BorderBrush="{DynamicResource Border}"
+                                    BorderThickness="1" Padding="6" VerticalAlignment="Top">
+                                <Grid>
+                                    <StackPanel x:Name="EnvList"/>
+                                    <TextBlock x:Name="EnvListEmpty" Style="{DynamicResource Muted}" Margin="10,8" TextWrapping="Wrap"
+                                               Text="No environments yet — add your first tenant on the right."/>
+                                </Grid>
+                            </Border>
+                        </DockPanel>
 
-                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
-                        <CheckBox x:Name="CbAdmin"  Content="Admin centre (tenant-wide)"/>
-                        <CheckBox x:Name="CbDevice" Content="Device-code sign-in"/>
-                    </StackPanel>
+                        <!-- Add / edit + sign-in options -->
+                        <Grid Grid.Column="1" Margin="24,0,0,0" VerticalAlignment="Top">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
-                        <Button x:Name="BtnConnect" Content="Connect"/>
-                        <TextBlock Text="First time? The welcome screen's one-click sign-in sets this up. Saved defaults load automatically."
-                                   Style="{DynamicResource Muted}" Margin="6,0,0,0"/>
-                    </StackPanel>
-                </Grid>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Add or edit an environment" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Name" VerticalAlignment="Center"/>
+                            <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TbEnvName" AutomationProperties.Name="Environment name"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Site URL" VerticalAlignment="Center"/>
+                            <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TbUrl" AutomationProperties.Name="Site URL"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Client ID" VerticalAlignment="Center"/>
+                            <TextBox   Grid.Row="3" Grid.Column="1" x:Name="TbClientId" AutomationProperties.Name="Application (client) ID"/>
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Tenant" VerticalAlignment="Center"/>
+                            <TextBox   Grid.Row="4" Grid.Column="1" x:Name="TbTenant" AutomationProperties.Name="Tenant"/>
+
+                            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
+                                <CheckBox x:Name="CbAdmin"  Content="Admin centre (tenant-wide)"/>
+                                <CheckBox x:Name="CbDevice" Content="Device-code sign-in"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
+                                <CheckBox x:Name="CbOSLogin" Content="Sign in with Windows (no browser)"
+                                          ToolTip="Windows Hello / your Windows account. Needs a one-time app change (see the guide) — falls back to the browser automatically."/>
+                                <CheckBox x:Name="CbKeepSignedIn" Content="Keep me signed in"
+                                          ToolTip="Stay signed in across restarts on this device. Off = this session only. Sign out clears it."/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Margin="0,4,0,0">
+                                <Button x:Name="BtnConnect" Content="Connect &amp; save"/>
+                                <Button x:Name="BtnEnvSignOut" Content="Sign out" Style="{DynamicResource GhostButton}" Margin="8,0,0,0"/>
+                                <TextBlock Text="Connecting saves this environment and makes it active. Your browser signs you in (SSO)."
+                                           Style="{DynamicResource Muted}" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="300"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </DockPanel>
 
                 <!-- MIGRATE -->
                 <DockPanel x:Name="ViewMigrate" Margin="28,26" Visibility="Collapsed">
