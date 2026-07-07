@@ -47,3 +47,24 @@ Describe 'Test-SPConnectInput' {
         (Test-SPConnectInput -ClientId $G -Url 'http://example.com') -join "`n" | Should -Match 'Site URL'
     }
 }
+
+Describe 'Get-SPDeviceCodeFromText' {
+    It 'parses the standard MSAL device-code message' {
+        $r = Get-SPDeviceCodeFromText 'To sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code CN2KLBQWZ to authenticate.'
+        $r.Code | Should -Be 'CN2KLBQWZ'
+        $r.Url | Should -Be 'https://microsoft.com/devicelogin'
+    }
+    It 'parses a hyphenated code and the aka.ms URL variant' {
+        $r = Get-SPDeviceCodeFromText 'To sign in, use a web browser to open the page https://www.microsoft.com/link and enter the code ABCD-EFGH to authenticate.'
+        $r.Code | Should -Be 'ABCD-EFGH'
+    }
+    It 'falls back to a loose code + devicelogin-URL scan when the wording differs' {
+        $r = Get-SPDeviceCodeFromText 'Sign in at https://microsoft.com/devicelogin. Use code H4XR2PLM9 when asked.'
+        $r.Code | Should -Be 'H4XR2PLM9'
+        $r.Url | Should -Be 'https://microsoft.com/devicelogin'
+    }
+    It 'returns null for unrelated text and empty input' {
+        Get-SPDeviceCodeFromText 'Connecting to https://contoso.sharepoint.com ...' | Should -BeNullOrEmpty
+        Get-SPDeviceCodeFromText '' | Should -BeNullOrEmpty
+    }
+}

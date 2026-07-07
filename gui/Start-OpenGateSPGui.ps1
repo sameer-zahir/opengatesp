@@ -803,6 +803,51 @@ function Update-EnvList {
     }
 }
 
+# --- Device-code sign-in dialog -----------------------------------------------------------
+# PnP's device-code prompt lands in the worker's output streams, which used to vanish; the
+# Invoke-Worker timer now mirrors those streams and pops this dialog when the code appears.
+function Show-DeviceCodeDialog($DeviceCode) {
+    if ($script:DeviceCodeWindow) { return }
+    $x = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Device-code sign-in" Width="440" SizeToContent="Height" WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{DynamicResource Bg}" TextElement.Foreground="{DynamicResource Fg}" TextElement.FontFamily="Segoe UI" TextElement.FontSize="14">
+  <StackPanel Margin="26">
+    <TextBlock Text="Finish signing in" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource Fg}"/>
+    <TextBlock TextWrapping="Wrap" Margin="0,6,0,14" Foreground="{DynamicResource FgMute}"
+               Text="Open the sign-in page and enter this code. This window closes by itself once you're signed in."/>
+    <TextBox x:Name="DcCode" IsReadOnly="True" FontFamily="Consolas" FontSize="26" FontWeight="Bold"
+             TextAlignment="Center" Padding="10" AutomationProperties.Name="Device code"/>
+    <StackPanel Orientation="Horizontal" Margin="0,14,0,0" HorizontalAlignment="Center">
+      <Button x:Name="DcCopy" Content="Copy code"/>
+      <Button x:Name="DcOpen" Content="Open sign-in page" Margin="10,0,0,0"/>
+    </StackPanel>
+  </StackPanel>
+</Window>
+'@
+    try {
+        $w = [Windows.Markup.XamlReader]::Parse($x)
+        $w.Resources.MergedDictionaries.Add($script:Controls)
+        if ($script:ThemeDict) { $w.Resources.MergedDictionaries.Add($script:ThemeDict) }
+        $w.Owner = $window
+        $w.Tag = "$($DeviceCode.Url)"
+        $w.FindName('DcCode').Text = "$($DeviceCode.Code)"
+        $w.FindName('DcCopy').Add_Click({ try { [System.Windows.Clipboard]::SetText($script:DeviceCodeWindow.FindName('DcCode').Text) } catch { } })
+        $w.FindName('DcOpen').Add_Click({ try { Start-Process "$($script:DeviceCodeWindow.Tag)" } catch { } })
+        $w.Add_Closed({ $script:DeviceCodeWindow = $null })
+        $script:DeviceCodeWindow = $w
+        $w.Show()   # modeless — the sign-in keeps running in the worker
+    }
+    catch { }
+}
+
+function Close-DeviceCodeDialog {
+    if ($script:DeviceCodeWindow) {
+        try { $script:DeviceCodeWindow.Close() } catch { }
+        $script:DeviceCodeWindow = $null
+    }
+}
+
 function Show-Onboarding {
     # First run: one-click, in-app Entra app registration. "Sign in to your tenant" runs
     # Register-PnPEntraIDAppForInteractiveLogin in the worker runspace (interactive browser consent),
@@ -1040,10 +1085,29 @@ function Invoke-Worker {
     $timer = New-Object System.Windows.Threading.DispatcherTimer
     $timer.Interval = [TimeSpan]::FromMilliseconds(250)
     # Carry state on .Tag so the Tick handler needs no captured variables.
-    $timer.Tag = @{ Ps = $ps; Handle = $handle; OnDone = $OnDone; Command = $Command }
+    $timer.Tag = @{ Ps = $ps; Handle = $handle; OnDone = $OnDone; Command = $Command; InfoSeen = 0; WarnSeen = 0 }
     $timer.Add_Tick({
         $tmr = $args[0]
         $st  = $tmr.Tag
+        # Mirror new information/warning records while the operation runs — PnP's device-code
+        # prompt arrives here (Write-Host lands in the Information stream), and without this
+        # the code the user must type never reaches the UI.
+        try {
+            while ($st.InfoSeen -lt $st.Ps.Streams.Information.Count) {
+                $line = "$($st.Ps.Streams.Information[$st.InfoSeen])"; $st.InfoSeen++
+                if (-not $line) { continue }
+                Set-Status $line
+                $dc = Get-SPDeviceCodeFromText $line
+                if ($dc) { Show-DeviceCodeDialog $dc }
+            }
+            while ($st.WarnSeen -lt $st.Ps.Streams.Warning.Count) {
+                $line = "$($st.Ps.Streams.Warning[$st.WarnSeen])"; $st.WarnSeen++
+                if (-not $line) { continue }
+                Set-Status $line
+                $dc = Get-SPDeviceCodeFromText $line
+                if ($dc) { Show-DeviceCodeDialog $dc }
+            }
+        } catch { }
         if (-not $st.Handle.IsCompleted) { return }
         $tmr.Stop()
 
@@ -1056,6 +1120,7 @@ function Invoke-Worker {
         $st.Ps.Dispose()
         $script:Busy = $false
         if ($script:BusyBar) { $script:BusyBar.Visibility = [System.Windows.Visibility]::Collapsed }
+        Close-DeviceCodeDialog   # sign-in finished (or failed) — the code is no longer needed
         & $st.OnDone $result $err
     })
     $timer.Start()

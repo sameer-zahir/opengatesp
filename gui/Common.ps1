@@ -43,6 +43,35 @@ function Get-SPAppIdFromResult {
     return $null
 }
 
+function Get-SPDeviceCodeFromText {
+    <#
+    .SYNOPSIS
+        Pull the device-code sign-in instructions (code + verification URL) out of a stream
+        line, so the GUI can show them in a dialog instead of losing them in the worker's
+        output streams.
+    .DESCRIPTION
+        MSAL's message reads: "To sign in, use a web browser to open the page
+        https://microsoft.com/devicelogin and enter the code XXXXXXXXX to authenticate."
+        Wording varies slightly across versions, so a looser code+devicelogin-URL scan backs
+        up the exact shape. Returns @{ Code; Url } or $null.
+    #>
+    param([string]$Text)
+
+    if ([string]::IsNullOrWhiteSpace($Text)) { return $null }
+
+    $m = [regex]::Match($Text, '(?i)open the page\s+(?<url>https?://\S+?)\s+and enter the code\s+(?<code>[A-Z0-9-]+)')
+    if ($m.Success) {
+        return @{ Code = $m.Groups['code'].Value; Url = $m.Groups['url'].Value.TrimEnd('.', ',') }
+    }
+
+    $url = [regex]::Match($Text, '(?i)(?<url>https?://\S*devicelogin\S*)')
+    $code = [regex]::Match($Text, '(?i)\bcode\s+(?<code>[A-Z0-9]{6,}(?:-[A-Z0-9]{2,})*)\b')
+    if ($url.Success -and $code.Success) {
+        return @{ Code = $code.Groups['code'].Value; Url = $url.Groups['url'].Value.TrimEnd('.', ',') }
+    }
+    return $null
+}
+
 function Test-SPConnectInput {
     <#
     .SYNOPSIS
