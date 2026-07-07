@@ -46,11 +46,12 @@ Write actions follow a strict, code-enforced **preview-first contract** — the 
 Copy wizard's *Run is locked until you Preview*:
 
 1. Every write runs as a **preview** first. Nothing changes; you see exactly what *would* happen.
-2. The assistant shows you the preview and stops — the apply is **locked until you reply**.
-3. Only in a later message can the same action run for real — and only if it matches the previewed
-   one exactly. A changed detail (different site, different folder), or an attempt to apply in the
-   same breath as the preview, is forced back to a preview. This is enforced in code, not left to
-   the model's manners.
+2. The preview card shows an **Apply** button — and clicking it is the **only** way to approve the
+   change. Saying "yes, go ahead" in chat does nothing; the change stays locked.
+3. One click applies exactly what was previewed. A changed detail (different site, different
+   folder) is forced back to a new preview, an approval is **single-use** (no replay), and an
+   unused approval expires after the next turn. This is enforced in code, not left to the model's
+   manners.
 
 With the toggle **off**, the model never even sees the write tools — the assistant is strictly
 read-only.
@@ -58,14 +59,16 @@ read-only.
 **Why so strict?** Everything the assistant reads from your tenant — file names, group names,
 sharing labels — is treated as **untrusted input**: a maliciously named item could try to talk the
 model into something you didn't ask for (prompt injection). The off-by-default toggle, the
-schema-filtered tool arguments, and the reply-gated preview contract mean that even a fully misled
-model cannot change anything without you seeing the plan and answering it.
+schema-filtered tool arguments, and the Apply-button gate mean that even a fully misled model
+cannot change anything — only your click on the preview card can.
 
 ## Prefer your own AI app?
 
 **Add to Claude Desktop** (on the AI page) registers OpenGateSP's [MCP server](../mcp-server/README.md)
 in Claude Desktop, so you can drive the same tools from there — or from Codex, Cursor, or any MCP
-client. The MCP server exposes the full tool surface, including the copy/migration tools.
+client. The MCP server exposes the full tool surface, including the copy/migration tools, and
+enforces its own preview-first gate: `execute:true` is only honored after the identical call was
+previewed in that session, and approvals are single-use.
 
 ## Troubleshooting
 

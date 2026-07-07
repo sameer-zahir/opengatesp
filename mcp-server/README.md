@@ -7,7 +7,11 @@ protocol — so there's no duplicated SharePoint logic.
 
 ## Tools
 
-Write tools default to a `-WhatIf` preview — an agent must pass `execute: true` to change anything.
+Write tools are **preview-first, enforced server-side**: every write defaults to a `-WhatIf`
+preview, and `execute: true` is only honored after the **identical call** (same tool, same
+arguments) was previewed earlier in the same session — otherwise it runs as another preview and
+the result says so. Approvals are single-use: applying consumes the preview, so a repeat apply
+needs a fresh preview. Even an MCP client configured to auto-approve tools can't one-shot a write.
 
 **Status & reports (read-only)**
 
@@ -115,6 +119,10 @@ Then ask: *"Use OpenGateSP to show external sharing on https://contoso.sharepoin
 - **Headless:** configure app-only certificate auth ([docs/05](../docs/05-app-only-auth.md)) and
   the server needs no sign-in at all.
 - **Delegated** — the agent can never exceed your own SharePoint permissions.
+- **Writes are preview-gated in the engine host** (not just in tool descriptions): an apply that
+  wasn't previewed in this session is downgraded to a preview, and approvals are single-use. Still,
+  don't blanket-auto-approve OpenGateSP's write tools in your MCP client — reviewing the preview is
+  the point.
 - Engine host output is silenced (`OPENGATESP_QUIET`) so logging can't corrupt the protocol.
 - Override the PowerShell executable with the `OPENGATESP_PWSH` environment variable if needed.
 

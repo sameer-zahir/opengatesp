@@ -7,8 +7,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 // dist/engine.js or src/engine.ts -> the host script lives one level up.
 const HOST_SCRIPT = join(here, "..", "engine-host.ps1");
 
+/** One engine response: the result rows plus whether the write gate downgraded the call to a preview. */
+export interface EngineResult {
+  data: unknown;
+  downgraded: boolean;
+}
+
 interface Pending {
-  resolve: (value: unknown) => void;
+  resolve: (value: EngineResult) => void;
   reject: (err: Error) => void;
 }
 
@@ -59,7 +65,7 @@ export class EngineHost {
         const p = this.pending.get(id);
         if (!p) return;
         this.pending.delete(id);
-        if (msg.ok) p.resolve(msg.data);
+        if (msg.ok) p.resolve({ data: msg.data, downgraded: msg.downgraded === true });
         else p.reject(new Error((msg.error as string) || "engine error"));
       });
 
@@ -75,11 +81,11 @@ export class EngineHost {
     return this.ready;
   }
 
-  /** Run an engine command and resolve with its parsed data (an array of result objects). */
-  async call(command: string, params: Record<string, unknown> = {}): Promise<unknown> {
+  /** Run an engine command and resolve with its parsed data plus the write-gate downgrade flag. */
+  async call(command: string, params: Record<string, unknown> = {}): Promise<EngineResult> {
     await this.start();
     const id = `r${++this.seq}`;
-    return new Promise<unknown>((resolve, reject) => {
+    return new Promise<EngineResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
       this.proc!.stdin.write(`${JSON.stringify({ id, command, params })}\n`);
     });

@@ -25,8 +25,23 @@ if (-not $ModulePath) {
     $ModulePath = Join-Path (Split-Path $PSScriptRoot -Parent) 'module\OpenGateSP\OpenGateSP.psd1'
 }
 Import-Module $ModulePath -Force
+# Shared write-safety helpers (Get-SPWriteKey / Resolve-SPGatedWrite) — the same file the GUI AI uses.
+. (Join-Path (Split-Path $PSScriptRoot -Parent) 'gui\ai\ToolCatalog.ps1')
 
 $script:Connected = $false
+
+# Preview-first gate for write commands (mirrors the GUI's Apply-button gate): an apply call —
+# execute=true, already resolved to -Force (or, for noForce cmdlets, to "no -WhatIf") by the MCP
+# layer — is only honored when the identical call (same command + args minus safety flags) was
+# previewed earlier in this session; otherwise it is downgraded to a -WhatIf preview and the
+# response is marked downgraded. Approvals are single-use.
+$script:PreviewedWrites = [System.Collections.Generic.HashSet[string]]::new()
+$script:WriteCommands = @(
+    'site.lifecycle', 'remediate.checkin', 'remediate.versions', 'remediate.inheritance',
+    'remediate.orphans', 'migrate.files', 'copy.site', 'copy.permissions', 'copy.site.crosstenant',
+    'copy.termgroup', 'copy.m365group', 'copy.team', 'copy.planner', 'copy.list',
+    'provision.site', 'bulk.metadata'
+)
 
 function Confirm-Connected {
     if ($script:Connected) { return }
@@ -131,9 +146,17 @@ while ($null -ne ($line = [Console]::In.ReadLine())) {
         if ($req.PSObject.Properties.Name -contains 'params' -and $req.params) {
             foreach ($prop in $req.params.PSObject.Properties) { $params[$prop.Name] = $prop.Value }
         }
+        # Preview-first gate: write applies only go through when this exact call was previewed.
+        $gate = $null
+        if ($req.command -in $script:WriteCommands) {
+            $gate = Resolve-SPGatedWrite -Command $req.command -Params $params -Previewed $script:PreviewedWrites
+            $params = $gate.Params
+        }
         # Suppress warning/verbose/debug/information streams; keep only pipeline output.
         $data = Invoke-EngineCommand -Command $req.command -Params $params 3>$null 4>$null 5>$null 6>$null
+        if ($gate -and $gate.WasPreview) { [void]$script:PreviewedWrites.Add($gate.Key) }   # arm only after a successful preview
         $resp = [ordered]@{ id = $id; ok = $true; data = @($data) }
+        if ($gate -and $gate.Downgraded) { $resp['downgraded'] = $true }
         [Console]::Out.WriteLine(($resp | ConvertTo-Json -Depth 8 -Compress))
     }
     catch {

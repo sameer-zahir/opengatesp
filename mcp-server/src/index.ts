@@ -12,13 +12,20 @@ type ToolResult = {
   isError?: boolean;
 };
 
-function ok(data: unknown): ToolResult {
-  return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+function ok(data: unknown, downgraded = false): ToolResult {
+  const text = JSON.stringify(data, null, 2);
+  if (!downgraded) return { content: [{ type: "text", text }] };
+  const note =
+    "PREVIEW ONLY — writes are preview-first and this exact call had not been previewed in this session, " +
+    "so it ran as a preview instead (nothing was changed). The identical call is now approved: " +
+    "call the tool again with execute:true to apply.";
+  return { content: [{ type: "text", text: `${note}\n\n${text}` }] };
 }
 
 async function run(command: string, params: Record<string, unknown>): Promise<ToolResult> {
   try {
-    return ok(await engine.call(command, params));
+    const res = await engine.call(command, params);
+    return ok(res.data, res.downgraded);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
@@ -210,7 +217,7 @@ server.tool(
 
 server.tool(
   "sharepoint_set_site_lifecycle",
-  "Lock, make read-only (archive), or unlock a site. Requires SharePoint admin. Dry-run by default; execute=true to apply.",
+  "Lock, make read-only (archive), or unlock a site. Requires SharePoint admin. Dry-run by default; execute=true applies (honored only after the identical call was previewed in this session).",
   {
     siteUrl: z.string().url(),
     lockState: z.enum(["Unlock", "ReadOnly", "NoAccess"]).describe("ReadOnly archives; NoAccess fully locks; Unlock restores."),
@@ -226,7 +233,7 @@ server.tool(
 
 server.tool(
   "sharepoint_check_in_files",
-  "Bulk check-in files left checked out in a site's document libraries (clears a migration blocker). Dry-run by default; execute=true to apply.",
+  "Bulk check-in files left checked out in a site's document libraries (clears a migration blocker). Dry-run by default; execute=true applies (honored only after the identical call was previewed in this session).",
   {
     siteUrl: z.string().url(),
     library: z.string().optional().describe("Limit to one library (default: all document libraries)."),
@@ -243,7 +250,7 @@ server.tool(
 
 server.tool(
   "sharepoint_clear_version_history",
-  "Trim a file's version history, keeping the newest N historical versions (the current version is never touched). Dry-run by default; execute=true to delete.",
+  "Trim a file's version history, keeping the newest N historical versions (the current version is never touched). Dry-run by default; execute=true deletes (honored only after the identical call was previewed in this session).",
   {
     siteUrl: z.string().url(),
     fileUrl: z.string().describe("Server-relative file URL, e.g. /sites/Marketing/Shared Documents/big.pptx"),
@@ -261,7 +268,7 @@ server.tool(
 
 server.tool(
   "sharepoint_restore_inheritance",
-  "Restore permission inheritance on a list/library (or a single item via itemId) that has broken inheritance. Dry-run by default; execute=true to apply.",
+  "Restore permission inheritance on a list/library (or a single item via itemId) that has broken inheritance. Dry-run by default; execute=true applies (honored only after the identical call was previewed in this session).",
   {
     siteUrl: z.string().url(),
     list: z.string(),
@@ -279,7 +286,7 @@ server.tool(
 
 server.tool(
   "sharepoint_remove_orphaned_users",
-  "Remove users with site access who no longer exist in the directory (stale-access cleanup). Needs Graph User.Read.All. Dry-run by default; execute=true to remove.",
+  "Remove users with site access who no longer exist in the directory (stale-access cleanup). Needs Graph User.Read.All. Dry-run by default; execute=true removes (honored only after the identical call was previewed in this session).",
   {
     siteUrl: z.string().url(),
     execute: z.boolean().optional(),
@@ -294,7 +301,7 @@ server.tool(
 
 server.tool(
   "sharepoint_migrate_files",
-  "Migrate a local folder into a SharePoint library. Previews (-WhatIf) by default; set execute=true to actually upload.",
+  "Migrate a local folder into a SharePoint library. Previews (-WhatIf) by default; execute=true uploads (honored only after the identical call was previewed in this session).",
   {
     source: z.string().describe("Local folder path, e.g. C:\\Shares\\Marketing"),
     siteUrl: z.string().url(),
@@ -338,7 +345,7 @@ server.tool(
 
 server.tool(
   "sharepoint_copy_site",
-  "Copy a SharePoint site's structure (and optionally its content) to another site in the SAME tenant — the open 'copy structure and content'. Previews a dry-run plan by default; set execute=true to perform the copy. Same-tenant only in this release.",
+  "Copy a SharePoint site's structure (and optionally its content) to another site in the SAME tenant — the open 'copy structure and content'. Previews a dry-run plan by default; execute=true performs the copy (honored only after the identical call was previewed in this session). Same-tenant only in this release.",
   {
     sourceUrl: z.string().url(),
     destinationUrl: z.string().url(),
@@ -372,7 +379,7 @@ server.tool(
 
 server.tool(
   "sharepoint_copy_permissions",
-  "Copy a site's role assignments to another site, remapping users/groups via a Source,Destination mapping CSV and/or a domain swap. Same-tenant or tenant-to-tenant. Previews a dry-run plan by default (and flags unmapped principals); set execute=true to apply.",
+  "Copy a site's role assignments to another site, remapping users/groups via a Source,Destination mapping CSV and/or a domain swap. Same-tenant or tenant-to-tenant. Previews a dry-run plan by default (and flags unmapped principals); execute=true applies (honored only after the identical call was previewed in this session).",
   {
     sourceUrl: z.string().url(),
     destinationUrl: z.string().url(),
@@ -396,7 +403,7 @@ server.tool(
 
 server.tool(
   "sharepoint_copy_site_cross_tenant",
-  "Copy a site between DIFFERENT tenants (Phase 3): structure via provisioning template, library files by download/upload, optional principal remap. The server opens an app-only connection per tenant, so a certificate thumbprint registered in each tenant is required (headless). Dry-run by default; execute=true to perform the copy.",
+  "Copy a site between DIFFERENT tenants (Phase 3): structure via provisioning template, library files by download/upload, optional principal remap. The server opens an app-only connection per tenant, so a certificate thumbprint registered in each tenant is required (headless). Dry-run by default; execute=true performs the copy (honored only after the identical call was previewed in this session).",
   {
     sourceUrl: z.string().url(),
     sourceClientId: z.string().describe("Entra app (client) id registered in the SOURCE tenant."),
@@ -429,7 +436,7 @@ server.tool(
 
 server.tool(
   "sharepoint_copy_term_group",
-  "Copy a managed-metadata term group between tenants via XML export/import — run it before a cross-tenant content copy so managed-metadata columns have terms to bind to on the destination. Like sharepoint_copy_site_cross_tenant, the server opens an app-only connection per tenant (certificate thumbprint registered in each). Dry-run by default; execute=true to import.",
+  "Copy a managed-metadata term group between tenants via XML export/import — run it before a cross-tenant content copy so managed-metadata columns have terms to bind to on the destination. Like sharepoint_copy_site_cross_tenant, the server opens an app-only connection per tenant (certificate thumbprint registered in each). Dry-run by default; execute=true imports (honored only after the identical call was previewed in this session).",
   {
     termGroup: z.string().describe("Term group name to copy, e.g. Corporate Taxonomy."),
     sourceUrl: z.string().url(),
@@ -456,7 +463,7 @@ server.tool(
 
 server.tool(
   "sharepoint_copy_m365_group",
-  "Create a new Microsoft 365 Group modelled on an existing one (description + owner/member roster). Dry-run by default; execute=true to create. Needs Graph Group.ReadWrite.All.",
+  "Create a new Microsoft 365 Group modelled on an existing one (description + owner/member roster). Dry-run by default; execute=true creates (honored only after the identical call was previewed in this session). Needs Graph Group.ReadWrite.All.",
   {
     sourceIdentity: z.string().describe("Source group id or display name."),
     displayName: z.string().describe("Display name for the new group."),
@@ -473,7 +480,7 @@ server.tool(
 
 server.tool(
   "sharepoint_copy_team",
-  "Create a new Microsoft Teams team modelled on an existing one (channels + owner/member roster; tabs/messages not copied). Dry-run by default; execute=true to create.",
+  "Create a new Microsoft Teams team modelled on an existing one (channels + owner/member roster; tabs/messages not copied). Dry-run by default; execute=true creates (honored only after the identical call was previewed in this session).",
   {
     sourceTeam: z.string().describe("Source team group id or display name."),
     displayName: z.string().describe("Display name for the new team."),
@@ -490,7 +497,7 @@ server.tool(
 
 server.tool(
   "sharepoint_copy_planner_plan",
-  "Recreate a Planner plan (buckets + tasks) on a destination Microsoft 365 Group. Assignments/attachments not copied. Dry-run by default; execute=true to create.",
+  "Recreate a Planner plan (buckets + tasks) on a destination Microsoft 365 Group. Assignments/attachments not copied. Dry-run by default; execute=true creates (honored only after the identical call was previewed in this session).",
   {
     sourcePlanId: z.string().describe("Source plan id."),
     destinationGroupId: z.string().describe("Microsoft 365 Group id that will own the new plan."),
@@ -507,7 +514,7 @@ server.tool(
 
 server.tool(
   "sharepoint_copy_list",
-  "Copy a single SharePoint list or library — its schema (columns, content types, views) and optionally its content — to another site in the SAME tenant. The granular form of sharepoint_copy_site. Previews a dry-run plan by default; set execute=true to perform the copy.",
+  "Copy a single SharePoint list or library — its schema (columns, content types, views) and optionally its content — to another site in the SAME tenant. The granular form of sharepoint_copy_site. Previews a dry-run plan by default; execute=true performs the copy (honored only after the identical call was previewed in this session).",
   {
     sourceUrl: z.string().url(),
     destinationUrl: z.string().url(),
@@ -545,7 +552,7 @@ server.tool(
 
 server.tool(
   "sharepoint_provision_site",
-  "Create a SharePoint site. Previews (-WhatIf) by default; set execute=true to actually create.",
+  "Create a SharePoint site. Previews (-WhatIf) by default; execute=true creates (honored only after the identical call was previewed in this session).",
   {
     title: z.string(),
     type: z.enum(["TeamSite", "CommunicationSite"]).describe("Site type (default: TeamSite)."),
@@ -564,7 +571,7 @@ server.tool(
 
 server.tool(
   "sharepoint_bulk_metadata",
-  "Bulk-update list/library metadata from a CSV. Previews (-WhatIf) by default; set execute=true to apply.",
+  "Bulk-update list/library metadata from a CSV. Previews (-WhatIf) by default; execute=true applies (honored only after the identical call was previewed in this session).",
   {
     siteUrl: z.string().url(),
     list: z.string(),

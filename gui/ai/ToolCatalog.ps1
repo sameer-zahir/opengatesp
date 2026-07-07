@@ -227,6 +227,24 @@ function Resolve-SPWriteParams {
     $p
 }
 
+# Session-scoped preview-first gate used by the MCP engine host (the GUI has the stricter
+# Apply-button gate in AiClient/AiView). An apply call — one arriving WITHOUT -WhatIf — is only
+# honored when the identical call (same command + args minus safety flags) is in $Previewed;
+# otherwise it is downgraded to a -WhatIf preview. A passing apply consumes its key (single-use).
+# Mutates only $Previewed (the consume); the caller arms keys (Add) after a preview actually
+# succeeds, so a failed preview never approves anything.
+function Resolve-SPGatedWrite {
+    param([string]$Command, [hashtable]$Params, [System.Collections.Generic.HashSet[string]]$Previewed)
+    $p = @{} + $Params
+    $key = Get-SPWriteKey -Tool @{ name = $Command } -Params $p
+    $downgraded = $false
+    if (-not $p['WhatIf']) {                       # apply intent (noForce cmdlets carry neither flag)
+        if ($Previewed.Contains($key)) { [void]$Previewed.Remove($key) }   # consume the approval
+        else { [void]$p.Remove('Force'); $p['WhatIf'] = $true; $downgraded = $true }
+    }
+    @{ Params = $p; Downgraded = $downgraded; WasPreview = [bool]$p['WhatIf']; Key = $key }
+}
+
 # Map the model's camelCase tool arguments to the PascalCase cmdlet parameters (the MCP server uses
 # the same convention), plus any fixed params. Only arguments declared in the tool's schema are
 # forwarded — anything else the model invents (force, confirm, whatIf, connection, ...) is dropped,

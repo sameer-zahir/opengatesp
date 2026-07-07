@@ -15,12 +15,12 @@ function Invoke-SPAiHttp {
 # provider-native running history (mutated in place). $Emit { param($step) } streams step hashtables
 # (kind = assistant|toolcall|toolresult|toolerror). $InvokeTool { param($cmdlet,$paramHash) } executes a
 # tool and returns its data (the GUI runs this in its worker; tests pass canned data). $PreviewedWrites
-# is the set of ARMED write calls (owned by the caller so it survives across turns): execute=true is
-# downgraded to a preview unless its exact call was previewed in the IMMEDIATELY PRECEDING turn. Keys
-# are single-use (consumed on apply) and expire after one turn (the set is replaced, not unioned, at
-# turn end). Previews from this turn arm only when the function returns — so a write can never preview
-# and apply within one turn, which forces a user reply between plan and change (prompt injection in
-# tool results can't skip or replay it).
+# is the set of APPROVED write calls (owned by the caller so it survives across turns): execute=true
+# is downgraded to a preview unless the user explicitly approved that exact call — in the GUI, by
+# clicking Apply on its preview card (which adds the key between turns). Nothing in this loop ever
+# arms a key, so a chat reply alone cannot approve a write and prompt injection in tool results can't
+# fire one. Keys are single-use (consumed on apply) and expire at the end of the following turn (the
+# set is cleared at turn end).
 function Invoke-SPAiConversation {
     param(
         [hashtable]$Config,
@@ -33,7 +33,6 @@ function Invoke-SPAiConversation {
         [int]$MaxIterations = 8
     )
     if ($null -eq $PreviewedWrites) { $PreviewedWrites = [System.Collections.Generic.HashSet[string]]::new() }
-    $newPreviews = [System.Collections.Generic.List[string]]::new()   # armed only after this turn ends
     $provider = $Config.Provider
     $tools    = @(ConvertTo-SPProviderTools -Provider $provider -Catalog $Catalog)
     $writesOn = @($Catalog | Where-Object { -not $_.readOnly }).Count -gt 0
@@ -70,20 +69,17 @@ function Invoke-SPAiConversation {
                 $params = Resolve-SPWriteParams -Tool $tool -Params $params -Apply $apply
             }
             $cmdline = Get-SPCommandLine -Cmdlet $tool.cmdlet -Params $params
-            & $Emit @{ kind = 'toolcall'; name = $tc.name; cmdline = $cmdline; write = $isWrite; applied = ($isWrite -and $apply) }
+            & $Emit @{ kind = 'toolcall'; name = $tc.name; cmdline = $cmdline; write = $isWrite; applied = ($isWrite -and $apply); writeKey = $writeKey }
             try {
                 $data = & $InvokeTool $tool.cmdlet $params
                 $rows = @($data)
-                if ($isWrite) {
-                    if ($apply) { [void]$PreviewedWrites.Remove($writeKey) }   # consume: an applied key can't fire again
-                    else        { $newPreviews.Add($writeKey) }
-                }
+                if ($isWrite -and $apply) { [void]$PreviewedWrites.Remove($writeKey) }   # consume: an applied key can't fire again
                 & $Emit @{ kind = 'toolresult'; name = $tc.name; rows = $rows; count = $rows.Count; cmdline = $cmdline; write = $isWrite; applied = ($isWrite -and $apply) }
                 $resultText = if ($rows.Count) { ($rows | ConvertTo-Json -Depth 6 -Compress) } else { '[] (no rows)' }
                 if ($isWrite) {
                     $prefix = if ($apply) { 'APPLIED — the change was made.' }
-                    elseif ($downgraded) { 'PREVIEW ONLY — nothing was changed. Writes always preview first, and the apply call is only honored after the user replies: show them this plan, end your turn, and call the tool again with execute=true only if their next message confirms.' }
-                    else { 'PREVIEW ONLY — nothing was changed. Show the user this plan and end your turn; if their next message confirms, call the same tool again with execute=true to apply.' }
+                    elseif ($downgraded) { 'PREVIEW ONLY — nothing was changed. Writes stay locked until the user clicks Apply on this preview card in the app; a chat reply cannot approve them. Show the user this plan and end your turn — when they click Apply you will be prompted to run the tool again with execute=true.' }
+                    else { 'PREVIEW ONLY — nothing was changed. Show the user this plan and end your turn. The change stays locked until they click Apply on this preview card; when they do, call the same tool again with execute=true to apply.' }
                     $resultText = "$prefix`n$resultText"
                 }
             }
@@ -95,8 +91,7 @@ function Invoke-SPAiConversation {
             Add-SPAiToolResult -Provider $provider -Messages $Messages -ToolCallId $tc.id -ResultText $resultText
         }
     }
-    # Arm this turn's previews only now — the next user turn may execute them, this one never could.
-    # Replace rather than union: a key is honored for exactly one following turn, then expires.
+    # An Apply-click approval is valid for exactly the turn it precedes: clear at turn end so unused
+    # approvals expire instead of accumulating. (Arming happens only in the GUI, on the Apply click.)
     $PreviewedWrites.Clear()
-    foreach ($k in $newPreviews) { [void]$PreviewedWrites.Add($k) }
 }

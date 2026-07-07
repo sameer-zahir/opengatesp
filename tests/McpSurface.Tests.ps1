@@ -27,4 +27,16 @@ Describe 'MCP surface parity' {
         $mcpNames = [regex]::Matches($indexText, '"(sharepoint_[a-z_]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
         @((Get-SPAiToolCatalog -IncludeWrites).name | Where-Object { $_ -notin $mcpNames }) | Should -BeNullOrEmpty
     }
+    It 'every MCP write tool is covered by the engine host preview gate' {
+        # A tool whose handler tests an execute flag is a write; each one's engine command must be
+        # in the host's $script:WriteCommands list so the session preview-first gate covers it.
+        $writeCmds = @(foreach ($block in ($indexText -split 'server\.tool\(')) {
+                if ($block -match '\bexecute\b\s*[!=]==' -and $block -match 'run\("([a-z.0-9]+)"') { $Matches[1] }
+            }) | Sort-Object -Unique
+        $writeCmds.Count | Should -Be 16
+        ($hostText -match '\$script:WriteCommands\s*=\s*@\(([^)]*)\)') | Should -BeTrue
+        $gated = [regex]::Matches($Matches[1], "'([a-z.0-9]+)'") | ForEach-Object { $_.Groups[1].Value }
+        @($writeCmds | Where-Object { $_ -notin $gated }) | Should -BeNullOrEmpty
+        $hostText | Should -Match 'Resolve-SPGatedWrite'   # the gate is actually wired into the loop
+    }
 }

@@ -120,10 +120,11 @@ sentences.
 
 Some tools can change SharePoint (their descriptions say so). They follow a strict, code-enforced
 two-step contract: every write runs as a PREVIEW first — nothing changes — and the apply call
-(execute=true) is only honored in a LATER turn, after the user has replied to the preview. Show
-the user what the preview found, end your turn, and wait; call the same tool again with
-execute=true only if their next message confirms. Never apply a change the user has not
-confirmed. Read-only reports need no confirmation.
+(execute=true) is only honored after the user clicks the Apply button on that preview card in the
+app. A chat reply alone can never approve a write. Show the user what the preview found and end
+your turn; when they click Apply, the app prompts you to apply — call the same tool again with
+execute=true then. Never claim a change was made unless the tool result says APPLIED. Read-only
+reports need no confirmation.
 '@
     }
     else {

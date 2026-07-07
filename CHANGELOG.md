@@ -22,6 +22,14 @@ follow [Semantic Versioning](https://semver.org/).
 - **AI reply-gate hardened.** An armed write approval is now single-use (consumed on apply — no
   replay) and expires after one turn (a key previewed in turn N is honored only in turn N+1),
   and only a real boolean `execute` applies — the string `"false"` no longer counts as true.
+- **AI writes now require a click, not a reply.** Every write preview card has an **Apply**
+  button, and clicking it is the *only* thing that approves the change (one click approves and
+  applies). A chat reply can no longer arm a write, which closes the remaining injection window
+  where a preview armed in one turn could be fired by whatever message came next.
+- **MCP writes are preview-gated server-side.** `execute:true` is honored only after the
+  identical call was previewed in the same session; otherwise it runs as another preview and the
+  result says so. Approvals are single-use. An MCP client set to auto-approve tools can no longer
+  one-shot a write.
 
 ### Fixed
 - Regression tests for all of the above (`tests/Guardrails.Tests.ps1` plus new governance and

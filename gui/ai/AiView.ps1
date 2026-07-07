@@ -259,7 +259,11 @@ function Add-AiToolCard($step) {
     <TextBlock x:Name="Title" FontWeight="SemiBold" Foreground="{DynamicResource Fg}"/>
     <TextBox x:Name="Cmd" IsReadOnly="True" BorderThickness="0" Background="Transparent" FontFamily="Consolas" FontSize="12"
              Foreground="{DynamicResource FgMute}" TextWrapping="Wrap" Margin="0,6,0,0"/>
-    <Button x:Name="Copy" Content="Copy script" Style="{DynamicResource GhostButton}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+    <TextBlock x:Name="Hint" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource FgMute}" Margin="0,6,0,0" Visibility="Collapsed"/>
+    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+      <Button x:Name="Apply" Content="Apply" Style="{DynamicResource GoodButton}" Visibility="Collapsed" Margin="0,0,8,0"/>
+      <Button x:Name="Copy" Content="Copy script" Style="{DynamicResource GhostButton}"/>
+    </StackPanel>
   </StackPanel>
 </Border>
 '@
@@ -269,6 +273,25 @@ function Add-AiToolCard($step) {
     $n.FindName('Cmd').Text = $step.cmdline
     $cmd = $step.cmdline
     $n.FindName('Copy').Add_Click({ try { [System.Windows.Clipboard]::SetText($cmd) } catch { } }.GetNewClosure())
+    # A write preview stays locked until the user clicks Apply — the click is the ONLY thing that
+    # arms the key (AiClient never arms; a chat reply can't approve a write). One click approves
+    # and immediately asks the assistant to apply that exact call.
+    if ($step.write -and -not $step.applied -and $step.writeKey) {
+        $hint = $n.FindName('Hint')
+        $hint.Text = 'Nothing changes until you click Apply.'
+        $hint.Visibility = [System.Windows.Visibility]::Visible
+        $btn = $n.FindName('Apply')
+        $btn.Visibility = [System.Windows.Visibility]::Visible
+        $btn.Tag = @{ Key = [string]$step.writeKey; Cmd = [string]$step.cmdline }
+        $btn.Add_Click({
+                $b = $args[0]; $d = $b.Tag
+                if ($script:Busy) { Set-Status 'Busy — wait for the current operation to finish.'; return }
+                if (-not $script:AiPreviewed) { $script:AiPreviewed = [System.Collections.Generic.HashSet[string]]::new() }
+                [void]$script:AiPreviewed.Add([string]$d.Key)
+                $b.Content = 'Approved ✓'; $b.IsEnabled = $false
+                Start-SPAiTurn "Apply the previewed change now: $($d.Cmd)"
+            })
+    }
     Add-AiNode $n
 }
 

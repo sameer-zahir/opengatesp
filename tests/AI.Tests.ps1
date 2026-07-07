@@ -211,10 +211,12 @@ Describe 'System prompt' {
         $p | Should -Match 'Allow write actions'
         $p | Should -Not -Match 'execute=true'
     }
-    It 'states the preview-then-execute contract when writes are on' {
+    It 'states the preview-then-Apply contract when writes are on' {
         $p = Get-SPAiSystemPrompt -WritesEnabled
         $p | Should -Match 'PREVIEW'
         $p | Should -Match 'execute=true'
+        $p | Should -Match 'Apply button'
+        $p | Should -Match 'reply alone can never approve'
     }
 }
 
@@ -295,10 +297,10 @@ Describe 'Invoke-SPAiConversation (agent loop)' {
         (@($steps | Where-Object { $_.kind -eq 'assistant' })[-1]).text | Should -Match 'could not'
     }
 
-    It 'never applies in the preview turn — execute=true only works in a later turn' {
+    It 'never applies in the preview turn — execute=true only works after the user clicks Apply' {
         # Turn 1: the model tries to apply immediately, twice with identical args. Both calls must
-        # run as -WhatIf previews — a preview arms only when the turn ends, so a prompt-injected
-        # model cannot preview + apply within one user message.
+        # run as -WhatIf previews — only an Apply click (simulated below by adding the emitted
+        # writeKey) arms a key, so a prompt-injected model cannot preview + apply on its own.
         $mkModel = {
             param($tries)
             $state = @{ n = 0 }
@@ -335,7 +337,12 @@ Describe 'Invoke-SPAiConversation (agent loop)' {
         @($steps | Where-Object { $_.kind -eq 'toolresult' -and $_.applied }).Count | Should -Be 0
         ($msgs | ConvertTo-Json -Depth 8) | Should -Match 'PREVIEW ONLY'
 
-        # Turn 2: the user replied; the previewed call is now armed, so execute=true applies.
+        # The user clicks Apply on the preview card: the GUI arms the writeKey the card carries.
+        $key = @($steps | Where-Object { $_.kind -eq 'toolcall' -and $_.write })[-1].writeKey
+        $key | Should -Not -BeNullOrEmpty                # write cards must carry the key for the button
+        [void]$previewed.Add($key)
+
+        # Turn 2: the click armed the exact call, so execute=true now applies.
         $msgs.Add(@{ role = 'user'; content = 'yes, go ahead' })
         Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog (Get-SPAiToolCatalog -IncludeWrites) `
             -PreviewedWrites $previewed -CallModel (& $mkModel 1) -Emit { param($s) [void]$steps.Add($s) } -InvokeTool $invoke
@@ -372,7 +379,7 @@ Describe 'Invoke-SPAiConversation (agent loop)' {
         $calls[1].ContainsKey('Force') | Should -BeFalse
     }
 
-    It 'consumes the armed key on apply — an identical replay previews again' {
+    It 'consumes an approved key on apply — an identical replay previews again' {
         $mkModel = {
             $state = @{ n = 0 }
             {
@@ -386,28 +393,28 @@ Describe 'Invoke-SPAiConversation (agent loop)' {
                 }
             }.GetNewClosure()
         }
+        $steps = [System.Collections.Generic.List[object]]::new()
         $calls = [System.Collections.Generic.List[hashtable]]::new()
         $previewed = [System.Collections.Generic.HashSet[string]]::new()
         $msgs = [System.Collections.Generic.List[object]]::new()
         $cfg = @{ Provider = 'anthropic'; Model = 'claude'; ApiKey = 'k' }
         $cat = Get-SPAiToolCatalog -IncludeWrites
         $invoke = { param($c, $p) [void]$calls.Add($p); @() }
+        $run = { param($text) $msgs.Add(@{ role = 'user'; content = $text }); Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog $cat -PreviewedWrites $previewed -CallModel (& $mkModel) -Emit { param($s) [void]$steps.Add($s) } -InvokeTool $invoke }
 
-        # Turn 1 previews (arms), turn 2 applies (consumes), turn 3 replays the exact same call.
-        foreach ($m in 'remove them', 'yes, go ahead', 'and again') {
-            $msgs.Add(@{ role = 'user'; content = $m })
-            Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog $cat -PreviewedWrites $previewed `
-                -CallModel (& $mkModel) -Emit { param($s) } -InvokeTool $invoke
-        }
+        & $run 'remove them'                                                            # turn 1: preview card
+        [void]$previewed.Add(@($steps | Where-Object { $_.kind -eq 'toolcall' })[-1].writeKey)   # user clicks Apply
+        & $run 'apply the previewed change'                                             # turn 2: applies (consumes)
+        & $run 'and again'                                                              # turn 3: exact replay, no click
 
         $calls.Count | Should -Be 3
-        $calls[0]['WhatIf'] | Should -BeTrue     # turn 1: downgraded to preview (arms)
-        $calls[1]['Force']  | Should -BeTrue     # turn 2: armed ⇒ applies (and consumes the key)
+        $calls[0]['WhatIf'] | Should -BeTrue     # turn 1: downgraded to preview
+        $calls[1]['Force']  | Should -BeTrue     # turn 2: click-approved ⇒ applies (and consumes the key)
         $calls[2]['WhatIf'] | Should -BeTrue     # turn 3: key consumed ⇒ back to preview, no silent re-apply
         $calls[2].ContainsKey('Force') | Should -BeFalse
     }
 
-    It 'expires an armed key after one turn — a stale preview cannot fire later' {
+    It 'expires an unused approval after one turn — a stale Apply click cannot fire later' {
         $mkToolTurn = {
             param($in)
             $state = @{ n = 0 }
@@ -419,24 +426,26 @@ Describe 'Invoke-SPAiConversation (agent loop)' {
             }.GetNewClosure()
         }
         $chatTurn = { param($body, $endpoint, $headers) [pscustomobject]@{ stop_reason = 'end_turn'; content = @([pscustomobject]@{ type = 'text'; text = 'Anything else?' }) } }
+        $steps = [System.Collections.Generic.List[object]]::new()
         $calls = [System.Collections.Generic.List[hashtable]]::new()
         $previewed = [System.Collections.Generic.HashSet[string]]::new()
         $msgs = [System.Collections.Generic.List[object]]::new()
         $cfg = @{ Provider = 'anthropic'; Model = 'claude'; ApiKey = 'k' }
         $cat = Get-SPAiToolCatalog -IncludeWrites
         $invoke = { param($c, $p) [void]$calls.Add($p); @() }
-        $run = { param($model, $text) $msgs.Add(@{ role = 'user'; content = $text }); Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog $cat -PreviewedWrites $previewed -CallModel $model -Emit { param($s) } -InvokeTool $invoke }
+        $run = { param($model, $text) $msgs.Add(@{ role = 'user'; content = $text }); Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog $cat -PreviewedWrites $previewed -CallModel $model -Emit { param($s) [void]$steps.Add($s) } -InvokeTool $invoke }
 
-        & $run (& $mkToolTurn ([pscustomobject]@{ siteUrl = 'https://x' })) 'check in files'                    # turn 1: preview arms
-        & $run $chatTurn 'thanks'                                                                                # turn 2: no tool call — key expires
-        & $run (& $mkToolTurn ([pscustomobject]@{ siteUrl = 'https://x'; execute = $true })) 'now apply it'      # turn 3: stale key
+        & $run (& $mkToolTurn ([pscustomobject]@{ siteUrl = 'https://x' })) 'check in files'                    # turn 1: preview card
+        [void]$previewed.Add(@($steps | Where-Object { $_.kind -eq 'toolcall' })[-1].writeKey)                   # user clicks Apply...
+        & $run $chatTurn 'actually, tell me about versioning first'                                              # ...but turn 2 does not apply — approval expires
+        & $run (& $mkToolTurn ([pscustomobject]@{ siteUrl = 'https://x'; execute = $true })) 'now apply it'      # turn 3: stale approval
 
         $calls.Count | Should -Be 2
-        $calls[1]['WhatIf'] | Should -BeTrue     # armed 2 turns ago ⇒ no longer honored
+        $calls[1]['WhatIf'] | Should -BeTrue     # approved 2 turns ago ⇒ no longer honored
         $calls[1].ContainsKey('Force') | Should -BeFalse
     }
 
-    It 'only a real boolean execute applies — string "false"/"true" stay previews' {
+    It 'a reply alone never approves — execute=true after an unclicked preview stays a preview' {
         $mkToolTurn = {
             param($in)
             $state = @{ n = 0 }
@@ -455,8 +464,40 @@ Describe 'Invoke-SPAiConversation (agent loop)' {
         $invoke = { param($c, $p) [void]$calls.Add($p); @() }
         $run = { param($in, $text) $msgs.Add(@{ role = 'user'; content = $text }); Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog $cat -PreviewedWrites $previewed -CallModel (& $mkToolTurn $in) -Emit { param($s) } -InvokeTool $invoke }
 
-        & $run ([pscustomobject]@{ siteUrl = 'https://x' }) 'check in files'                      # turn 1: preview arms
+        & $run ([pscustomobject]@{ siteUrl = 'https://x' }) 'check in files'                     # turn 1: preview, NO Apply click
+        & $run ([pscustomobject]@{ siteUrl = 'https://x'; execute = $true }) 'yes, go ahead'     # turn 2: reply is not approval
+
+        $calls.Count | Should -Be 2
+        $calls[1]['WhatIf'] | Should -BeTrue
+        $calls[1].ContainsKey('Force') | Should -BeFalse
+        ($msgs | ConvertTo-Json -Depth 8) | Should -Match 'clicks Apply'   # the model is told why
+    }
+
+    It 'only a real boolean execute applies — string "false"/"true" stay previews' {
+        $mkToolTurn = {
+            param($in)
+            $state = @{ n = 0 }
+            {
+                param($body, $endpoint, $headers)
+                $state.n++
+                if ($state.n -gt 1) { [pscustomobject]@{ stop_reason = 'end_turn'; content = @([pscustomobject]@{ type = 'text'; text = 'Done.' }) } }
+                else { [pscustomobject]@{ stop_reason = 'tool_use'; content = @([pscustomobject]@{ type = 'tool_use'; id = 't1'; name = 'sharepoint_check_in_files'; input = $in }) } }
+            }.GetNewClosure()
+        }
+        $steps = [System.Collections.Generic.List[object]]::new()
+        $calls = [System.Collections.Generic.List[hashtable]]::new()
+        $previewed = [System.Collections.Generic.HashSet[string]]::new()
+        $msgs = [System.Collections.Generic.List[object]]::new()
+        $cfg = @{ Provider = 'anthropic'; Model = 'claude'; ApiKey = 'k' }
+        $cat = Get-SPAiToolCatalog -IncludeWrites
+        $invoke = { param($c, $p) [void]$calls.Add($p); @() }
+        $run = { param($in, $text) $msgs.Add(@{ role = 'user'; content = $text }); Invoke-SPAiConversation -Config $cfg -Messages $msgs -Catalog $cat -PreviewedWrites $previewed -CallModel (& $mkToolTurn $in) -Emit { param($s) [void]$steps.Add($s) } -InvokeTool $invoke }
+
+        & $run ([pscustomobject]@{ siteUrl = 'https://x' }) 'check in files'                      # turn 1: preview card
+        $key = @($steps | Where-Object { $_.kind -eq 'toolcall' })[-1].writeKey                    # execute is excluded from the key
+        [void]$previewed.Add($key)                                                                 # Apply clicked before each attempt —
         & $run ([pscustomobject]@{ siteUrl = 'https://x'; execute = 'false' }) 'ok'               # turn 2: [bool]'false' is $true — must NOT apply
+        [void]$previewed.Add($key)                                                                 # (approvals expire each turn; re-click)
         & $run ([pscustomobject]@{ siteUrl = 'https://x'; execute = 'true' }) 'ok'                # turn 3: string 'true' must not apply either
 
         $calls.Count | Should -Be 3
@@ -489,5 +530,55 @@ Describe 'Invoke-SPAiConversation (agent loop)' {
 
         $ran.hit | Should -BeFalse
         @($steps | Where-Object { $_.kind -eq 'toolerror' }).Count | Should -Be 1
+    }
+}
+
+Describe 'MCP session gate (Resolve-SPGatedWrite)' {
+    It 'downgrades an apply that was never previewed (and arms nothing itself)' {
+        $set = [System.Collections.Generic.HashSet[string]]::new()
+        $g = Resolve-SPGatedWrite -Command 'remediate.orphans' -Params @{ SiteUrl = 'https://x'; Force = $true } -Previewed $set
+        $g.Downgraded | Should -BeTrue
+        $g.WasPreview | Should -BeTrue
+        $g.Params['WhatIf'] | Should -BeTrue
+        $g.Params.ContainsKey('Force') | Should -BeFalse
+        $set.Count | Should -Be 0                    # arming is the caller's job, after success
+    }
+    It 'passes a requested preview through untouched' {
+        $set = [System.Collections.Generic.HashSet[string]]::new()
+        $g = Resolve-SPGatedWrite -Command 'remediate.orphans' -Params @{ SiteUrl = 'https://x'; WhatIf = $true } -Previewed $set
+        $g.Downgraded | Should -BeFalse
+        $g.WasPreview | Should -BeTrue
+        $g.Params['WhatIf'] | Should -BeTrue
+    }
+    It 'honors an apply after its preview — once (the key is consumed)' {
+        $set = [System.Collections.Generic.HashSet[string]]::new()
+        $prev = Resolve-SPGatedWrite -Command 'bulk.metadata' -Params @{ SiteUrl = 'https://x'; List = 'Docs'; CsvPath = 'C:\m.csv'; WhatIf = $true } -Previewed $set
+        [void]$set.Add($prev.Key)                    # the host arms after the preview succeeds
+        $apply = Resolve-SPGatedWrite -Command 'bulk.metadata' -Params @{ SiteUrl = 'https://x'; List = 'Docs'; CsvPath = 'C:\m.csv'; Force = $true } -Previewed $set
+        $apply.Downgraded | Should -BeFalse
+        $apply.Params['Force'] | Should -BeTrue
+        $apply.Params.ContainsKey('WhatIf') | Should -BeFalse
+        $set.Count | Should -Be 0                    # consumed
+        $again = Resolve-SPGatedWrite -Command 'bulk.metadata' -Params @{ SiteUrl = 'https://x'; List = 'Docs'; CsvPath = 'C:\m.csv'; Force = $true } -Previewed $set
+        $again.Downgraded | Should -BeTrue           # replay blocked
+    }
+    It 'changed arguments do not inherit an approval' {
+        $set = [System.Collections.Generic.HashSet[string]]::new()
+        $prev = Resolve-SPGatedWrite -Command 'remediate.versions' -Params @{ SiteUrl = 'https://x'; FileUrl = '/a.pptx'; WhatIf = $true } -Previewed $set
+        [void]$set.Add($prev.Key)
+        $g = Resolve-SPGatedWrite -Command 'remediate.versions' -Params @{ SiteUrl = 'https://x'; FileUrl = '/OTHER.pptx'; Force = $true } -Previewed $set
+        $g.Downgraded | Should -BeTrue
+        $g.Params['WhatIf'] | Should -BeTrue
+    }
+    It 'gates noForce commands too (provision.site applies with neither flag)' {
+        $set = [System.Collections.Generic.HashSet[string]]::new()
+        $g = Resolve-SPGatedWrite -Command 'provision.site' -Params @{ Title = 'HR'; Type = 'TeamSite'; Alias = 'hr' } -Previewed $set
+        $g.Downgraded | Should -BeTrue               # apply intent = no -WhatIf; never previewed
+        $g.Params['WhatIf'] | Should -BeTrue
+        [void]$set.Add($g.Key)
+        $ok = Resolve-SPGatedWrite -Command 'provision.site' -Params @{ Title = 'HR'; Type = 'TeamSite'; Alias = 'hr' } -Previewed $set
+        $ok.Downgraded | Should -BeFalse
+        $ok.Params.ContainsKey('WhatIf') | Should -BeFalse
+        $ok.Params.ContainsKey('Force') | Should -BeFalse
     }
 }
