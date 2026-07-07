@@ -71,9 +71,13 @@ After a release is published:
    ```powershell
    (Get-FileHash dist\OpenGateSP-Setup.exe -Algorithm SHA256).Hash
    ```
-2. Validate and test locally:
+2. Validate and test locally — **including unattended**, which is what winget's validation
+   pipeline actually runs (on a clean image *without* PowerShell 7, so any installer dialog
+   that isn't `WizardSilent`-guarded hangs it; that's exactly how the first 0.11.0
+   submission failed):
    ```powershell
    winget validate installer\winget
+   dist\OpenGateSP-Setup.exe /VERYSILENT /NORESTART   # must finish with zero prompts
    winget install --manifest installer\winget   # installs from the local manifest
    ```
 3. Submit a PR to **microsoft/winget-pkgs** (easiest with `wingetcreate`):

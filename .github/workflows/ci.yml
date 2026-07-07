@@ -101,9 +101,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $v = "${{ github.ref_name }}".TrimStart('v')
-          gh release create "${{ github.ref_name }}" `
-            dist/OpenGateSP-Setup.exe "dist/OpenGateSP-$v.zip" `
-            --title "OpenGateSP $v" --generate-notes
+          # The release may already exist when it was cut by hand (e.g. an installer fix that
+          # had to ship outside CI, like the 0.11.1 winget validation fix). Never touch an
+          # existing release's assets — the winget manifest pins their SHA256.
+          gh release view "${{ github.ref_name }}" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release ${{ github.ref_name }} already exists — leaving its assets untouched."
+          } else {
+            gh release create "${{ github.ref_name }}" `
+              dist/OpenGateSP-Setup.exe "dist/OpenGateSP-$v.zip" `
+              --title "OpenGateSP $v" --generate-notes
+          }
 
       # Publish the new version to winget. Fully automated when a WINGET_TOKEN secret (a GitHub PAT
       # with access to your microsoft/winget-pkgs fork) is configured; otherwise prints the exact
@@ -121,8 +129,7 @@ jobs:
             ./wingetcreate.exe update SameerZahir.OpenGateSP --version $v --urls $url --submit --token $env:WINGET_TOKEN
             Write-Host "Submitted OpenGateSP $v to winget-pkgs."
           } else {
-            $hash = (Get-FileHash dist/OpenGateSP-Setup.exe -Algorithm SHA256).Hash
             Write-Host "WINGET_TOKEN not set — skipping automatic submission."
             Write-Host "To publish manually:  wingetcreate update SameerZahir.OpenGateSP --version $v --urls $url --submit"
-            Write-Host "Installer SHA256: $hash"
+            Write-Host "(wingetcreate downloads the released installer and computes its hash itself.)"
           }
