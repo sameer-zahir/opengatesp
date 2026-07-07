@@ -67,6 +67,15 @@ needs a fresh preview. Even an MCP client configured to auto-approve tools can't
 | `sharepoint_copy_term_group` | Cross-tenant managed-metadata term-group copy (app-only cert per tenant) |
 | `sharepoint_compare_site` | Post-migration validation — diff destination vs source (read-only) |
 
+**Identity copy (Entra tenant-to-tenant)** — the [docs/14](../docs/14-identity-copy.md) pipeline; app-only cert per tenant
+
+| Tool | What it does |
+|---|---|
+| `sharepoint_identity_inventory` | Inventory the source tenant's users, guests, and groups (read-only) |
+| `sharepoint_identity_map` | Propose the source→destination map as a hand-editable CSV (read-only) |
+| `sharepoint_identity_validate` | Validate the edited map: collisions, unverified domains (read-only) |
+| `sharepoint_identity_copy` | Create users/guests/groups + sync rosters. Preview by default; passwords/MFA/licenses never migrate |
+
 **Collaboration & provisioning** — writes preview by default
 
 | Tool | What it does |

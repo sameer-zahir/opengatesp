@@ -45,7 +45,11 @@
         'Copy-SPPlannerPlan',
         'New-SPMigrationConnection',
         'New-SPSiteFromTemplate',
-        'Set-SPBulkMetadata'
+        'Set-SPBulkMetadata',
+        'Get-SPIdentityInventory',
+        'New-SPIdentityMap',
+        'Test-SPIdentityMap',
+        'Copy-SPIdentity'
     )
     CmdletsToExport   = @()
     VariablesToExport = @()

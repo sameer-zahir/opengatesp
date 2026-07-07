@@ -51,6 +51,22 @@ Register-PnPEntraIDAppForInteractiveLogin `
    - *Microsoft Graph* → Delegated → `User.Read` (and `Group.Read.All` for group reports)
 6. **Grant admin consent** for the tenant.
 
+### Scopes for identity copy (docs/14)
+
+The [identity-copy pipeline](14-identity-copy.md) is tenant-level Graph work and follows
+least privilege per side — only the **destination** tenant's app ever needs write scopes:
+
+- **Source app (read):** `User.Read.All`, `Group.Read.All` — or `Directory.Read.All`, which
+  covers both.
+- **Destination app (read, for mapping/validation):** `User.Read.All`, `Group.Read.All`,
+  `Organization.Read.All` (verified-domain checks).
+- **Destination app (write, `Copy-SPIdentity` only):** `User.ReadWrite.All`,
+  `Group.ReadWrite.All`, and `User.Invite.All` if you invite guests.
+
+For headless (MCP/scheduled) identity runs these are **application** permissions on the
+app-only certificate apps from [docs/05](05-app-only-auth.md); grant admin consent in each
+tenant.
+
 ## Connect
 
 ```powershell

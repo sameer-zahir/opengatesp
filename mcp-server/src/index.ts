@@ -462,6 +462,96 @@ server.tool(
 );
 
 server.tool(
+  "sharepoint_identity_inventory",
+  "Step 1 of the tenant-to-tenant identity pipeline (the open 'Copy identities'): inventory the SOURCE tenant's users, guests, security groups, and Microsoft 365 groups — with owner/member rosters — and optionally write the CSV that sharepoint_identity_map consumes. Distribution lists and mail-enabled security groups are listed but marked unsupported (Graph cannot create them). Read-only; the server opens an app-only connection to the source tenant (certificate thumbprint). Needs Graph User.Read.All + Group.Read.All.",
+  {
+    sourceUrl: z.string().url().describe("Any site URL in the SOURCE tenant, e.g. https://contoso.sharepoint.com."),
+    sourceClientId: z.string().describe("Entra app (client) id registered in the SOURCE tenant."),
+    sourceTenant: z.string().describe("Source tenant, e.g. contoso.onmicrosoft.com."),
+    sourceThumbprint: z.string().describe("App-only certificate thumbprint in the source tenant's store."),
+    path: z.string().optional().describe("CSV path to write the inventory to (the file sharepoint_identity_map consumes)."),
+  },
+  async (a) => {
+    const params: Record<string, unknown> = {
+      SourceUrl: a.sourceUrl, SourceClientId: a.sourceClientId, SourceTenant: a.sourceTenant, SourceThumbprint: a.sourceThumbprint,
+    };
+    if (a.path) params.Path = a.path;
+    return run("identity.inventory", params);
+  },
+);
+
+server.tool(
+  "sharepoint_identity_map",
+  "Step 2 of the identity pipeline: propose a reviewable source-to-destination identity mapping — match identities that already exist at the DESTINATION tenant (users by mail, then UPN local part; groups by mail nickname, then display name), and propose local-part@domainTo UPNs for the rest. Read-only; nothing is created. The emitted CSV is meant to be HAND-EDITED, then checked with sharepoint_identity_validate.",
+  {
+    inventoryCsv: z.string().describe("The inventory CSV from sharepoint_identity_inventory."),
+    domainTo: z.string().describe("Destination UPN domain for proposed users, e.g. fabrikam.com — must be verified at the destination tenant."),
+    destinationUrl: z.string().url().describe("Any site URL in the DESTINATION tenant."),
+    destinationClientId: z.string().describe("Entra app (client) id registered in the DESTINATION tenant."),
+    destinationTenant: z.string().describe("Destination tenant, e.g. fabrikam.onmicrosoft.com."),
+    destinationThumbprint: z.string().describe("App-only certificate thumbprint in the destination tenant's store."),
+    includeGuests: z.boolean().optional().describe("Propose Action=Invite for guest accounts instead of skipping them."),
+    path: z.string().optional().describe("CSV path to write the map to (review and hand-edit before copying)."),
+  },
+  async (a) => {
+    const params: Record<string, unknown> = {
+      InventoryCsv: a.inventoryCsv, DomainTo: a.domainTo,
+      DestinationUrl: a.destinationUrl, DestinationClientId: a.destinationClientId, DestinationTenant: a.destinationTenant, DestinationThumbprint: a.destinationThumbprint,
+    };
+    if (a.includeGuests === true) params.IncludeGuests = true;
+    if (a.path) params.Path = a.path;
+    return run("identity.map", params);
+  },
+);
+
+server.tool(
+  "sharepoint_identity_validate",
+  "Step 3 of the identity pipeline: validate the (hand-edited) identity map against the DESTINATION tenant before anything is created — UPN and mail-nickname collisions (directory and within the map), unverified UPN domains, vanished matches, guests without mail, unsupported creates. Read-only; one finding per row (OK/Warning/Error, errors first). sharepoint_identity_copy re-runs this validation and refuses to start while any row is an Error.",
+  {
+    mapCsv: z.string().describe("The reviewed map CSV from sharepoint_identity_map (after your edits)."),
+    destinationUrl: z.string().url().describe("Any site URL in the DESTINATION tenant."),
+    destinationClientId: z.string().describe("Entra app (client) id registered in the DESTINATION tenant."),
+    destinationTenant: z.string().describe("Destination tenant, e.g. fabrikam.onmicrosoft.com."),
+    destinationThumbprint: z.string().describe("App-only certificate thumbprint in the destination tenant's store."),
+  },
+  async (a) =>
+    run("identity.validate", {
+      MapCsv: a.mapCsv,
+      DestinationUrl: a.destinationUrl, DestinationClientId: a.destinationClientId, DestinationTenant: a.destinationTenant, DestinationThumbprint: a.destinationThumbprint,
+    }),
+);
+
+server.tool(
+  "sharepoint_identity_copy",
+  "Step 4 of the identity pipeline: create the identities from a reviewed map in the DESTINATION tenant — users (DISABLED by default, random throwaway password, force-change), guests (by invitation), security groups, and M365 groups — then sync group rosters when inventoryCsv is given (re-runs converge). Passwords, MFA registrations, and licenses NEVER migrate: after cutover, assign licenses, issue Temporary Access Passes, and enable the accounts. Dry-run by default; execute=true creates (honored only after the identical call was previewed in this session). Needs Graph User.ReadWrite.All + Group.ReadWrite.All (+ User.Invite.All for guests).",
+  {
+    mapCsv: z.string().describe("The reviewed and validated map CSV."),
+    destinationUrl: z.string().url().describe("Any site URL in the DESTINATION tenant."),
+    destinationClientId: z.string().describe("Entra app (client) id registered in the DESTINATION tenant."),
+    destinationTenant: z.string().describe("Destination tenant, e.g. fabrikam.onmicrosoft.com."),
+    destinationThumbprint: z.string().describe("App-only certificate thumbprint in the destination tenant's store."),
+    inventoryCsv: z.string().optional().describe("The inventory CSV from sharepoint_identity_inventory — enables the group-roster (owners/members) sync pass."),
+    enableAccounts: z.boolean().optional().describe("Create users ENABLED. Default: disabled, for a controlled cutover."),
+    sendInvitations: z.boolean().optional().describe("Send guests the standard invitation email. Default: invite silently."),
+    principalMapPath: z.string().optional().describe("Write a Source,Destination principal-map CSV consumable by sharepoint_copy_permissions (users by UPN, groups by object id)."),
+    execute: z.boolean().optional().describe("false = dry-run (default); true = create."),
+  },
+  async (a) => {
+    const params: Record<string, unknown> = {
+      MapCsv: a.mapCsv,
+      DestinationUrl: a.destinationUrl, DestinationClientId: a.destinationClientId, DestinationTenant: a.destinationTenant, DestinationThumbprint: a.destinationThumbprint,
+    };
+    if (a.inventoryCsv) params.InventoryCsv = a.inventoryCsv;
+    if (a.enableAccounts === true) params.EnableAccounts = true;
+    if (a.sendInvitations === true) params.SendInvitations = true;
+    if (a.principalMapPath) params.PrincipalMapPath = a.principalMapPath;
+    if (a.execute === true) params.Force = true;
+    else params.WhatIf = true;
+    return run("identity.copy", params);
+  },
+);
+
+server.tool(
   "sharepoint_copy_m365_group",
   "Create a new Microsoft 365 Group modelled on an existing one (description + owner/member roster). Dry-run by default; execute=true creates (honored only after the identical call was previewed in this session). Needs Graph Group.ReadWrite.All.",
   {

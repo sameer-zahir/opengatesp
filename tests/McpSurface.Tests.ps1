@@ -33,7 +33,7 @@ Describe 'MCP surface parity' {
         $writeCmds = @(foreach ($block in ($indexText -split 'server\.tool\(')) {
                 if ($block -match '\bexecute\b\s*[!=]==' -and $block -match 'run\("([a-z.0-9]+)"') { $Matches[1] }
             }) | Sort-Object -Unique
-        $writeCmds.Count | Should -Be 16
+        $writeCmds.Count | Should -Be 17
         ($hostText -match '\$script:WriteCommands\s*=\s*@\(([^)]*)\)') | Should -BeTrue
         $gated = [regex]::Matches($Matches[1], "'([a-z.0-9]+)'") | ForEach-Object { $_.Groups[1].Value }
         @($writeCmds | Where-Object { $_ -notin $gated }) | Should -BeNullOrEmpty

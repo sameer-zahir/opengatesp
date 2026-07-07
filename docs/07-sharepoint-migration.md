@@ -99,6 +99,11 @@ ids) — copy the term group first and supply a principal mapping. Headless (MCP
 cross-tenant runs need **app-only** auth (a certificate per tenant). MCP tool:
 **`sharepoint_copy_site_cross_tenant`**.
 
+**Where does the principal mapping come from?** If the destination tenant doesn't have the
+people and groups yet, create them first with the **identity-copy pipeline**
+([docs/14](14-identity-copy.md)) — `Copy-SPIdentity -PrincipalMapPath` emits exactly the
+`Source,Destination` CSV that `-MappingCsv` consumes.
+
 ## Manual test plan (run against a tenant)
 
 Do this against a **non-production / dev tenant** (the free Microsoft 365 Developer Program tenant is ideal), not your live enterprise tenant.

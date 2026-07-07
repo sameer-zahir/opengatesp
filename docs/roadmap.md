@@ -16,15 +16,18 @@ The path toward ShareGate-style site migration, grounded in what PnP PowerShell 
 - **Phase 7 — remediation + fidelity (shipped, 0.8.0):** remediation quick-actions (`Invoke-SPCheckIn`, `Clear-SPVersionHistory`, `Restore-SPInheritance`, `Remove-SPOrphanedUsers`); Person/Managed-Metadata column round-tripping and best-effort `-IncludeVersions` version history. See [docs/11](11-remediation.md).
 - **Phase 8 — polished, human GUI + install (shipped, 0.10.0):** nav icons + app identity, a Settings cog, first-run onboarding, toasts, keyboard shortcuts, and a focus ring; installer PowerShell-7 offer, in-app update check, CI release automation, and winget/SignPath prep. See [docs/design-system.md](design-system.md).
 - **Phase 9 — AI assistant + Protect-style detection (shipped, 0.11.0):** the BYOK in-app **AI assistant** (Claude / OpenAI / Ollama / LM Studio; DPAPI-encrypted key; read-only reports plus preview-first write actions behind a toggle — see [docs/13](13-ai-assistant.md)); **governance detection** — `Find-SPEveryoneClaims` (Everyone/EEEU oversharing), `Get-SPOwnerlessGroups`, `Invoke-SPGovernanceReview` (consolidated review); a dashboard Home with live KPIs + persistent activity; the single guided Copy wizard; `Copy-SPTermGroup` over MCP.
+- **Phase 10 — identity copy, Entra tenant-to-tenant (built, ships as 0.14 after live
+  two-tenant validation):** create user accounts, guests (by invitation), security groups, and
+  Microsoft 365 groups — with rosters — in a destination tenant. A four-step pipeline
+  (`Get-SPIdentityInventory` → `New-SPIdentityMap` → `Test-SPIdentityMap` → `Copy-SPIdentity`)
+  with a hand-editable mapping CSV and fail-closed validation before anything is created; users
+  arrive disabled with throwaway passwords (passwords/MFA/licenses never migrate — explicit
+  handover), and the emitted principal map feeds `Copy-SPPermissions`. OpenGateSP's answer to
+  ShareGate's *Copy identities* (their Entra ID Migration, launched June 2026, still preview).
+  CLI + MCP only. See [docs/14](14-identity-copy.md).
 - Maybe later: **Box** import.
 
 ## Also planned
-- **Identity copy (Entra tenant-to-tenant)** — create user accounts, security groups, Microsoft 365
-  groups, and their memberships in a destination tenant, with a reviewable mapping CSV before
-  anything is created. OpenGateSP's answer to ShareGate's *Copy identities* (their Entra ID
-  Migration, launched June 2026). Today OpenGateSP **remaps** identities during copies (mapping
-  CSV / domain swap) and clones group/Team rosters; it does not yet **create** identities — this
-  needs Graph write scopes and live-tenant validation, so it ships as its own release.
 - **Full per-version history fidelity** via the SharePoint Migration API (today's `-IncludeVersions` is best-effort — content/order preserved, per-version author/date are not).
 - **Governance automation** — the detection shipped in 0.11.0; next are the *policies*: ownerless-group and inactive-workspace **auto-remediation**, and recurring **access-review campaigns** (owner attestation with tracked decisions).
 - **More provisioning templates**; **PowerShell Gallery** (`Install-Module OpenGateSP`).

@@ -40,7 +40,7 @@ $script:WriteCommands = @(
     'site.lifecycle', 'remediate.checkin', 'remediate.versions', 'remediate.inheritance',
     'remediate.orphans', 'migrate.files', 'copy.site', 'copy.permissions', 'copy.site.crosstenant',
     'copy.termgroup', 'copy.m365group', 'copy.team', 'copy.planner', 'copy.list',
-    'provision.site', 'bulk.metadata'
+    'provision.site', 'bulk.metadata', 'identity.copy'
 )
 
 function Confirm-Connected {
@@ -122,6 +122,35 @@ function Invoke-EngineCommand {
                 if ($Params.ContainsKey($k)) { $cp[$k] = $Params[$k] }
             }
             return (Copy-SPTermGroup @cp)
+        }
+
+        # Identity pipeline (docs/14) — tenant-level Graph work, so each step opens its own
+        # app-only connection (inventory: SOURCE tenant; map/validate/copy: DESTINATION tenant).
+        'identity.inventory' {
+            $s = New-EngineTenantConnection $Params.SourceUrl $Params.SourceClientId $Params.SourceTenant $Params.SourceThumbprint
+            $cp = @{ Connection = $s }
+            if ($Params.ContainsKey('Path')) { $cp['Path'] = $Params.Path }
+            return (Get-SPIdentityInventory @cp)
+        }
+        'identity.map' {
+            $d = New-EngineTenantConnection $Params.DestinationUrl $Params.DestinationClientId $Params.DestinationTenant $Params.DestinationThumbprint
+            $cp = @{ InventoryCsv = $Params.InventoryCsv; DomainTo = $Params.DomainTo; DestinationConnection = $d }
+            foreach ($k in 'IncludeGuests', 'Path') {
+                if ($Params.ContainsKey($k)) { $cp[$k] = $Params[$k] }
+            }
+            return (New-SPIdentityMap @cp)
+        }
+        'identity.validate' {
+            $d = New-EngineTenantConnection $Params.DestinationUrl $Params.DestinationClientId $Params.DestinationTenant $Params.DestinationThumbprint
+            return (Test-SPIdentityMap -MapCsv $Params.MapCsv -DestinationConnection $d)
+        }
+        'identity.copy' {
+            $d = New-EngineTenantConnection $Params.DestinationUrl $Params.DestinationClientId $Params.DestinationTenant $Params.DestinationThumbprint
+            $cp = @{ MapCsv = $Params.MapCsv; DestinationConnection = $d }
+            foreach ($k in 'InventoryCsv', 'EnableAccounts', 'SendInvitations', 'PrincipalMapPath', 'Force', 'WhatIf') {
+                if ($Params.ContainsKey($k)) { $cp[$k] = $Params[$k] }
+            }
+            return (Copy-SPIdentity @cp)
         }
 
         'copy.team'          { Confirm-Connected; return (Copy-SPTeam @Params) }
