@@ -15,6 +15,7 @@ BeforeAll {
     . (Join-Path $mod 'Private\Resolve-SPAuthChoice.ps1')
     . (Join-Path $mod 'Public\Connect-SPTool.ps1')
     . (Join-Path $mod 'Public\Disconnect-SPTool.ps1')
+    . (Join-Path $mod 'Public\New-SPMigrationConnection.ps1')
 
     # PnP stand-ins: record every call; OSLogin fails when the test arms $script:BrokerFails.
     function Connect-PnPOnline {
@@ -184,6 +185,53 @@ Describe 'Connect-SPTool -Environment (named profiles)' {
         $script:ConnectCalls[0].Url | Should -Be 'https://contoso.sharepoint.com/sites/hub'
         (Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw | ConvertFrom-Json).Environments.Contoso.Url |
             Should -Be 'https://contoso.sharepoint.com/sites/hub'
+    }
+}
+
+Describe 'New-SPMigrationConnection -Environment' {
+    BeforeEach {
+        $script:ConnectCalls = [System.Collections.Generic.List[object]]::new()
+        $script:BrokerFails = $false
+        $script:ConnectFailsWith = $null
+        Mock Get-SPConfigPath { Join-Path $TestDrive 'spconfig.json' }
+        # Seed two saved environments: delegated Contoso, app-only Fabrikam.
+        $cfg = Set-SPEnvironmentInConfig -Config ([pscustomobject]@{}) -Name 'Contoso' -Settings @{
+            ClientId = 'cid'; Tenant = 'contoso.onmicrosoft.com'; AuthMode = 'Delegated'
+        } -MakeActive
+        $cfg = Set-SPEnvironmentInConfig -Config $cfg -Name 'Fabrikam' -Settings @{
+            ClientId = 'fid'; Tenant = 'fabrikam.onmicrosoft.com'; AuthMode = 'AppOnly'; Thumbprint = 'FAB1'
+        }
+        Save-SPConfigObject -Config $cfg | Out-Null
+    }
+
+    It 'resolves the saved identity material and returns a connection' {
+        $conn = New-SPMigrationConnection -Environment 'Fabrikam' -Url 'https://fabrikam.sharepoint.com/sites/B'
+        $conn | Should -Not -BeNullOrEmpty
+        $script:ConnectCalls[0].ClientId | Should -Be 'fid'
+        $script:ConnectCalls[0].Thumbprint | Should -Be 'FAB1'
+        $script:ConnectCalls[0].ReturnConnection | Should -BeTrue
+    }
+    It 'a delegated environment connects interactively (browser SSO)' {
+        New-SPMigrationConnection -Environment 'Contoso' -Url 'https://contoso.sharepoint.com/sites/A' | Out-Null
+        $script:ConnectCalls[0].Interactive | Should -BeTrue
+        $script:ConnectCalls[0].Tenant | Should -Be 'contoso.onmicrosoft.com'
+    }
+    It 'does not change the active environment (transient by design)' {
+        New-SPMigrationConnection -Environment 'Fabrikam' -Url 'https://fabrikam.sharepoint.com/sites/B' | Out-Null
+        (Get-Content (Join-Path $TestDrive 'spconfig.json') -Raw | ConvertFrom-Json).ActiveEnvironment | Should -Be 'Contoso'
+    }
+    It 'explicit parameters override the environment values' {
+        New-SPMigrationConnection -Environment 'Contoso' -Url 'https://x' -ClientId 'override' | Out-Null
+        $script:ConnectCalls[0].ClientId | Should -Be 'override'
+    }
+    It 'throws without a ClientId from either source, and on an unknown environment' {
+        { New-SPMigrationConnection -Url 'https://x' } | Should -Throw '*ClientId is required*'
+        { New-SPMigrationConnection -Environment 'nope' -Url 'https://x' } | Should -Throw '*Unknown environment*'
+    }
+    It '-OSLogin flows through standalone' -Skip:(-not $IsWindows) {
+        New-SPMigrationConnection -Environment 'Contoso' -Url 'https://x' -OSLogin | Out-Null
+        $script:ConnectCalls[0].OSLogin | Should -BeTrue
+        $script:ConnectCalls[0].Interactive | Should -BeFalse
     }
 }
 
