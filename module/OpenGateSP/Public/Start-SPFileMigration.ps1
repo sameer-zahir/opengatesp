@@ -4,9 +4,11 @@ function Start-SPFileMigration {
         Migrate a local file share / folder into a SharePoint Online document library,
         preserving folder structure (and optionally timestamps).
     .DESCRIPTION
-        Walks $Source recursively and uploads each file into $Library under $TargetFolder,
-        recreating the folder tree. Existing files are skipped unless -Overwrite. Throttling
-        is handled with back-off, and the whole run is logged to a file.
+        Walks $Source recursively (including hidden and system files) and uploads each file into
+        $Library under $TargetFolder, recreating the folder tree. Reparse points (symlinks,
+        junctions, DFS links) are skipped and reported, not followed; enumeration failures
+        (e.g. access denied) appear as Failed rows. Existing files are skipped unless
+        -Overwrite. Throttling is handled with back-off, and the whole run is logged to a file.
 
         SAFETY: run with -WhatIf first to preview. A real run asks for one confirmation
         before writing (suppress with -Force).
@@ -76,8 +78,17 @@ function Start-SPFileMigration {
     }
     catch { throw "Could not resolve library '$Library' on ${SiteUrl}: $($_.Exception.Message)" }
 
-    $files = @(Get-ChildItem -LiteralPath $Source -Recurse -File)
-    Write-SPLog "Migration: '$Source' -> $SiteUrl / $libSiteRel/$TargetFolder  ($($files.Count) files; WhatIf=$($WhatIfPreference))"
+    # -Force so hidden/system files migrate too. Reparse points (symlinks/junctions/DFS links)
+    # are reported and skipped, not followed — following them risks loops and double-copies.
+    # Get-ChildItem -Recurse does not descend into directory reparse points, so those subtrees
+    # are surfaced as warnings instead of silently missing from Total.
+    $enumErrors = @()
+    $allFiles = @(Get-ChildItem -LiteralPath $Source -Recurse -File -Force -ErrorAction SilentlyContinue -ErrorVariable enumErrors)
+    $reparseFiles = @($allFiles | Where-Object { $_.Attributes -band [System.IO.FileAttributes]::ReparsePoint })
+    $files = @($allFiles | Where-Object { -not ($_.Attributes -band [System.IO.FileAttributes]::ReparsePoint) })
+    $reparseDirs = @(Get-ChildItem -LiteralPath $Source -Recurse -Directory -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.Attributes -band [System.IO.FileAttributes]::ReparsePoint })
+    Write-SPLog "Migration: '$Source' -> $SiteUrl / $libSiteRel/$TargetFolder  ($($files.Count) files; $($reparseFiles.Count + $reparseDirs.Count) reparse point(s) skipped; $($enumErrors.Count) enumeration error(s); WhatIf=$($WhatIfPreference))"
 
     # One-time confirmation on a real run
     if (-not $WhatIfPreference -and -not $Force) {
@@ -90,6 +101,18 @@ function Start-SPFileMigration {
 
     $stats   = [ordered]@{ Total = $files.Count; Uploaded = 0; Skipped = 0; Failed = 0; WouldUpload = 0 }
     $results = [System.Collections.Generic.List[object]]::new()
+
+    # Surface what the walk could NOT migrate, so it never silently vanishes from the report.
+    foreach ($rp in @($reparseDirs) + @($reparseFiles)) {
+        $stats.Skipped++
+        $results.Add([pscustomobject]@{ File = $rp.FullName; Status = 'Skipped (reparse point — not followed)'; Target = $null; Error = $null })
+    }
+    foreach ($e in $enumErrors) {
+        $stats.Failed++
+        $errPath = if ($e.TargetObject) { "$($e.TargetObject)" } else { $Source }
+        Write-SPLog "ENUMERATION FAILED ${errPath}: $($e.Exception.Message)" -Level Error
+        $results.Add([pscustomobject]@{ File = $errPath; Status = 'Failed (enumeration)'; Target = $null; Error = $e.Exception.Message })
+    }
 
     foreach ($f in $files) {
         $ext = $f.Extension.ToLowerInvariant()

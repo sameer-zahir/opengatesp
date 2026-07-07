@@ -34,6 +34,10 @@ function Copy-SPSite {
     .PARAMETER ConflictMode
         What to do when an object already exists at the destination: Replace, Skip,
         KeepBoth, or IfNewer (default).
+    .PARAMETER Since
+        Incremental copy: only list items and library files modified at/after this timestamp
+        are copied. Compared in UTC — a value with an Unspecified kind is treated as UTC
+        (Get-Date values carry Kind=Local and convert correctly).
     .PARAMETER Force
         Skip the confirmation and perform the copy (still respects -WhatIf).
     .PARAMETER AsJson
@@ -133,17 +137,24 @@ function Copy-SPSite {
             try {
                 if ($l.BaseType -eq 'DocumentLibrary') {
                     if ($CrossTenant) {
-                        $fn = Copy-SPFilesCrossTenant -SourceConnection $src -DestinationConnection $dst -ListTitle $l.Title -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl
-                        $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail "$fn file(s) copied (cross-tenant)"))
+                        $xt = Copy-SPFilesCrossTenant -SourceConnection $src -DestinationConnection $dst -ListTitle $l.Title -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl -Since $Since
+                        $xtStatus = if ($xt.Failed -gt 0) { if ($xt.Copied -eq 0) { 'Error' } else { 'Warning' } } else { 'Success' }
+                        $xtDetail = "$($xt.Copied) file(s) copied (cross-tenant)"
+                        if ($xt.Failed -gt 0) { $xtDetail += "; $($xt.Failed) failed: $(@($xt.Errors)[0])" }
+                        $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status $xtStatus -Detail $xtDetail))
                     }
                     else {
-                        Copy-SPLibraryFiles -SourceConnection $src -DestinationConnection $dst -IncludeVersions:$IncludeVersions -ListTitle $l.Title -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl -Overwrite:($ConflictMode -eq 'Replace')
-                        $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail $(if ($IncludeVersions) { 'Files copied (with version history)' } else { 'Files copied' })))
+                        $lib = Copy-SPLibraryFiles -SourceConnection $src -DestinationConnection $dst -IncludeVersions:$IncludeVersions -ListTitle $l.Title -SourceWebUrl $SourceUrl -DestinationWebUrl $DestinationUrl -Since $Since -Overwrite:($ConflictMode -eq 'Replace')
+                        $results.Add((New-SPCopyResult -ObjectType 'Library' -Name $l.Title -Action 'Overwrite' -Status ($lib.Status ?? 'Success') -Detail ($lib.Detail ?? 'Files copied')))
                     }
                 }
                 else {
-                    $n = Copy-SPListItems -SourceConnection $src -DestinationConnection $dst -ListTitle $l.Title -Since $Since
-                    $results.Add((New-SPCopyResult -ObjectType 'List' -Name $l.Title -Action 'Overwrite' -Status 'Success' -Detail "$n item(s) copied"))
+                    $io = Copy-SPListItems -SourceConnection $src -DestinationConnection $dst -ListTitle $l.Title -Since $Since
+                    $ioStatus = if ($io.Failed -gt 0) { if ($io.Copied -eq 0) { 'Error' } else { 'Warning' } } else { 'Success' }
+                    $ioDetail = "$($io.Copied) of $($io.Queued) item(s) copied"
+                    if ($io.Failed -gt 0) { $ioDetail += "; $($io.Failed) failed: $(@($io.Errors)[0])" }
+                    elseif (-not $io.Confirmed) { $ioDetail += ' (batch outcome unconfirmed)' }
+                    $results.Add((New-SPCopyResult -ObjectType 'List' -Name $l.Title -Action 'Overwrite' -Status $ioStatus -Detail $ioDetail))
                 }
             }
             catch {

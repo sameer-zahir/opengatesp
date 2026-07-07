@@ -9,10 +9,16 @@ function Select-SPChangedItems {
         the timestamp of the last successful copy as -Since; only items modified at/after it
         survive. With -DestIndex (item id -> destination Modified) it also drops items the
         destination already holds at an equal-or-newer time, so re-runs converge.
+
+        All timestamps are compared in UTC: Kind=Local values are converted, Kind=Unspecified
+        values are TREATED AS UTC (SharePoint returns UTC datetimes with an Unspecified kind;
+        a -Since built from Get-Date carries Kind=Local and converts correctly). Comparing raw
+        wall-clock values would silently drop or duplicate items across timezones.
     .PARAMETER SourceItem
         Items with .Id and .Modified.
     .PARAMETER Since
-        Keep only items with Modified >= Since. Omit to ignore the watermark.
+        Keep only items with Modified >= Since. Treated as UTC when its Kind is Unspecified.
+        Omit to ignore the watermark.
     .PARAMETER DestIndex
         Optional hashtable keyed by item id (as string) -> destination Modified.
     .OUTPUTS
@@ -26,14 +32,28 @@ function Select-SPChangedItems {
         [hashtable]$DestIndex
     )
 
+    # Local => convert; Unspecified => stamp as UTC (SharePoint's convention); Utc => as-is.
+    $toUtc = {
+        param($value)
+        $dt = $value -as [Nullable[datetime]]
+        if ($null -eq $dt) { return $null }
+        switch ($dt.Kind) {
+            ([System.DateTimeKind]::Local) { $dt.ToUniversalTime() }
+            ([System.DateTimeKind]::Unspecified) { [datetime]::SpecifyKind($dt, [System.DateTimeKind]::Utc) }
+            default { $dt }
+        }
+    }
+
+    $sinceUtc = & $toUtc $Since
+
     $out = foreach ($it in $SourceItem) {
         if (-not $it) { continue }
-        $mod = $it.Modified -as [Nullable[datetime]]
+        $mod = & $toUtc $it.Modified
 
-        if ($Since -and $mod -and $mod -lt $Since) { continue }
+        if ($sinceUtc -and $mod -and $mod -lt $sinceUtc) { continue }
 
         if ($DestIndex -and $null -ne $it.Id -and $DestIndex.ContainsKey("$($it.Id)")) {
-            $dmod = $DestIndex["$($it.Id)"] -as [Nullable[datetime]]
+            $dmod = & $toUtc $DestIndex["$($it.Id)"]
             if ($mod -and $dmod -and $mod -le $dmod) { continue }
         }
         $it

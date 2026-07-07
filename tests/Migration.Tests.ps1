@@ -9,6 +9,8 @@ BeforeAll {
     . (Join-Path $priv 'Resolve-SPConflict.ps1')
     . (Join-Path $priv 'New-SPCopyResult.ps1')
     . (Join-Path $priv 'Get-SPCopyPlan.ps1')
+    . (Join-Path $priv 'Measure-SPBatchOutcome.ps1')
+    . (Join-Path $priv 'Select-SPChangedItems.ps1')
 }
 
 Describe 'Resolve-SPConflict' {
@@ -73,5 +75,75 @@ Describe 'Get-SPCopyPlan' {
         $src = @([pscustomobject]@{ Name = 'A'; ObjectType = 'List'; Modified = $null })
         $dst = @([pscustomobject]@{ Name = 'A'; Modified = $null })
         (Get-SPCopyPlan -SourceObjects $src -DestObjects $dst -Mode Replace).Action | Should -Be 'Overwrite'
+    }
+}
+
+Describe 'Measure-SPBatchOutcome' {
+    It 'flags an empty batch output as unconfirmed instead of inventing failures' {
+        $r = Measure-SPBatchOutcome -BatchOutput @() -Queued 7
+        $r.Copied    | Should -Be 7
+        $r.Failed    | Should -Be 0
+        $r.Confirmed | Should -BeFalse
+    }
+    It 'counts every clean result as copied' {
+        $out = 1..3 | ForEach-Object { [pscustomobject]@{ StatusCode = 201 } }
+        $r = Measure-SPBatchOutcome -BatchOutput $out -Queued 3
+        $r.Copied    | Should -Be 3
+        $r.Failed    | Should -Be 0
+        $r.Confirmed | Should -BeTrue
+    }
+    It 'never reports a failed request as copied (error property)' {
+        $out = @(
+            [pscustomobject]@{ ErrorMessage = $null }
+            [pscustomobject]@{ ErrorMessage = 'Column X does not exist' }
+            [pscustomobject]@{ Error = 'The item could not be added' }
+        )
+        $r = Measure-SPBatchOutcome -BatchOutput $out -Queued 3
+        $r.Copied | Should -Be 1
+        $r.Failed | Should -Be 2
+        $r.Errors | Should -Contain 'Column X does not exist'
+    }
+    It 'treats an HTTP status >= 400 as a failure' {
+        $out = @(
+            [pscustomobject]@{ ResponseStatusCode = 500 }
+            [pscustomobject]@{ ResponseStatusCode = 204 }
+        )
+        $r = Measure-SPBatchOutcome -BatchOutput $out -Queued 2
+        $r.Failed | Should -Be 1
+        $r.Copied | Should -Be 1
+    }
+    It 'caps the captured error messages at 5' {
+        $out = 1..9 | ForEach-Object { [pscustomobject]@{ Error = "err$_" } }
+        $r = Measure-SPBatchOutcome -BatchOutput $out -Queued 9
+        $r.Failed | Should -Be 9
+        @($r.Errors).Count | Should -Be 5
+    }
+}
+
+Describe 'Select-SPChangedItems UTC handling' {
+    It 'treats Kind=Unspecified timestamps as UTC on both sides (deterministic cut-off)' {
+        $items = @(
+            [pscustomobject]@{ Id = 1; Modified = [datetime]::SpecifyKind((Get-Date '2026-07-01T09:59:59'), 'Unspecified') }
+            [pscustomobject]@{ Id = 2; Modified = [datetime]::SpecifyKind((Get-Date '2026-07-01T10:00:00'), 'Unspecified') }
+        )
+        $since = [datetime]::SpecifyKind((Get-Date '2026-07-01T10:00:00'), 'Utc')
+        $r = @(Select-SPChangedItems -SourceItem $items -Since $since)
+        @($r).Id | Should -Be @(2)
+    }
+    It 'converts a Kind=Local -Since so it compares as the same instant, not the same wall-clock' {
+        # 10:00 UTC expressed as local time must keep an item modified 10:30 UTC and drop 09:30 UTC,
+        # regardless of the machine's timezone.
+        $sinceLocal = ([datetime]::SpecifyKind((Get-Date '2026-07-01T10:00:00'), 'Utc')).ToLocalTime()
+        $items = @(
+            [pscustomobject]@{ Id = 1; Modified = [datetime]::SpecifyKind((Get-Date '2026-07-01T09:30:00'), 'Unspecified') }
+            [pscustomobject]@{ Id = 2; Modified = [datetime]::SpecifyKind((Get-Date '2026-07-01T10:30:00'), 'Unspecified') }
+        )
+        $r = @(Select-SPChangedItems -SourceItem $items -Since $sinceLocal)
+        @($r).Id | Should -Be @(2)
+    }
+    It 'converges when the DestIndex holds the same instant in a different kind' {
+        $items = @([pscustomobject]@{ Id = 5; Modified = [datetime]::SpecifyKind((Get-Date '2026-07-01T12:00:00'), 'Unspecified') })
+        $dest = @{ '5' = ([datetime]::SpecifyKind((Get-Date '2026-07-01T12:00:00'), 'Utc')).ToLocalTime() }
+        @(Select-SPChangedItems -SourceItem $items -DestIndex $dest).Count | Should -Be 0
     }
 }

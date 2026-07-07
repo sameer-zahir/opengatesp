@@ -9,6 +9,8 @@ BeforeAll {
     . (Join-Path $mod 'Private\Write-SPLog.ps1')
     . (Join-Path $mod 'Private\ConvertTo-SPOutput.ps1')
     . (Join-Path $mod 'Private\New-SPCopyResult.ps1')
+    . (Join-Path $mod 'Private\Get-SPHttpStatusCode.ps1')
+    . (Join-Path $mod 'Private\Get-SPRetryDelay.ps1')
     . (Join-Path $mod 'Private\Invoke-SPRetry.ps1')
     . (Join-Path $mod 'Private\Select-SPVersionsToTrim.ps1')
     . (Join-Path $mod 'Private\ConvertTo-SPPrincipalKey.ps1')
