@@ -4,6 +4,59 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
+## [0.14.0]
+
+The identity release: **Copy identities (Entra tenant-to-tenant)** — the open answer to
+ShareGate's Copy identities — plus ShareGate-style **environments** with browser-SSO,
+stay-signed-in, and Windows-native sign-in. Also folds in the planned 0.13 migration
+correctness wave, so failures can no longer report as Success.
+
+### Added
+- **Copy identities** — a four-step, review-first pipeline: `Get-SPIdentityInventory`
+  (users/guests/security/M365 groups + rosters; Exchange-only group types flagged
+  unsupported), `New-SPIdentityMap` (matches existing destination identities — mail first,
+  then UPN local part — and proposes the rest; emits a **hand-editable mapping CSV**),
+  `Test-SPIdentityMap` (UPN/nickname collisions, unverified domains, vanished matches;
+  fail-closed), and `Copy-SPIdentity` (dry-run by default; users created **disabled** with
+  crypto-random throwaway passwords — **passwords, MFA, and licenses never migrate, by
+  design**; guests by invitation; convergent group-roster sync; emits a `Source,Destination`
+  principal map for `Copy-SPPermissions -MappingCsv`). Four `sharepoint_identity_*` MCP
+  tools behind the server-side preview-first gate. CLI + MCP only. See docs/14.
+- **Environments** — save each tenant as a named profile: `Connect-SPTool -Environment`,
+  `Get-SPEnvironment`, `Remove-SPEnvironment`, `Disconnect-SPTool`, and
+  `New-SPMigrationConnection -Environment` (one line per side for cross-tenant). The GUI
+  Connect view becomes a ShareGate-style **Environments manager** with one-click switching
+  and the app's first **Sign out**. Read-only `sharepoint_environments` MCP tool. See docs/03.
+- **Sign-in upgrades** — `-OSLogin` (Windows Hello / WAM broker, no browser; automatic
+  browser fallback when the app registration lacks the broker redirect URI — docs/02);
+  opt-in `-PersistLogin` (stay signed in across restarts; clear with
+  `Disconnect-SPTool -ClearPersistedLogin`); the device-code prompt now appears in a GUI
+  dialog (code + copy + open-page) instead of vanishing into a background stream.
+
+### Fixed
+- **Migration correctness wave** (the planned 0.13): batch item failures are classified from
+  real `Invoke-PnPBatch` results instead of counting as copied on queue; cross-site metadata
+  restore passes `-TargetConnection` (was a silent no-op across site collections) and
+  downgrades to Warning on failure; `-Since` is normalized to UTC and now honored for
+  library files; hidden files migrate and reparse points are reported as skipped instead of
+  followed or omitted; throttling retries honor `Retry-After` and detect by HTTP status
+  (robust to localized messages); version-history copy degrades loudly ("current version
+  only") instead of silently.
+- Saved delegated sign-in flavors are reused on silent reconnects — device-code users were
+  being switched to browser auth on every reconnect.
+- GUI onboarding no longer overwrites `spconfig.json` (it dropped `AuthMode`/`Thumbprint`).
+- The Environments form no longer clips its sign-in checkboxes at default window width.
+
+### Changed
+- **Requires PnP.PowerShell 2.12.0 or later** (enforced by the module manifest) — the
+  release that added the persisted sign-in cache.
+- Note: the PnP token cache is per app registration, so `-ClearPersistedLogin` signs out
+  every environment sharing that app.
+- README: Fluent Light screenshots (incl. the new Environments page); identity copy and
+  environments move to checkmarks in the ShareGate comparison.
+- CI: a failed winget submission no longer fails the release job (the GitHub release is
+  already published by then).
+
 ## [0.12.0]
 
 ### Security

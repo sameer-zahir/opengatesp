@@ -127,6 +127,13 @@ jobs:
           if ($env:WINGET_TOKEN) {
             Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
             ./wingetcreate.exe update SameerZahir.OpenGateSP --version $v --urls $url --submit --token $env:WINGET_TOKEN
+            if ($LASTEXITCODE -ne 0) {
+              # Non-fatal: the GitHub release is already published at this point. Most common
+              # cause: the package's first-ever winget PR hasn't merged yet, so there is
+              # nothing for `update` to update.
+              Write-Warning "winget submission failed (exit $LASTEXITCODE) — submit later with: wingetcreate update SameerZahir.OpenGateSP --version $v --urls $url --submit"
+              exit 0
+            }
             Write-Host "Submitted OpenGateSP $v to winget-pkgs."
           } else {
             Write-Host "WINGET_TOKEN not set — skipping automatic submission."
