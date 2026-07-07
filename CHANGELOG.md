@@ -4,7 +4,14 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
 follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased — 0.11.1]
+## [0.11.1]
+
+### Fixed
+- **Silent / winget installs no longer stall on a dialog.** The installer's "PowerShell 7 not
+  detected" advisory was shown even under `/VERYSILENT` (Inno Setup's `MsgBox` ignores silent
+  mode), so unattended installs — including winget's validation pipeline — hung waiting for a
+  click on machines without PowerShell 7. Silent installs now skip the advisory entirely; with
+  `/SUPPRESSMSGBOXES` it auto-answers "No" instead of opening a browser.
 
 ### Security
 - **AI write actions: the apply step is now reply-gated.** A write's `execute` call is only

@@ -5,7 +5,7 @@
 ; Version comes from tools\Get-OpenGateSPVersion.ps1 via Build-Installer.ps1 (ISCC /DMyAppVersion=...).
 ; The literal below is only a fallback for compiling the .iss directly.
 #ifndef MyAppVersion
-  #define MyAppVersion "0.11.0"
+  #define MyAppVersion "0.11.1"
 #endif
 #define MyAppPublisher "Sameer Zahir"
 #define MyAppURL "https://sameerzahir.com"
@@ -80,14 +80,21 @@ function InitializeSetup(): Boolean;
 var ec: Integer;
 begin
   Result := True;
+  { Unattended installs (winget passes /VERYSILENT) must never show UI — a plain
+    MsgBox still displays when silent and blocks the install. The PS7 advisory is
+    informational only, so skip it entirely when silent; SuppressibleMsgBox also
+    honors /SUPPRESSMSGBOXES for interactive runs (defaulting to No, so setup
+    never opens a browser unprompted). }
+  if WizardSilent() then
+    Exit;
   if not PowerShell7Installed() then
   begin
-    if MsgBox('OpenGateSP runs on PowerShell 7, which was not detected on this PC.'
+    if SuppressibleMsgBox('OpenGateSP runs on PowerShell 7, which was not detected on this PC.'
         + #13#10 + #13#10
         + 'Open the PowerShell 7 download page now?'
         + #13#10 + #13#10
         + 'You can keep installing OpenGateSP either way — just install PowerShell 7 before you launch it.',
-        mbConfirmation, MB_YESNO) = IDYES then
+        mbConfirmation, MB_YESNO, IDNO) = IDYES then
       ShellExec('open', 'https://aka.ms/powershell', '', '', SW_SHOW, ewNoWait, ec);
   end;
 end;
