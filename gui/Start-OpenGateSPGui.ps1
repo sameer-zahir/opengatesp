@@ -754,8 +754,8 @@ function Update-EnvList {
       <Button x:Name="EnvRowRemove" Content="Remove" Style="{DynamicResource GhostButton}" Margin="6,0,0,0"/>
     </StackPanel>
     <StackPanel VerticalAlignment="Center">
-      <TextBlock x:Name="EnvRowName" FontWeight="SemiBold" Foreground="{DynamicResource Fg}"/>
-      <TextBlock x:Name="EnvRowDetail" FontSize="12" Foreground="{DynamicResource FgMute}"/>
+      <TextBlock x:Name="EnvRowName" FontWeight="SemiBold" Foreground="{DynamicResource Fg}" TextTrimming="CharacterEllipsis"/>
+      <TextBlock x:Name="EnvRowDetail" FontSize="12" Foreground="{DynamicResource FgMute}" TextTrimming="CharacterEllipsis"/>
     </StackPanel>
   </DockPanel>
 </Border>

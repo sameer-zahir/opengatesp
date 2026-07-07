@@ -10,7 +10,7 @@
 > up the mess, and schedule the reports — with a built-in AI assistant that runs on **your own**
 > model. No tiers, no trials, no sales call.
 
-![OpenGateSP — the home dashboard](docs/screenshot-dark.png)
+![OpenGateSP — the home dashboard](docs/screenshot-light.png)
 
 ## Download & install
 
@@ -34,7 +34,10 @@ anything.
 
 **Copy sites, Teams & Groups.** Copy a site's lists, libraries, and content to another site — in
 your tenant or a different one. Clone a Team with its channels and members, a Microsoft 365
-Group, or a Planner plan. Bring permissions along, remapping people with a simple CSV.
+Group, or a Planner plan. Bring permissions along, remapping people with a simple CSV — or go
+further and **copy the identities themselves**: inventory a tenant's users and groups, review a
+mapping CSV, and recreate them in the destination tenant (PowerShell/MCP; passwords and licenses
+never migrate, by design).
 
 **See who has access to what.** External sharing, full permission reports, a who-can-touch-what
 matrix, "Everyone" oversharing, ownerless Groups, and people who left the company but still have
@@ -87,16 +90,15 @@ on [PnP PowerShell](https://pnp.github.io/powershell/) — not affiliated with S
 | **Built-in AI assistant — your own model** | — | **✅** |
 | Drive it from your own AI app (MCP) | — | **✅** |
 | Open source you can read, fork, and own | — | **✅** |
-| Copy identities (Entra tenant-to-tenant) | ✅ | planned |
+| Copy identities (Entra tenant-to-tenant) | ✅ | ✅ |
+| Connect to environments (saved tenants, SSO) | ✅ | ✅ |
 | Full per-version history fidelity | ✅ | best-effort |
 | Automated governance policies | ✅ | partial |
 
 The gaps are real and we say so: full version-history fidelity needs the SharePoint Migration
-API (best-effort here today), ShareGate Protect's *automated* policy engine is only partially
-covered (OpenGateSP does the reporting and the cleanup, not yet always-on policies), and
-ShareGate's new **Copy identities** (creating users and groups in a destination tenant) is on the
-[roadmap](docs/roadmap.md) — OpenGateSP currently remaps identities during a copy rather than
-creating them.
+API (best-effort here today), and ShareGate Protect's *automated* policy engine is only
+partially covered (OpenGateSP does the reporting and the cleanup, not yet always-on policies) —
+both are on the [roadmap](docs/roadmap.md).
 
 ## Is it safe?
 
@@ -124,7 +126,7 @@ Setup guides: [prerequisites](docs/01-prerequisites.md), [app registration](docs
 [headless/scheduled auth](docs/05-app-only-auth.md). To drive it from Claude, Codex, or Cursor,
 hook up the [MCP server](mcp-server/README.md) — write tools are preview-gated there too.
 
-![OpenGateSP light theme](docs/screenshot-light.png)
+![OpenGateSP — saved environments with one-click switching](docs/screenshot-environments.png)
 
 Four themes, picked on first run, changeable any time.
 

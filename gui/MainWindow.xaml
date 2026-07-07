@@ -240,23 +240,21 @@
                             <TextBlock Grid.Row="4" Grid.Column="0" Text="Tenant" VerticalAlignment="Center"/>
                             <TextBox   Grid.Row="4" Grid.Column="1" x:Name="TbTenant" AutomationProperties.Name="Tenant"/>
 
-                            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
-                                <CheckBox x:Name="CbAdmin"  Content="Admin centre (tenant-wide)"/>
-                                <CheckBox x:Name="CbDevice" Content="Device-code sign-in"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
-                                <CheckBox x:Name="CbOSLogin" Content="Sign in with Windows (no browser)"
+                            <WrapPanel Grid.Row="5" Grid.Column="1" Margin="0,2,0,0">
+                                <CheckBox x:Name="CbAdmin"  Content="Admin centre (tenant-wide)" Margin="0,0,14,4"/>
+                                <CheckBox x:Name="CbDevice" Content="Device-code sign-in" Margin="0,0,14,4"/>
+                                <CheckBox x:Name="CbOSLogin" Content="Sign in with Windows (no browser)" Margin="0,0,14,4"
                                           ToolTip="Windows Hello / your Windows account. Needs a one-time app change (see the guide) — falls back to the browser automatically."/>
-                                <CheckBox x:Name="CbKeepSignedIn" Content="Keep me signed in"
+                                <CheckBox x:Name="CbKeepSignedIn" Content="Keep me signed in" Margin="0,0,14,4"
                                           ToolTip="Stay signed in across restarts on this device. Off = this session only. Sign out clears it."/>
-                            </StackPanel>
+                            </WrapPanel>
 
-                            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Margin="0,4,0,0">
+                            <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Margin="0,6,0,0">
                                 <Button x:Name="BtnConnect" Content="Connect &amp; save"/>
                                 <Button x:Name="BtnEnvSignOut" Content="Sign out" Style="{DynamicResource GhostButton}" Margin="8,0,0,0"/>
-                                <TextBlock Text="Connecting saves this environment and makes it active. Your browser signs you in (SSO)."
-                                           Style="{DynamicResource Muted}" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="300"/>
                             </StackPanel>
+                            <TextBlock Grid.Row="7" Grid.Column="1" Style="{DynamicResource Muted}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       Text="Connecting saves this environment and makes it active. Your browser signs you in (SSO)."/>
                         </Grid>
                     </Grid>
                 </DockPanel>
