@@ -46,6 +46,10 @@ permission inheritance, remove stale users, archive dead sites. Everything previ
 **Schedule the reports.** Governance reports as CSVs on a daily or weekly schedule, no sign-in
 needed once set up.
 
+**Connect to your environments.** Save each tenant as a named environment and switch with one
+click — your browser signs you in (SSO), "keep me signed in" survives restarts if you opt in,
+and Windows Hello sign-in is available after a one-time app tweak.
+
 Every button in the app is also a PowerShell command you can read and script — the guides in
 [docs/](docs/) cover each area, start with the [quickstart](docs/03-quickstart.md).
 

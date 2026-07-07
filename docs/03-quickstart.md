@@ -35,6 +35,38 @@ Connect-SPTool -Url https://contoso.sharepoint.com -ClientId <clientId> -Tenant 
 
 After `-SaveConfig`, later sessions are just `Connect-SPTool`.
 
+### Environments — work with more than one tenant
+
+An **environment** is a saved, named tenant connection (the ShareGate "Connect to your
+environments" idea). Connecting to one saves it and makes it active; everything you run
+afterwards targets the active environment:
+
+```powershell
+# Save each tenant once (the browser signs you in — SSO picks up your session):
+Connect-SPTool -Environment "Contoso"  -Url https://contoso.sharepoint.com  -ClientId <id> -Tenant contoso.onmicrosoft.com
+Connect-SPTool -Environment "Fabrikam" -Url https://fabrikam.sharepoint.com -ClientId <id> -Tenant fabrikam.onmicrosoft.com
+
+# From then on, switching is one argument:
+Connect-SPTool -Environment Contoso
+Get-SPEnvironment            # list them; the active one is flagged
+Remove-SPEnvironment -Name Fabrikam -WhatIf
+
+# Cross-tenant copies read one line per side:
+$src = New-SPMigrationConnection -Environment Contoso  -Url https://contoso.sharepoint.com/sites/A
+$dst = New-SPMigrationConnection -Environment Fabrikam -Url https://fabrikam.sharepoint.com/sites/B
+```
+
+**Stay signed in (opt-in):** add `-PersistLogin` and the sign-in survives new sessions and
+reboots — sign in once, silent afterwards. Turn it off with `-PersistLogin:$false`, and sign
+out fully with `Disconnect-SPTool -ClearPersistedLogin`. Note the token cache is per app
+registration, so clearing it signs out every environment that shares the app.
+
+**Windows sign-in (optional):** `-OSLogin` uses Windows Hello / your Windows account instead
+of a browser — after a one-time app change ([docs/02](02-entra-app-registration.md#optional--windows-native-sign-in-no-browser));
+without it, OpenGateSP falls back to the browser automatically.
+
+The GUI's **Environments** page is the same feature with buttons.
+
 ## 3. Migration (always dry-run first)
 
 ```powershell

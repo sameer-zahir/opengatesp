@@ -51,6 +51,22 @@ Register-PnPEntraIDAppForInteractiveLogin `
    - *Microsoft Graph* → Delegated → `User.Read` (and `Group.Read.All` for group reports)
 6. **Grant admin consent** for the tenant.
 
+## Optional — Windows-native sign-in (no browser)
+
+`Connect-SPTool -OSLogin` (and the GUI's **Sign in with Windows**) signs in through the
+Windows broker (WAM): Windows Hello, FIDO keys, and conditional-access device auth, with no
+browser window. It needs **one extra redirect URI** on your app registration:
+
+1. **Entra admin centre → App registrations → your app → Authentication.**
+2. Under **Mobile and desktop applications**, add:
+   `ms-appx-web://microsoft.aad.brokerplugin/{client_id}`
+   (replace `{client_id}` with your app's own Application ID).
+
+Neither `Register-PnPEntraIDAppForInteractiveLogin` nor the GUI's one-click setup adds this
+URI — it is a one-time manual step. Until it's there, OpenGateSP **falls back to the browser
+automatically** and tells you why, so nothing breaks; Windows sign-in is an upgrade, not a
+requirement. Windows only.
+
 ### Scopes for identity copy (docs/14)
 
 The [identity-copy pipeline](14-identity-copy.md) is tenant-level Graph work and follows

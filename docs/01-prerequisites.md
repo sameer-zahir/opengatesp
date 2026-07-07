@@ -12,13 +12,20 @@ Install/upgrade from <https://aka.ms/powershell> or `winget install Microsoft.Po
 
 > The **GUI** (coming) is Windows-only because it uses WPF. The **module/engine** runs anywhere PowerShell 7 and PnP.PowerShell run (Windows/macOS/Linux).
 
-## 2. PnP.PowerShell
+## 2. PnP.PowerShell (2.12.0 or later)
 
-The engine is built on [PnP.PowerShell](https://pnp.github.io/powershell/):
+The engine is built on [PnP.PowerShell](https://pnp.github.io/powershell/) and requires
+**2.12.0 or later** (3.x recommended) — that release added the persisted sign-in cache
+(`-PersistLogin` / `Disconnect-PnPOnline -ClearPersistedLogin`) that powers "keep me signed
+in". The module manifest enforces the floor, so `Import-Module` tells you if you're below it.
 
 ```powershell
 Install-Module PnP.PowerShell -Scope CurrentUser
 ```
+
+> "Keep me signed in" stores the token cache in your user profile — DPAPI-protected on
+> Windows. On macOS/Linux the cache is a file in your profile without OS-level encryption;
+> prefer session-only sign-ins there.
 
 ## 3. Permission to register an Entra ID app
 

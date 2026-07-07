@@ -42,6 +42,14 @@ Connect-SPTool -Url https://contoso.sharepoint.com -ClientId <appId> -Tenant con
 `-SaveConfig` records the **auth mode** (and thumbprint / cert path — **never the password**), so
 afterwards a plain `Connect-SPTool` reconnects headlessly, and so do the GUI and the MCP server.
 
+App-only pairs naturally with a **named environment** (docs/03) — keep a headless profile
+side by side with your interactive ones and switch freely:
+
+```powershell
+Connect-SPTool -Environment "Contoso (headless)" -Url https://contoso.sharepoint.com `
+    -ClientId <appId> -Tenant contoso.onmicrosoft.com -Thumbprint <thumbprint>
+```
+
 ## 3. Use it unattended
 
 A nightly external-sharing report, no human in the loop:
@@ -55,6 +63,12 @@ Get-SPSharingReport -SiteUrl https://contoso.sharepoint.com/sites/Marketing |
 
 The **MCP server** picks this up automatically: once app-only is the saved mode, AI-driven calls
 need no sign-in.
+
+## Signing out
+
+`Disconnect-SPTool` closes the current connection; add `-ClearPersistedLogin` to also clear
+a persisted delegated sign-in (see docs/03 — app-only connections have no persisted user
+session to clear).
 
 ## Secret handling
 
