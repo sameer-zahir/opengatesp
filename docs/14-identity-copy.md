@@ -2,8 +2,8 @@
 
 Create the **people and groups** in a destination tenant before you move their content:
 users, guests (by invitation), security groups, and Microsoft 365 groups — with their
-owner/member rosters. OpenGateSP's answer to ShareGate's *Copy identities* (Entra ID
-Migration), built on the same review-first posture as the rest of the module: every step
+owner/member rosters. Cross-tenant identity copy (Entra ID users & groups), built on the same
+review-first posture as the rest of the module: every step
 until the last is **read-only**, and the last is **dry-run by default**.
 
 Run this **before** a cross-tenant content copy ([docs/07](07-sharepoint-migration.md)):

@@ -883,7 +883,7 @@
 
                         <TextBlock Text="About" Style="{DynamicResource Section}" Foreground="{DynamicResource Fg}" Margin="0,0,0,6"/>
                         <TextBlock x:Name="SetAbout" Text="OpenGateSP" Foreground="{DynamicResource Fg}" Margin="0,0,0,2"/>
-                        <TextBlock Text="The free, open-source ShareGate alternative · MIT" Style="{DynamicResource Muted}" Margin="0,0,0,12"/>
+                        <TextBlock Text="A free, open-source SharePoint migration &amp; governance toolkit · MIT" Style="{DynamicResource Muted}" Margin="0,0,0,12"/>
                         <StackPanel Orientation="Horizontal">
                             <Button x:Name="BtnCheckUpdates" Content="Check for updates"/>
                             <Button x:Name="BtnDocs" Content="Documentation" Style="{DynamicResource GhostButton}"/>

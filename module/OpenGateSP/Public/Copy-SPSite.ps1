@@ -2,7 +2,7 @@ function Copy-SPSite {
     <#
     .SYNOPSIS
         Copy a SharePoint site's structure (and optionally its content) to another site
-        in the SAME tenant — the open equivalent of ShareGate's "Copy structure and content".
+        in the SAME tenant — a structure-and-content site copy.
     .DESCRIPTION
         Connects to both the source and destination sites, builds a plan of what would copy
         (honouring the conflict mode), and — unless this is a dry run — applies the source's

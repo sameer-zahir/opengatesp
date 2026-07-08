@@ -6,8 +6,8 @@ follow [Semantic Versioning](https://semver.org/).
 
 ## [0.14.0]
 
-The identity release: **Copy identities (Entra tenant-to-tenant)** — the open answer to
-ShareGate's Copy identities — plus ShareGate-style **environments** with browser-SSO,
+The identity release: **Copy identities (Entra tenant-to-tenant)** — cross-tenant identity
+copy for Entra ID users and groups — plus saved **environments** with browser-SSO,
 stay-signed-in, and Windows-native sign-in. Also folds in the planned 0.13 migration
 correctness wave, so failures can no longer report as Success.
 
@@ -25,7 +25,7 @@ correctness wave, so failures can no longer report as Success.
 - **Environments** — save each tenant as a named profile: `Connect-SPTool -Environment`,
   `Get-SPEnvironment`, `Remove-SPEnvironment`, `Disconnect-SPTool`, and
   `New-SPMigrationConnection -Environment` (one line per side for cross-tenant). The GUI
-  Connect view becomes a ShareGate-style **Environments manager** with one-click switching
+  Connect view becomes a saved-tenant **Environments manager** with one-click switching
   and the app's first **Sign out**. Read-only `sharepoint_environments` MCP tool. See docs/03.
 - **Sign-in upgrades** — `-OSLogin` (Windows Hello / WAM broker, no browser; automatic
   browser fallback when the app registration lacks the broker redirect URI — docs/02);
@@ -53,7 +53,7 @@ correctness wave, so failures can no longer report as Success.
 - Note: the PnP token cache is per app registration, so `-ClearPersistedLogin` signs out
   every environment sharing that app.
 - README: Fluent Light screenshots (incl. the new Environments page); identity copy and
-  environments move to checkmarks in the ShareGate comparison.
+  environments move to checkmarks in the feature comparison.
 - CI: a failed winget submission no longer fails the release job (the GitHub release is
   already published by then).
 
@@ -110,7 +110,7 @@ correctness wave, so failures can no longer report as Success.
 
 ## [0.11.0]
 
-The BYOK in-app AI assistant, ShareGate-Protect-style governance detection, and a dashboard Home.
+The BYOK in-app AI assistant, governance detection (oversharing & ownership risk), and a dashboard Home.
 
 ### Added
 - **In-app AI assistant (bring your own model)** — chat with *your own* Claude / OpenAI key or a local
@@ -123,7 +123,7 @@ The BYOK in-app AI assistant, ShareGate-Protect-style governance detection, and 
   metadata, check-in, trim versions, restore inheritance, remove orphaned users, site lifecycle)
   that **always run as a preview first** — `execute` only takes effect after an identical preview
   ran and you confirmed in chat (the wizard's Run-locked-until-Preview rule, enforced in code).
-- **Protect-style governance detection** — `Find-SPEveryoneClaims` (where "Everyone"/"Everyone
+- **Governance detection** — `Find-SPEveryoneClaims` (where "Everyone"/"Everyone
   except external users" has access — the biggest oversharing risk, graded Error/Warning),
   `Get-SPOwnerlessGroups` (Microsoft 365 Groups with no owner), and `Invoke-SPGovernanceReview`
   (broad-audience grants + external sharing + orphaned access in one severity-graded list). All
@@ -171,7 +171,7 @@ A polished, human GUI and the groundwork for a seamless install. No engine cmdle
 
 ## [0.9.0]
 
-GUI redesign — ShareGate-aligned navigation and a guided Copy wizard. No engine cmdlet changes.
+GUI redesign — lifecycle-grouped navigation and a guided Copy wizard. No engine cmdlet changes.
 
 ### Added
 - **Guided Copy flow** — a "What would you like to copy?" **chooser** (SharePoint / Collaboration /
@@ -185,7 +185,7 @@ GUI redesign — ShareGate-aligned navigation and a guided Copy wizard. No engin
   GUI can be extended consistently.
 
 ### Changed
-- **Left navigation** regrouped to the ShareGate model — Home (top); **Migration** (Explore, Copy,
+- **Left navigation** regrouped by the migration lifecycle — Home (top); **Migration** (Explore, Copy,
   Pre-check, Security); **Activity** (Tasks, Scheduled); **Governance** (Provisioning); Connect pinned
   at the bottom. The old Migrate / Copy-site / Teams-&-Groups nav entries fold into the single
   **Copy** chooser (those forms are still reached through it).
@@ -240,7 +240,7 @@ Source **Explore** (pre-migration discovery) and post-migration validation.
 
 ## [0.6.0]
 
-ShareGate-parity **Phase 5** — deeper governance.
+**Phase 5** — deeper governance.
 
 ### Added
 - **`Get-SPPermissionsMatrix`** — pivot a site's role assignments into a per-principal access
@@ -258,7 +258,7 @@ ShareGate-parity **Phase 5** — deeper governance.
 
 ## [0.5.0]
 
-ShareGate-parity **Phase 4** — Teams, Microsoft 365 Groups, and Planner.
+**Phase 4** — Teams, Microsoft 365 Groups, and Planner.
 
 ### Added
 - **`Copy-SPM365Group`** — create a new Microsoft 365 Group modelled on an existing one
@@ -276,7 +276,7 @@ ShareGate-parity **Phase 4** — Teams, Microsoft 365 Groups, and Planner.
 
 ## [0.4.0]
 
-ShareGate-parity **Phase 3** — tenant-to-tenant.
+**Phase 3** — tenant-to-tenant.
 
 ### Added
 - **`New-SPMigrationConnection`** — open a PnP connection to a specific site in a specific
@@ -298,7 +298,7 @@ ShareGate-parity **Phase 3** — tenant-to-tenant.
 
 ## [0.3.0]
 
-ShareGate-parity **Phase 2** — permissions, identity mapping, and incremental copy.
+**Phase 2** — permissions, identity mapping, and incremental copy.
 
 ### Added
 - **`Copy-SPPermissions`** — copy a site's role assignments (and, with `-IncludeListPermissions`,
@@ -325,7 +325,7 @@ ShareGate-parity **Phase 2** — permissions, identity mapping, and incremental 
 - **Scheduled governance reports** — `scripts/scheduled/Run-GovernanceReport.ps1` writes
   sharing/permission CSVs headless (app-only auth); `Register-GovernanceReportTask.ps1`
   schedules it; `Get-SPScheduledCommand` builds the command line. See [docs/06](docs/06-scheduled-reports.md).
-- **SharePoint → SharePoint site copy (ShareGate-parity, Phase 1)** — `Copy-SPSite` copies a
+- **SharePoint → SharePoint site copy (Phase 1)** — `Copy-SPSite` copies a
   site's structure (lists, libraries, fields, content types, views, navigation, pages) and
   optionally its content (items, plus files with their Created/Modified/Author timestamps) to
   another site in the **same tenant**. Dry-run by default; conflict modes Replace / Skip /

@@ -24,7 +24,7 @@ needs a fresh preview. Even an MCP client configured to auto-approve tools can't
 | `sharepoint_orphaned_users` | Users with access who no longer exist in the directory |
 | `sharepoint_site_inventory` | Tenant-wide sites + storage (needs SharePoint admin) |
 
-**Governance (Protect-style)**
+**Governance**
 
 | Tool | What it does |
 |---|---|

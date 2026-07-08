@@ -3,7 +3,7 @@ function Copy-SPIdentity {
     .SYNOPSIS
         Create the identities from a reviewed map in the DESTINATION tenant: users, guests
         (by invitation), security groups, and M365 groups — then sync group rosters.
-        Dry-run by default. The open equivalent of ShareGate's "Copy identities".
+        Dry-run by default. Cross-tenant identity copy (Entra ID users & groups).
     .DESCRIPTION
         Step 4 of the identity-copy pipeline (docs/14). Refuses to start while
         Test-SPIdentityMap still reports Errors (override with -SkipValidation at your own

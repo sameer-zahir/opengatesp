@@ -10,13 +10,15 @@ PackageUrl: https://github.com/sameer-zahir/opengatesp
 License: MIT
 LicenseUrl: https://github.com/sameer-zahir/opengatesp/blob/main/LICENSE
 Copyright: (c) 2026 Sameer Zahir
-ShortDescription: Free, open-source ShareGate alternative for SharePoint Online — migrate file shares, audit permissions, provision sites.
+ShortDescription: Free, open-source SharePoint Online migration & governance toolkit — migrate file shares, audit permissions, provision sites.
 Description: >-
-  OpenGateSP is a free, open-source alternative to ShareGate for SharePoint Online and
-  Microsoft 365: file-share migration, a local pre-migration readiness check, permissions
-  and external-sharing reports, site provisioning, and scheduled governance reports. A
-  themed Windows GUI, a PowerShell module, and an MCP server share one engine. Built on
-  PnP PowerShell with delegated or app-only authentication.
+  OpenGateSP is a free, open-source SharePoint Online and Microsoft 365 migration and
+  governance toolkit — an independent alternative to ShareGate: file-share migration, a local
+  pre-migration readiness check, permissions and external-sharing reports, site provisioning,
+  and scheduled governance reports. A themed Windows GUI, a PowerShell module, and an MCP
+  server share one engine. Built on PnP PowerShell with delegated or app-only authentication.
+  Independent project — not affiliated with or endorsed by Workleap; ShareGate is a trademark
+  of Workleap.
 Moniker: opengatesp
 Tags:
   - sharepoint

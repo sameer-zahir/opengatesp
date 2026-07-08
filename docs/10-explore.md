@@ -1,8 +1,8 @@
 # Explore & post-migration validation
 
-ShareGate's "Explore" is *browse + report + remediate* a SOURCE environment. OpenGateSP's
 `Invoke-SPExplore` is the read-only, consolidated **pre-migration assessment** of a SharePoint
-source — the SharePoint-side companion to `Test-SPMigrationReadiness` (which scans local folders).
+source — *browse + report* a SOURCE environment, the SharePoint-side companion to
+`Test-SPMigrationReadiness` (which scans local folders).
 After a copy, `Compare-SPSite` validates the result.
 
 ## Assess a source
