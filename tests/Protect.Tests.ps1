@@ -1,5 +1,5 @@
 #Requires -Version 7.4
-# Unit tests for Protect-style governance detection (pure decision logic; no tenant / PnP).
+# Unit tests for governance detection (pure decision logic; no tenant / PnP).
 
 BeforeAll {
     . (Join-Path $PSScriptRoot '..\module\OpenGateSP\Private\Select-SPEveryoneClaims.ps1')

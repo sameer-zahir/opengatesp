@@ -1,8 +1,8 @@
 # 09 — Deeper governance
 
 Beyond the sharing / permission / inventory reports, OpenGateSP can answer "who can touch
-what", flag stale access, detect the biggest oversharing and ownership risks
-(ShareGate-Protect-style), and lock or archive a site.
+what", flag stale access, detect the biggest oversharing and ownership risks, and lock or
+archive a site.
 
 ## Functions
 

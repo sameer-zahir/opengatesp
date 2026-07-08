@@ -37,9 +37,8 @@ After `-SaveConfig`, later sessions are just `Connect-SPTool`.
 
 ### Environments — work with more than one tenant
 
-An **environment** is a saved, named tenant connection (the ShareGate "Connect to your
-environments" idea). Connecting to one saves it and makes it active; everything you run
-afterwards targets the active environment:
+An **environment** is a saved, named tenant connection. Connecting to one saves it and makes it
+active; everything you run afterwards targets the active environment:
 
 ```powershell
 # Save each tenant once (the browser signs you in — SSO picks up your session):

@@ -3,8 +3,8 @@
 The reference for the OpenGateSP GUI (WPF). Everything here already lives in code —
 `gui/Start-OpenGateSPGui.ps1` (`$XamlControls` = component styles, `$Xaml*` = theme token
 dictionaries) and `gui/MainWindow.xaml` (layout). This doc is the contract: **build new UI from
-these tokens and components so the app stays one coherent surface.** Design direction follows
-ShareGate Migrate/Protect — calm, guided, foolproof — see [[opengatesp-design-northstar]].
+these tokens and components so the app stays one coherent surface.** Design direction: calm,
+guided, foolproof — built on the Microsoft Fluent 2 design language.
 
 > How to extend: add a `<Style x:Key="…">` to `$XamlControls` once, reuse it everywhere via
 > `Style="{DynamicResource …}"`. Add colours only as **semantic tokens** (below) to every theme
@@ -119,7 +119,7 @@ write action a single un-previewable button.
 ## 8. Navigation IA (and why it's ordered this way)
 
 The rail reads like a **migration runbook**, not a feature dump — grouped by the real timeline
-*assess → move → verify → govern*, mirroring ShareGate's structure:
+*assess → move → verify → govern*:
 
 ```
  Home                         ← launchpad (pinned top, ungrouped)
@@ -150,7 +150,7 @@ OpenGateSP uses one saved connection — it's setup, not part of a copy.
 
 ## 9. The guided Copy wizard (the centerpiece pattern)
 
-ShareGate's foolproof copy is **chooser → breadcrumb steps**, and OpenGateSP mirrors it:
+The guided copy is a **chooser → breadcrumb-step** wizard — the standard foolproof-migration pattern:
 
 1. **Chooser** (`ViewCopyLanding`) — *"What would you like to copy?"* A `TabControl`
    (SharePoint · Collaboration · Import external) over a `WrapPanel` of `Card`s. Each card states
@@ -163,7 +163,7 @@ ShareGate's foolproof copy is **chooser → breadcrumb steps**, and OpenGateSP m
 Rules baked in (see §10): **Next is disabled until the step is valid** (source present;
 destination present and ≠ source); **Run is locked until you Preview the current settings** (a
 param-hash re-arms it whenever an option changes); every Run **confirms with a named summary**. The
-Scope step uses **`Compare-SPSite`** — our stand-in for ShareGate's dual live trees — to show
+Scope step uses **`Compare-SPSite`** — a source-vs-destination diff view — to show
 source-vs-destination lists with the diff in one grid. Each control maps to one `Copy-SPSite` /
 `Copy-SPList` parameter (`Build-CopyParams` is the single source of truth for Preview, Run, and a
 future "Copy as PowerShell").

@@ -1,7 +1,7 @@
 # 07 — SharePoint → SharePoint migration
 
 `Copy-SPSite` copies a site's **structure** (and optionally its **content**) to another site —
-the open equivalent of ShareGate's "Copy structure and content". It's **dry-run by default**:
+a structure-and-content site copy. It's **dry-run by default**:
 same-tenant by default, with **tenant-to-tenant** via `-CrossTenant` (see below).
 
 > **Status:** the planning, conflict-resolution, and reporting logic is unit-tested; the live

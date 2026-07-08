@@ -5,10 +5,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![PowerShell 7.4+](https://img.shields.io/badge/PowerShell-7.4%2B-5391FE?logo=powershell&logoColor=white)
 
-> **The free, open-source alternative to [ShareGate](https://sharegate.com)** for SharePoint Online
-> and Microsoft 365. Migrate file shares, copy sites and Teams, see who has access to what, clean
-> up the mess, and schedule the reports — with a built-in AI assistant that runs on **your own**
-> model. No tiers, no trials, no sales call.
+> **A free, open-source SharePoint Online & Microsoft 365 migration and governance toolkit** —
+> an independent, open-source alternative to [ShareGate](https://sharegate.com). Migrate file
+> shares, copy sites and Teams, see who has access to what, clean up the mess, and schedule the
+> reports — with a built-in AI assistant that runs on **your own** model. No tiers, no trials,
+> no sales call.
 
 ![OpenGateSP — the home dashboard](docs/screenshot-light.png)
 
@@ -72,9 +73,10 @@ Details: [docs/13-ai-assistant.md](docs/13-ai-assistant.md).
 
 ## How it compares to ShareGate
 
-ShareGate is a polished, expensive tool for work that comes down to SharePoint API calls anyone
-can script. OpenGateSP does that work in the open, for free. (It's an independent project built
-on [PnP PowerShell](https://pnp.github.io/powershell/) — not affiliated with ShareGate.)
+ShareGate is the established commercial tool in this space. OpenGateSP is an independent,
+open-source project that does the common migration and governance jobs for free, built on
+[PnP PowerShell](https://pnp.github.io/powershell/) and the Microsoft Graph / SharePoint APIs —
+not affiliated with or endorsed by Workleap.
 
 | | ShareGate | OpenGateSP |
 |---|---|---|
@@ -133,7 +135,7 @@ Four themes, picked on first run, changeable any time.
 ## Roadmap
 
 Next up: governance auto-remediation policies and access-review campaigns, **identity copy**
-(Entra tenant-to-tenant users/groups — ShareGate's "Copy identities"), full version-history
+(Entra tenant-to-tenant users/groups), full version-history
 fidelity via the Migration API, and PowerShell Gallery publishing. The full list, including what
 already shipped: [docs/roadmap.md](docs/roadmap.md).
 
@@ -143,4 +145,4 @@ already shipped: [docs/roadmap.md](docs/roadmap.md).
 
 ---
 
-<sub>OpenGateSP is an independent open-source project, not affiliated with or endorsed by ShareGate or Workleap. "ShareGate" is a trademark of its respective owner.</sub>
+<sub>OpenGateSP is an independent open-source project, not affiliated with or endorsed by Workleap. ShareGate is a trademark of Workleap.</sub>

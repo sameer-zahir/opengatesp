@@ -8,7 +8,7 @@ function Get-SPOwnerlessGroups {
         Lists every Microsoft 365 Group and counts its owners; reports those with zero. Ownerless
         *public* groups are graded Error, private ones Warning. Needs Microsoft Graph Group.Read.All
         (register the app with that scope; see docs/02). Slower on large tenants (one owner lookup
-        per group). Part of ShareGate-Protect-style governance detection.
+        per group). Part of the governance detection toolkit.
     .PARAMETER AsJson
         Emit a JSON array instead of objects.
     .EXAMPLE

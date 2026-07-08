@@ -41,7 +41,7 @@ signed (the GitHub release), functionality described on the README / download pa
    - Project name: `OpenGateSP`
    - Repository: `https://github.com/sameer-zahir/opengatesp`
    - License: `MIT` (no dual-licensing)
-   - Description: free, open-source ShareGate alternative for SharePoint Online — file-share
+   - Description: free, open-source SharePoint Online migration & governance toolkit — file-share
      migration, a pre-migration readiness check, permissions/external-sharing reports, site
      provisioning, scheduled governance reports. Windows GUI + PowerShell module + MCP server.
    - Download / releases page: `https://github.com/sameer-zahir/opengatesp/releases`

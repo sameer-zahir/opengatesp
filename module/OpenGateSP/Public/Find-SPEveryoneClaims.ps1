@@ -6,7 +6,7 @@ function Find-SPEveryoneClaims {
     .DESCRIPTION
         Reads the site's role assignments (and, with -IncludeListPermissions, lists/libraries with
         unique permissions) and reports every broad-audience grant, graded by whether it allows
-        writing. This is the detection half of ShareGate-Protect-style governance — pair it with
+        writing. This is the detection half of the governance toolkit — pair it with
         Restore-SPInheritance / Set-SPSiteLifecycle to remediate.
     .PARAMETER SiteUrl
         The site to scan. Connected automatically.

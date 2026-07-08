@@ -1,7 +1,7 @@
 #Requires -Version 7.4
 <#
 .SYNOPSIS
-    Windows GUI for OpenGateSP — a simple ShareGate-style front end over the engine.
+    Windows GUI for OpenGateSP — a simple, guided front end over the engine.
 .DESCRIPTION
     Loads the OpenGateSP module into a dedicated background runspace (so the PnP connection
     persists and the UI never freezes during long operations) and drives it from a WPF
@@ -690,7 +690,7 @@ function Show-Toast([string]$Type, [string]$Title, [string]$Message) {
     catch { }
 }
 
-# --- Environments manager (ShareGate-style saved tenant connections) ---------------------
+# --- Environments manager (saved, named tenant connections) ------------------------------
 function Get-GuiEnvironment {
     try { @(Get-SPEnvironmentsFromConfig -Config (Get-SPConfig)) } catch { @() }
 }

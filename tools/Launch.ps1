@@ -67,7 +67,7 @@ function Close-BootSplash($sync) {
 }
 
 Write-Host ""
-Write-Host "  OpenGateSP - the free, open-source ShareGate alternative" -ForegroundColor Cyan
+Write-Host "  OpenGateSP - free, open-source SharePoint migration & governance" -ForegroundColor Cyan
 Write-Host ""
 
 # 1. Ensure PnP.PowerShell (the SharePoint engine) is installed.
